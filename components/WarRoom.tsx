@@ -14,6 +14,7 @@ import { Mascot, type MascotExpression } from "./Mascot";
 import { ResultScreen } from "./ResultScreen";
 import { ConsoleFrame } from "./ConsoleFrame";
 import { SlackThread } from "./SlackThread";
+import { PollyFindingInteractive } from "./PollyFindingInteractive";
 
 interface Props {
   incident: Incident;
@@ -567,7 +568,11 @@ export function WarRoom({ incident, isDaily }: Props) {
                 {/* Finding rendered inside AWS Console frame */}
                 <div className="mb-5 flex-1">
                   <ConsoleFrame findingKey={currentFinding}>
-                    <div dangerouslySetInnerHTML={{ __html: FINDINGS[currentFinding].body }} />
+                    {currentFinding === "polly" ? (
+                      <PollyFindingInteractive />
+                    ) : (
+                      <div dangerouslySetInnerHTML={{ __html: FINDINGS[currentFinding].body }} />
+                    )}
                   </ConsoleFrame>
                 </div>
 
