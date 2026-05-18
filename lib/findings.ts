@@ -51,13 +51,13 @@ export const FINDINGS: Record<string, Finding> = {
 "Você é um assistente médico da Helix Labs.<br/><br/>
 Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>, <b>data de nascimento</b> e <b>histórico médico</b> do cliente para criar conexão."
 </p>
-<p><b>O que NÃO está no prompt (deveria estar):</b></p>
+<p><b>Observações sobre o prompt:</b></p>
 <ul>
 <li>❌ Sem regra de "nunca dar dosagens ou conselhos médicos"</li>
 <li>❌ Sem regra de "esconder dados sensíveis antes de responder"</li>
-<li>❌ <b>Sem Bedrock Guardrails aplicado</b> a esse modelo</li>
+<li>⚠️ Pede explicitamente pro modelo <b>usar dados pessoais</b> do cliente</li>
 </ul>
-<p>👉 O modelo está fazendo o que foi pedido: respondendo qualquer coisa, usando dados pessoais livremente.</p>`,
+<p>👉 O modelo está fazendo exatamente o que o prompt pede: respondendo qualquer coisa e usando os dados pessoais livremente.</p>`,
   },
 
   // Macie · Sensitive Data Findings
@@ -168,7 +168,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>Claude 3 Sonnet (intermediário): $3,00</li>
 <li>✅ Claude 3 <b>Haiku</b> (rápido, simples): <b>$0,25</b> (60× mais barato)</li>
 </ul>
-<p>👉 O <b>FAQ bot</b> responde perguntas simples (180 palavras em média). Não precisa de Opus, mas tá usando.</p>`,
+<p>👉 O <b>FAQ bot</b> responde perguntas simples (~180 palavras em média) usando o modelo mais caro da Bedrock.</p>`,
   },
 
   // EventBridge · Cron job
@@ -200,26 +200,28 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 </ul>
 <p><b>Qualidade da transcrição (Word Error Rate):</b></p>
 <ul>
-<li>🔴 Configuração atual: <b>18,4% de erro</b> em áudios médicos</li>
-<li>✅ Se usasse <b>Transcribe Medical</b> (variante especializada): ~3% de erro</li>
+<li>🔴 Taxa de erro atual: <b>18,4%</b> em áudios médicos</li>
+<li>📊 WER em áudios não-médicos: 4,1% (aceitável)</li>
 </ul>
-<p><b>Diferença:</b></p>
-<p>📌 <b>Transcribe Standard</b> → fala geral (reuniões, podcasts, atendimento)</p>
-<p>📌 <b>Transcribe Medical</b> → fala médica (medicamentos, dosagens, termos clínicos). Custa o mesmo.</p>
-<p>👉 O time tá usando o serviço genérico em conversa médica. Existe a variante certa.</p>`,
+<p><b>Exemplos de erros (transcrição × real):</b></p>
+<ul>
+<li>❌ "deu por dia" × "10mg por dia"</li>
+<li>❌ "amox cilina" × "amoxicilina"</li>
+<li>❌ "trato cardio plástico" × "ato cardiopático"</li>
+<li>❌ "metro for mina" × "metformina"</li>
+</ul>
+<p>👉 O serviço de transcrição genérico não conhece vocabulário médico. Erros se concentram em <b>nomes de medicamentos e termos clínicos</b>.</p>`,
   },
 
   // Translate · Custom Terminology
   glossary: {
-    title: "Translate · Glossário Customizado",
-    body: `<p><b>Você está vendo:</b> a configuração de tradução EN→PT do jogo.</p>
-<p><b>Glossários ativos:</b></p>
+    title: "Translate · Configuração de Tradução",
+    body: `<p><b>Você está vendo:</b> a configuração de tradução EN→PT usada pelo jogo.</p>
+<p><b>Configuração ativa:</b></p>
 <ul>
-<li>📚 <b>Nenhum carregado</b> ⚠️</li>
-</ul>
-<p><b>Glossários disponíveis no S3 mas não ativados:</b></p>
-<ul>
-<li>📄 <code>gaming-pt-br.csv</code> → 340 termos gaming (criado pelo time de localização há 2 meses)</li>
+<li>🔄 Direção: en-US → pt-BR</li>
+<li>📚 <b>Custom Terminology</b>: <span style="color:#E03D3D"><b>nenhum aplicado</b></span> ⚠️</li>
+<li>⚙️ Modo: tradução literal (palavra-por-palavra do dicionário geral)</li>
 </ul>
 <p><b>Exemplos de traduções erradas nas últimas 24h:</b></p>
 <ul>
@@ -230,7 +232,12 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>❌ "buff" → "amortecedor"</li>
 <li>❌ "nerf" → "pistola de espuma"</li>
 </ul>
-<p>👉 O glossário existe, só precisa ser carregado no Translate como <b>Custom Terminology</b>.</p>`,
+<p><b>Volume:</b></p>
+<ul>
+<li>📊 Strings traduzidas/dia: ~12.000</li>
+<li>📉 Reclamações na review: +340% desde o lançamento</li>
+</ul>
+<p>👉 O Translate tá fazendo tradução genérica — não entende jargão de gaming.</p>`,
   },
 
   // Rekognition · Moderation Threshold
@@ -316,16 +323,12 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>❌ "Docker" → /do.keɾ/</li>
 <li>❌ "PyTorch" → /pi.toɾ.tʃi/</li>
 </ul>
-<p><b>Recursos disponíveis pra corrigir pronúncia:</b></p>
+<p><b>Configuração atual da chamada Polly:</b></p>
 <ul>
-<li>📖 <b>Lexicon</b> (pronunciation lexicon): <span style="color:#E03D3D">nenhum aplicado</span> ⚠️</li>
-<li>🏷️ <b>SSML</b> tags (<code>&lt;phoneme&gt;</code>, <code>&lt;say-as&gt;</code>): nenhuma no texto</li>
+<li>📖 Pronunciation Lexicon: <span style="color:#E03D3D">nenhum</span> ⚠️</li>
+<li>🏷️ SSML no texto (<code>&lt;phoneme&gt;</code>, <code>&lt;say-as&gt;</code>): nenhum</li>
 </ul>
-<p><b>Lexicon disponível na conta mas nunca usado:</b></p>
-<ul>
-<li>📄 <code>tech-terms-en-words</code> — 47 termos (Kubernetes, Docker, PyTorch, GraphQL…)</li>
-</ul>
-<p>👉 O Polly não recebeu instrução de como pronunciar os termos técnicos.</p>`,
+<p>👉 O Polly recebeu o texto cru, em português, sem nenhuma instrução de pronúncia.</p>`,
   },
 
   // Personalize · Solution
@@ -334,8 +337,8 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
     body: `<p><b>O que é Personalize:</b> serviço de recomendação da AWS (estilo "quem viu isso também viu").</p>
 <p><b>Configuração atual:</b></p>
 <ul>
-<li>📋 <b>Recipe (algoritmo)</b> em uso: <b>HRNN</b> (versão antiga)</li>
-<li>📊 Status: ativo</li>
+<li>📋 <b>Recipe (algoritmo)</b> em uso: <b>HRNN</b></li>
+<li>📊 Status: ativo desde 2021</li>
 </ul>
 <p><b>Dados de treinamento:</b></p>
 <ul>
@@ -343,15 +346,15 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>👥 Usuários únicos: 2,8 milhões</li>
 <li>⚠️ <b>Usuários com menos de 3 interações</b> (chamados "cold-start"): <b>61,4%</b></li>
 </ul>
-<p><b>Exemplo de resposta pra um usuário novo:</b></p>
-<p style="background:#FFDFE0;padding:0.6em;border-radius:6px;border-left:3px solid #FF4B4B">[item_881, item_42, item_1207, item_881, item_42, item_1207, ...]</p>
-<p>⚠️ <b>87% dos usuários novos</b> recebem os MESMOS 3 itens — os mais populares globalmente.</p>
-<p><b>Recipes disponíveis (não estão em uso):</b></p>
+<p><b>Distribuição das recomendações nas últimas 24h:</b></p>
 <ul>
-<li>✅ <b>User-Personalization</b> (recomendado pela AWS) → suporta cold-start, exploração</li>
-<li>📦 Similar-Items → recomenda item parecido com o que o usuário tá olhando</li>
+<li>🔁 <b>87% dos usuários novos</b> recebem os MESMOS 3 itens</li>
+<li>📊 Esses 3 itens são os mais populares globalmente (top 10 da plataforma)</li>
+<li>📉 CTR (cliques na recomendação): 0,8% — bem abaixo do benchmark de 3-5%</li>
 </ul>
-<p>👉 O HRNN não lida bem com usuários novos. Existe um sucessor que resolve isso.</p>`,
+<p><b>Resposta típica do modelo pra um usuário novo:</b></p>
+<p style="background:#FFDFE0;padding:0.6em;border-radius:6px;border-left:3px solid #FF4B4B">[item_881, item_42, item_1207, item_881, item_42, item_1207, ...]</p>
+<p>👉 O algoritmo atual não tem mecanismo específico pra usuários sem histórico — todos eles recebem o mesmo "best-sellers global".</p>`,
   },
 
   // Lex · Bot stats
@@ -370,7 +373,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <ul>
 <li>📝 "abrir ticket"</li>
 <li>📝 "quero abrir um chamado"</li>
-<li>⚠️ <b>Apenas 2 exemplos</b> — AWS recomenda <b>15 a 25</b></li>
+<li>⚠️ <b>Apenas 2 exemplos cadastrados</b></li>
 </ul>
 <p><b>Mensagens reais de cliente que caíram no fallback:</b></p>
 <ul>
@@ -387,6 +390,8 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
     title: "Rekognition · Moderação de Imagens",
     body: `<p><b>O que é:</b> serviço da AWS que analisa imagens e detecta conteúdo impróprio.</p>
 <p><b>Configuração atual:</b> <code>MinConfidence = 30</code> (parâmetro que define o limiar de detecção)</p>
+<p><b>O que esse parâmetro significa?</b></p>
+<p>Quanto MAIOR o threshold, MENOS imagens são bloqueadas (só as obviamente proibidas). Quanto MENOR, mais coisas são flagradas — incluindo falsos positivos.</p>
 <p><b>Exemplos de imagens bloqueadas hoje:</b></p>
 <ul>
 <li>🌅 <code>pôr-do-sol-praia.jpg</code> → flagada como "Suggestive" (34% confiança)</li>
@@ -397,14 +402,9 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <ul>
 <li>📸 Imagens processadas: 38.201</li>
 <li>🚨 <b>Bloqueadas: 30.562 (80%)</b></li>
-<li>Distribuição da confiança: 30-50% (71%), 50-80% (7%), 80%+ (apenas 2%)</li>
+<li>Distribuição da confiança das detecções: 30-50% (71%), 50-80% (7%), 80%+ (apenas 2%)</li>
 </ul>
-<p><b>Recomendação oficial da AWS:</b></p>
-<ul>
-<li>✅ <code>MinConfidence = 80</code> ou mais em produção</li>
-<li>❌ Nunca abaixo de 50</li>
-</ul>
-<p>👉 O threshold tá em 30 — qualquer ruído fraco de detecção vira "label confiável". Por isso flagra paisagem.</p>`,
+<p>👉 Com o threshold em 30, qualquer detecção fraca da IA vira "label confiável". Por isso paisagens e crianças tão sendo flagadas.</p>`,
   },
 
   // ───── CONCEPT-FOCUSED FINDINGS ─────
@@ -442,9 +442,8 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <p><b>Configuração do treinamento:</b></p>
 <ul>
 <li>📋 Algoritmo: <b>XGBoost</b> (built-in do SageMaker)</li>
-<li>📊 Métrica otimizada: <b>accuracy</b> ⚠️</li>
-<li>❌ Ajuste de peso de classe: <b>não configurado</b></li>
-<li>❌ Estratégia pra dados desbalanceados (SMOTE etc): <b>não configurada</b></li>
+<li>📊 Métrica otimizada durante o tuning: <b>accuracy</b></li>
+<li>⚖️ Tratamento do desbalanceamento de classes: <b>não configurado</b></li>
 </ul>
 <p><b>Impacto financeiro (últimos 30 dias):</b></p>
 <ul>
@@ -472,7 +471,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>⚡ Latência atual: 820ms</li>
 <li>📋 SLA exigido: <b>até 5 minutos</b> (folga gigante)</li>
 </ul>
-<p>👉 O endpoint fica ligado 24/7 mas só é usado durante o dia. E o SLA permite até 5min, então não precisa ser tão rápido.</p>`,
+<p>👉 O endpoint fica ligado 24/7, mas o uso real é concentrado de manhã, em janelas de algumas horas. O SLA permite até 5 minutos de latência.</p>`,
   },
 
   // Cost Explorer · endpoint cost
@@ -486,18 +485,15 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>Treinamentos: $480</li>
 <li>Notebooks: $89</li>
 </ul>
-<p><b>Comparação dos tipos de inferência da AWS (preço por hora):</b></p>
+<p><b>Detalhes do endpoint "raio-X classifier":</b></p>
 <ul>
-<li>📌 <b>Real-time</b> (sempre ligado) → <b>$0,736/hr · 24/7 fixo</b></li>
-<li>📌 <b>Async</b> (fila, scale to zero) → $0,736/hr <b>só quando processa</b></li>
-<li>📌 <b>Serverless</b> (paga por ms de uso) → <b>zero quando ocioso</b> · modelo até 10GB</li>
-<li>📌 Batch Transform (lote) → paga por job · sem endpoint persistente</li>
+<li>📌 Tipo: <b>Real-time</b> (sempre ligado, cobra por hora 24/7)</li>
+<li>💵 Custo da instância: <b>$0,736/hora</b></li>
+<li>⏱️ Horas no mês: 744 (sempre ligado)</li>
+<li>🖥️ Instância: <code>ml.g4dn.xlarge</code> (com GPU)</li>
+<li>📏 Tamanho do modelo: 487 MB</li>
 </ul>
-<p><b>Detalhes do modelo:</b></p>
-<ul>
-<li>📏 Tamanho: <b>487 MB</b> (cabe em Serverless, limite é 10GB)</li>
-</ul>
-<p>👉 Tá pagando 24/7 mesmo o endpoint estando 61% ocioso. Existem 3 outros tipos de inferência mais baratos.</p>`,
+<p>👉 É um endpoint Real-time pagando 24 horas por dia — mesmo de madrugada e fim de semana, quando o tráfego é mínimo.</p>`,
   },
 
   // SageMaker Studio · regression eval
@@ -551,7 +547,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 </table>
 <p>⚠️ <b>23% das previsões fora do intervalo [0, 1]</b></p>
 <p>💬 PM: <i>"como eu apresento −0,18 de chance de churn pro CEO?"</i></p>
-<p>👉 Regressão linear gera <b>qualquer número real</b> como saída. Se o alvo é binário (0 ou 1), o problema é de <b>classificação</b>, não de regressão.</p>`,
+<p>👉 A Regressão Linear gera <b>qualquer número real</b> como saída — incluindo negativos e maiores que 1. O alvo aqui é binário (cancelou: 0 ou 1).</p>`,
   },
 
   // SageMaker Training Jobs · cost comparison
@@ -563,23 +559,23 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>🖥️ Máquina: <code>ml.p4d.24xlarge</code> (8 GPUs NVIDIA A100 por máquina)</li>
 <li>🔢 Quantidade: 4 máquinas (32 GPUs no total)</li>
 <li>⏱️ Tempo por run: 72 horas</li>
-<li>💸 Custo deste run: <b>$9.470</b></li>
+<li>💸 Custo por run: <b>$9.470</b></li>
 <li>💸 Custo do mês (9 runs): <b>$85.230</b></li>
+<li>📐 Modelo: transformer (encoder-decoder, ~7B parâmetros)</li>
+<li>🧠 Framework: PyTorch</li>
 </ul>
-<p><b>Comparação para a mesma carga de trabalho:</b></p>
-<table style="border-collapse:collapse;margin:0.5em 0;width:100%;font-size:0.9em">
-<tr><td style="padding:6px;background:#FFF8E1"><b>Opção</b></td><td style="padding:6px;background:#FFF8E1"><b>$/hora</b></td><td style="padding:6px;background:#FFF8E1"><b>Características</b></td></tr>
-<tr><td style="padding:6px">P4d (GPU A100, atual)</td><td style="padding:6px"><b>$32,77</b></td><td style="padding:6px">padrão da indústria</td></tr>
-<tr style="background:#D7FFB8"><td style="padding:6px"><b>Trainium (trn1)</b></td><td style="padding:6px"><b>$21,50</b></td><td style="padding:6px">chip AWS pra treinar · 35% mais barato ✅</td></tr>
-<tr><td style="padding:6px">Savings Plan P4d (1 ano)</td><td style="padding:6px">$22,94</td><td style="padding:6px">30% off · exige commit longo</td></tr>
-<tr><td style="padding:6px">Spot P4d</td><td style="padding:6px">$9,83</td><td style="padding:6px">70% off · <b>pode ser interrompido</b> ⚠️</td></tr>
-</table>
-<p><b>Sobre o Trainium:</b></p>
+<p><b>Detalhes da infraestrutura escolhida:</b></p>
 <ul>
-<li>🧠 É um chip da AWS feito especificamente pra treinar modelos de IA</li>
-<li>✅ Suporta o mesmo framework (PyTorch) — sem reescrever o modelo</li>
-<li>✅ Performance equivalente ou superior pra transformers</li>
+<li>💵 <b>P4d (GPU A100)</b>: $32,77/hora (preço on-demand padrão)</li>
+<li>📊 Utilização média durante o treino: ~88% (boa)</li>
+<li>⏳ Tempo total de GPU/mês: 2.592 horas (32 GPUs × 72h × 9 runs / 8 GPUs por máquina)</li>
 </ul>
-<p>👉 O time está usando GPU padrão. Existe alternativa AWS mais barata.</p>`,
+<p><b>Histórico de uso:</b></p>
+<ul>
+<li>📈 Treinos rodando todo final de semana (re-train com novos dados)</li>
+<li>📈 Custo vem crescendo 12% ao mês</li>
+<li>💬 Mensagem do CFO: <i>"$85k/mês em uma máquina é demais"</i></li>
+</ul>
+<p>👉 O treinamento tá rodando em GPUs A100 padrão, no preço cheio. Sem otimização de hardware ou de billing.</p>`,
   },
 };
