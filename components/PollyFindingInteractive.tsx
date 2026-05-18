@@ -41,10 +41,10 @@ export function PollyFindingInteractive() {
       </p>
 
       <div className="space-y-2 my-3">
-        <PronCard term="Kubernetes" lang="pt-BR" />
-        <PronCard term="Docker" lang="pt-BR" />
-        <PronCard term="PyTorch" lang="pt-BR" />
-        <PronCard term="GraphQL" lang="pt-BR" />
+        <PronCard term="Kubernetes" phonetic="kú-ber-ne-tchis" lang="pt-BR" />
+        <PronCard term="Docker" phonetic="dó-quer" lang="pt-BR" />
+        <PronCard term="PyTorch" phonetic="pee-tór-tchi" lang="pt-BR" />
+        <PronCard term="GraphQL" phonetic="gráf-quê-éli" lang="pt-BR" />
       </div>
 
       <p>
@@ -70,15 +70,37 @@ export function PollyFindingInteractive() {
 
 function PronCard({
   term,
+  phonetic,
   lang,
 }: {
   term: string;
+  phonetic: string;
   lang: "pt-BR" | "en-US";
 }) {
   return (
-    <div className="flex items-center justify-between gap-2 bg-white border-2 border-duo-line rounded-xl p-3" style={{ borderBottomWidth: 3 }}>
-      <div className="font-black text-duo-ink text-base">{term}</div>
-      <SpeakButton text={term} lang={lang} label="ouvir" variant="wrong" />
+    <div className="bg-white border-2 border-duo-line rounded-xl p-3" style={{ borderBottomWidth: 3 }}>
+      <div className="font-black text-duo-ink text-base leading-tight mb-1">{term}</div>
+
+      {/* Wrong pronunciation row */}
+      <div className="flex items-center justify-between gap-2 py-1.5 border-t border-duo-line-soft">
+        <div className="flex-1 min-w-0">
+          <div className="text-duo-red-dark text-xs font-bold leading-snug">
+            🔴 como tá lendo agora:{" "}
+            <span className="text-mono not-italic font-black">/{phonetic}/</span>
+          </div>
+        </div>
+        <SpeakButton text={term} lang={lang} label="ouvir" variant="wrong" />
+      </div>
+
+      {/* Correct pronunciation row */}
+      <div className="flex items-center justify-between gap-2 py-1.5 border-t border-duo-line-soft">
+        <div className="flex-1 min-w-0">
+          <div className="text-duo-green-dark text-xs font-bold leading-snug">
+            ✅ como deveria ler (em inglês)
+          </div>
+        </div>
+        <SpeakButton text={term} lang="en-US" label="ouvir" variant="correct" />
+      </div>
     </div>
   );
 }

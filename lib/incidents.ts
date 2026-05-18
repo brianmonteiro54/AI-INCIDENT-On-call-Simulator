@@ -794,10 +794,10 @@ const ALL_INCIDENTS: Incident[] = [
     quizQuestion: {
       question: "Além de Lexicon, qual tag SSML do Polly permite controlar a pronúncia de uma palavra usando fonemas IPA?",
       options: [
-        "<prosody>",
-        "<phoneme>",
-        "<emphasis>",
-        "<break>",
+        "&lt;prosody&gt;",
+        "&lt;phoneme&gt;",
+        "&lt;emphasis&gt;",
+        "&lt;break&gt;",
       ],
       correctIdx: 1,
       explanation: "<b>&lt;phoneme&gt;</b> permite especificar pronúncia exata usando IPA (alfabeto fonético internacional). SSML também tem <b>&lt;prosody&gt;</b> (velocidade/pitch), <b>&lt;emphasis&gt;</b> (ênfase) e <b>&lt;break&gt;</b> (pausas).",
