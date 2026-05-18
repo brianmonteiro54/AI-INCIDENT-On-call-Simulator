@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { ArrowLeft, Trophy, Flame, Upload, Check, RefreshCw } from "lucide-react";
-import { PlayerBar } from "@/components/PlayerBar";
+import { ArrowLeft, Flame, Upload, Check, RefreshCw, Trophy, Crown, Medal } from "lucide-react";
 import { useGame, bestGradeByIncident } from "@/lib/store";
 import { getLevel } from "@/lib/levels";
 import { playSound } from "@/lib/sound";
+import { Mascot } from "@/components/Mascot";
 
 interface Entry {
   name: string;
@@ -38,15 +38,13 @@ export default function LeaderboardPage() {
       const data = await res.json();
       setEntries(data.entries ?? []);
     } catch {
-      setError("falhou em buscar — leaderboard offline?");
+      setError("não conseguimos carregar o ranking");
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => {
-    fetchBoard();
-  }, []);
+  useEffect(() => { fetchBoard(); }, []);
 
   async function submit() {
     if (submitting || !hydrated || player.xp === 0) return;
@@ -73,136 +71,165 @@ export default function LeaderboardPage() {
       playSound("success");
       await fetchBoard();
     } catch {
-      setError("erro ao submeter");
+      setError("não rolou enviar");
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <>
-      <PlayerBar />
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-8 pb-20">
-        <Link href="/" onClick={() => playSound("page")} className="flex items-center gap-2 text-mono text-xs text-gray-500 hover:text-white transition-colors mb-6">
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>back to incidents</span>
-        </Link>
+    <div className="min-h-screen bg-duo-cream">
+      {/* Top bar */}
+      <header className="sticky top-0 z-30 bg-duo-cream/95 backdrop-blur-sm border-b-2 border-duo-line">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
+          <Link href="/" onClick={() => playSound("page")} className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition">
+            <ArrowLeft className="w-6 h-6 stroke-[2.5]" />
+          </Link>
+          <h1 className="text-display text-xl font-black text-duo-ink">Ranking Global</h1>
+          <div className="flex-1" />
+          <button onClick={() => { playSound("click"); fetchBoard(); }} className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition">
+            <RefreshCw className={`w-5 h-5 stroke-[2.5] ${loading ? "animate-spin" : ""}`} />
+          </button>
+        </div>
+      </header>
 
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 relative">
-          <div className="absolute -top-8 -left-8 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="relative">
-            <div className="flex items-center gap-2 text-mono text-[10px] text-amber-400 uppercase tracking-widest mb-2">
-              <Trophy className="w-3 h-3" />
-              global leaderboard
-            </div>
-            <h1 className="text-display text-4xl sm:text-5xl font-black text-white tracking-tight">
-              hall of <span className="text-amber-400 italic">on-call</span>
-            </h1>
-            <p className="text-gray-400 mt-2 text-sm max-w-lg">
-              Top engineers que dominaram os incidentes. Submete teu score quando estiver pronto pra entrar no ranking.
+      {/* Hero card */}
+      <section className="max-w-3xl mx-auto px-4 sm:px-6 pt-6">
+        <div className="duo-card p-5 sm:p-6 flex items-center gap-4 sm:gap-5 bg-duo-yellow-light border-duo-yellow">
+          <Mascot expression="celebrate" size={100} className="shrink-0" />
+          <div className="flex-1">
+            <h2 className="text-display text-2xl sm:text-3xl font-black text-duo-yellow-dark leading-tight mb-1">
+              Hall da Fama 🏆
+            </h2>
+            <p className="text-duo-ink-soft text-sm sm:text-base font-medium leading-snug">
+              Os engenheiros que mais salvaram a produção. Onde tu vai chegar?
             </p>
           </div>
-        </motion.div>
+        </div>
+      </section>
 
-        {/* Submit panel */}
-        {hydrated && player.xp > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.15 }}
-            className="glass-elev rounded-lg p-4 mb-6 flex items-center gap-4 flex-wrap"
-          >
+      {/* Submit panel */}
+      {hydrated && player.xp > 0 && (
+        <section className="max-w-3xl mx-auto px-4 sm:px-6 mt-4">
+          <div className="duo-card p-4 flex items-center gap-4 flex-wrap">
             <div className="flex-1 min-w-[180px]">
-              <div className="text-mono text-[10px] text-gray-500 uppercase tracking-widest">your score</div>
-              <div className="text-display text-2xl font-bold text-white">
-                @{player.name} · {player.xp} XP
-              </div>
-              <div className="text-mono text-xs text-gray-400">
-                {Object.keys(bestGradeByIncident(history)).length} resolvidos · ${player.totalSaved.toLocaleString()} salvos
+              <div className="text-xs font-black uppercase tracking-widest text-duo-ink-soft mb-1">tua pontuação</div>
+              <div className="font-black text-duo-ink text-lg leading-tight">
+                {player.name} · <span className="text-duo-blue-dark tabular">{player.xp.toLocaleString()}</span> XP
               </div>
             </div>
             <button
               onClick={submit}
               disabled={submitting || submitted}
-              className="btn-primary flex items-center gap-2 disabled:opacity-50"
+              className={`duo-btn ${submitted ? "duo-white" : "duo-green"} flex items-center gap-2`}
             >
-              {submitted ? <Check className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
-              <span>{submitted ? "submetido!" : submitting ? "enviando…" : "submeter score"}</span>
-            </button>
-          </motion.div>
-        )}
-
-        {/* Table */}
-        <div className="glass rounded-lg overflow-hidden">
-          <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
-            <h2 className="text-mono text-xs font-bold text-gray-300 uppercase tracking-[0.2em]">top engineers</h2>
-            <button onClick={fetchBoard} className="text-gray-500 hover:text-white transition-colors">
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+              {submitted ? <Check className="w-5 h-5" /> : <Upload className="w-5 h-5" />}
+              <span>{submitted ? "enviado!" : submitting ? "enviando…" : "publicar"}</span>
             </button>
           </div>
+        </section>
+      )}
 
-          {loading && entries.length === 0 ? (
-            <div className="text-center py-12 text-mono text-xs text-gray-500">carregando…</div>
-          ) : error ? (
-            <div className="text-center py-12 text-mono text-xs text-blood-400">{error}</div>
-          ) : entries.length === 0 ? (
-            <div className="text-center py-12 px-4">
-              <div className="text-display text-2xl font-bold text-gray-400 mb-2">🏜️ sem entradas ainda</div>
-              <div className="text-mono text-xs text-gray-600">Seja o primeiro a submeter um score.</div>
-            </div>
-          ) : (
-            <div className="divide-y divide-white/5">
-              {entries.map((e, i) => {
-                const lvl = getLevel(e.xp);
-                const isMe = e.name === player.name;
-                return (
-                  <motion.div
-                    key={`${e.name}-${i}`}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.03 }}
-                    className={`grid grid-cols-[36px_1fr_auto_auto_auto] items-center px-3 sm:px-5 py-3 gap-3 sm:gap-5 ${
-                      isMe ? "bg-acid-500/5 border-l-2 border-acid-500" : ""
-                    }`}
-                  >
-                    <div className={`text-display text-xl font-black text-center ${
-                      i === 0 ? "text-amber-400" :
-                      i === 1 ? "text-gray-300" :
-                      i === 2 ? "text-orange-400" : "text-gray-600"
-                    }`}>
-                      {i < 3 ? ["🥇", "🥈", "🥉"][i] : `#${i + 1}`}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-white font-semibold truncate flex items-center gap-2">
-                        @{e.name}
-                        {isMe && <span className="text-mono text-[9px] uppercase tracking-widest text-acid-400">you</span>}
-                      </div>
-                      <div className="text-mono text-[10px] text-gray-500 truncate">
-                        {lvl.name} · {e.completedCount} resolvidos · {e.aPlusCount} A+
-                      </div>
-                    </div>
-                    <div className="text-mono text-xs text-amber-400 text-right">
-                      <div className="text-[9px] text-gray-600 uppercase tracking-widest">XP</div>
-                      <div>{e.xp.toLocaleString()}</div>
-                    </div>
-                    <div className="text-mono text-xs text-acid-400 text-right hidden sm:block">
-                      <div className="text-[9px] text-gray-600 uppercase tracking-widest">Saved</div>
-                      <div>${(e.totalSaved / 1000).toFixed(0)}k</div>
-                    </div>
-                    <div className="text-mono text-xs text-blood-400 text-right hidden sm:flex items-center gap-1 justify-end">
-                      {e.streak >= 2 && <><Flame className="w-3 h-3" /> {e.streak}</>}
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
+      {/* Rankings */}
+      <section className="max-w-3xl mx-auto px-4 sm:px-6 mt-6 pb-10">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="h-1 flex-1 bg-duo-line rounded-full" />
+          <h2 className="text-display text-xl font-black text-duo-ink uppercase tracking-wider">top players</h2>
+          <div className="h-1 flex-1 bg-duo-line rounded-full" />
         </div>
 
-        <p className="text-mono text-[10px] text-gray-600 text-center mt-6">
-          Sem Upstash configurado, o leaderboard usa memória (reseta no restart).
-        </p>
-      </main>
-    </>
+        {loading && entries.length === 0 ? (
+          <div className="text-center py-16">
+            <Mascot expression="thinking" size={120} />
+            <div className="text-duo-ink-soft font-bold mt-3">carregando…</div>
+          </div>
+        ) : error ? (
+          <div className="duo-card duo-card-wrong p-5 text-center">
+            <div className="text-duo-red-dark font-black">{error}</div>
+          </div>
+        ) : entries.length === 0 ? (
+          <div className="duo-card p-10 text-center">
+            <Mascot expression="happy" size={120} className="mx-auto mb-4" />
+            <div className="text-display text-2xl font-black text-duo-ink mb-2">seja o primeiro!</div>
+            <div className="text-duo-ink-soft text-sm font-medium">ainda ninguém entrou no ranking 👀</div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {entries.map((e, i) => {
+              const lvl = getLevel(e.xp);
+              const isMe = e.name === player.name;
+              const medalCfg =
+                i === 0 ? { bg: "bg-duo-yellow", border: "border-duo-yellow-dark", text: "text-duo-yellow-dark", icon: "🥇" } :
+                i === 1 ? { bg: "bg-duo-line", border: "border-duo-ink-soft", text: "text-duo-ink", icon: "🥈" } :
+                i === 2 ? { bg: "bg-duo-orange-light", border: "border-duo-orange-dark", text: "text-duo-orange-dark", icon: "🥉" } :
+                null;
+
+              return (
+                <motion.div
+                  key={`${e.name}-${i}`}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className={`duo-card p-4 flex items-center gap-3 sm:gap-4 ${isMe ? "duo-card-selected" : ""}`}
+                >
+                  {/* Rank */}
+                  {medalCfg ? (
+                    <div className={`shrink-0 w-12 h-12 rounded-2xl ${medalCfg.bg} border-2 ${medalCfg.border} flex items-center justify-center text-2xl`}
+                      style={{ borderBottomWidth: 4 }}>
+                      {medalCfg.icon}
+                    </div>
+                  ) : (
+                    <div className="shrink-0 w-12 h-12 rounded-2xl bg-duo-line-soft border-2 border-duo-line flex items-center justify-center font-black text-duo-ink-soft text-lg"
+                      style={{ borderBottomWidth: 4 }}>
+                      {i + 1}
+                    </div>
+                  )}
+
+                  {/* Name + meta */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <h3 className="text-display text-base sm:text-lg font-black text-duo-ink truncate">
+                        {e.name}
+                      </h3>
+                      {isMe && <span className="chip border-duo-blue-dark bg-duo-blue text-white text-[10px] px-2 py-0">VC</span>}
+                      {e.streak >= 3 && (
+                        <span className="text-duo-orange-dark text-xs font-bold flex items-center">
+                          <Flame className="w-3 h-3 fill-duo-orange" />{e.streak}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-duo-ink-soft text-xs font-bold flex items-center gap-2 flex-wrap">
+                      <span>{lvl.name}</span>
+                      <span className="text-duo-ink-faded">·</span>
+                      <span>{e.completedCount} resolvidos</span>
+                      {e.aPlusCount > 0 && (
+                        <>
+                          <span className="text-duo-ink-faded">·</span>
+                          <span className="text-duo-yellow-dark">⭐ {e.aPlusCount} A+</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* XP */}
+                  <div className="text-right shrink-0">
+                    <div className="font-black text-duo-blue-dark text-lg sm:text-xl tabular leading-none">
+                      {e.xp.toLocaleString()}
+                    </div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-duo-ink-faded mt-1">
+                      XP
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="mt-6 text-center text-duo-ink-faded text-xs font-medium">
+          sem upstash, o ranking zera quando o servidor reinicia
+        </div>
+      </section>
+    </div>
   );
 }

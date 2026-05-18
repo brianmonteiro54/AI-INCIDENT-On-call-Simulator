@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, DM_Sans, JetBrains_Mono } from "next/font/google";
+import { Bricolage_Grotesque, DM_Sans, JetBrains_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({
@@ -17,6 +17,12 @@ const jetbrains = JetBrains_Mono({
   variable: "--font-jetbrains",
   display: "swap",
 });
+const serif = Instrument_Serif({
+  subsets: ["latin"],
+  variable: "--font-instrument",
+  display: "swap",
+  weight: ["400"],
+});
 
 export const metadata: Metadata = {
   title: "AI INCIDENT · On-call Simulator",
@@ -30,7 +36,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className={`${bricolage.variable} ${dmsans.variable} ${jetbrains.variable}`}>
+    <html lang="pt-BR" className={`${bricolage.variable} ${dmsans.variable} ${jetbrains.variable} ${serif.variable}`}>
       <body className="font-sans antialiased text-gray-200 selection:bg-acid-500/30">
         <div className="scan-overlay" />
         <div className="vignette" />

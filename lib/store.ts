@@ -106,11 +106,18 @@ export const useGame = create<GameState>()(
       name: "ai-incident-v2",
       storage: createJSONStorage(() => (typeof window !== "undefined" ? localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} } as unknown as Storage)),
       partialize: (s) => ({ player: s.player, history: s.history }),
-      onRehydrateStorage: () => (state) => {
+      onRehydrateStorage: () => (state, error) => {
+        // Always mark hydrated even if state is null (first visit) or errored
         if (state) {
           state.setHydrated(true);
           setSoundEnabled(state.player.soundOn ?? true);
+        } else {
+          // No persisted state — manually trigger hydrated after a tick
+          setTimeout(() => {
+            try { useGame.setState({ hydrated: true }); } catch {}
+          }, 0);
         }
+        if (error) console.error("rehydrate error", error);
       },
     }
   )

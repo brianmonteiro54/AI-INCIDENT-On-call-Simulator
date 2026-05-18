@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { PlayerBar } from "@/components/PlayerBar";
 import { AchievementToasts } from "@/components/AchievementToasts";
 import { WarRoom } from "@/components/WarRoom";
 import { getIncidentById } from "@/lib/incidents";
@@ -26,51 +26,43 @@ export default function IncidentPage() {
 
   if (!mounted || !hydrated) {
     return (
-      <>
-        <PlayerBar />
-        <div className="max-w-7xl mx-auto px-6 pt-20 text-center text-mono text-xs text-gray-500">
-          carregando…
-        </div>
-      </>
+      <div className="min-h-screen flex items-center justify-center text-mono text-xs text-gray-500">
+        ● connecting to incident channel…
+      </div>
     );
   }
 
   if (!incident) {
     return (
-      <>
-        <PlayerBar />
-        <div className="max-w-7xl mx-auto px-6 pt-20 text-center">
-          <h1 className="text-display text-3xl font-bold text-blood-400 mb-2">404 · incident not found</h1>
-          <p className="text-gray-500 mb-6">Esse incidente não existe.</p>
-          <button onClick={() => router.push("/")} className="btn-ghost">
-            voltar pro dashboard
-          </button>
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="text-center">
+          <div className="text-mono text-[10px] uppercase tracking-[0.3em] text-blood-400 mb-3">404 · not found</div>
+          <h1 className="text-display text-5xl sm:text-7xl font-black text-white mb-4">no signal.</h1>
+          <p className="text-gray-500 mb-8 max-w-md mx-auto">esse incidente não existe ou foi resolvido por outra pessoa.</p>
+          <Link href="/" className="btn-ghost">← back to dashboard</Link>
         </div>
-      </>
+      </div>
     );
   }
 
   const lvlIdx = getLevelIdx(player.xp);
   if (incident.minLevel > lvlIdx) {
     return (
-      <>
-        <PlayerBar />
-        <div className="max-w-7xl mx-auto px-6 pt-20 text-center">
-          <h1 className="text-display text-3xl font-bold text-amber-400 mb-2">🔒 locked</h1>
-          <p className="text-gray-400 mb-6">
-            Tu precisa de level <b>{incident.minLevel + 1}+</b> pra acessar esse incidente.
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="text-center max-w-md">
+          <div className="text-mono text-[10px] uppercase tracking-[0.3em] text-amber-400 mb-3">access denied · level gate</div>
+          <h1 className="text-display text-5xl sm:text-7xl font-black text-white mb-4">not yet.</h1>
+          <p className="text-gray-400 mb-8">
+            esse incidente requer <b className="text-amber-300">level {incident.minLevel + 1}</b> ou superior. continua acumulando XP nos cases anteriores.
           </p>
-          <button onClick={() => router.push("/")} className="btn-ghost">
-            voltar
-          </button>
+          <Link href="/" className="btn-ghost">← back to dashboard</Link>
         </div>
-      </>
+      </div>
     );
   }
 
   return (
     <>
-      <PlayerBar />
       <AchievementToasts />
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
         <WarRoom incident={incident} isDaily={isDaily} />

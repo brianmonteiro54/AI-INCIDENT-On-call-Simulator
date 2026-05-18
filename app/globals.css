@@ -4,143 +4,252 @@
 
 @layer base {
   :root {
-    --bg-base: #050608;
-    --grid-c: rgba(255, 255, 255, 0.025);
+    --bg-paper: #FFFBEF;
+    --bg-cream: #FFF8E1;
   }
   html, body {
-    background: var(--bg-base);
-    color: rgb(229 231 235);
+    background: var(--bg-paper);
+    color: #3C3C3C;
     overscroll-behavior: none;
   }
   body {
     background-image:
-      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(34, 211, 238, 0.07), transparent 60%),
-      radial-gradient(ellipse 60% 40% at 90% 100%, rgba(139, 92, 246, 0.05), transparent 60%),
-      linear-gradient(var(--grid-c) 1px, transparent 1px),
-      linear-gradient(90deg, var(--grid-c) 1px, transparent 1px);
-    background-size: auto, auto, 48px 48px, 48px 48px;
+      radial-gradient(ellipse 60% 40% at 10% -10%, rgba(28, 176, 246, 0.07), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 100% 100%, rgba(255, 150, 0, 0.06), transparent 60%);
     background-attachment: fixed;
     min-height: 100vh;
   }
   ::selection {
-    background: rgba(52, 211, 153, 0.3);
-    color: white;
+    background: rgba(88, 204, 2, 0.25);
+    color: #1F1F1F;
   }
-  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar { width: 12px; height: 12px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #1d2230; border-radius: 5px; }
-  ::-webkit-scrollbar-thumb:hover { background: #2d3340; }
+  ::-webkit-scrollbar-thumb { background: #E5E5E5; border-radius: 6px; border: 2px solid #FFFBEF; }
+  ::-webkit-scrollbar-thumb:hover { background: #CFCFCF; }
 }
 
 @layer components {
-  .glass {
-    background: rgba(15, 18, 24, 0.55);
-    backdrop-filter: blur(20px) saturate(140%);
-    -webkit-backdrop-filter: blur(20px) saturate(140%);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.04),
-      0 8px 24px rgba(0, 0, 0, 0.5);
-  }
-  .glass-strong {
-    background: rgba(22, 26, 35, 0.7);
-    backdrop-filter: blur(28px) saturate(160%);
-    -webkit-backdrop-filter: blur(28px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-  }
-  .glass-elev {
-    background: rgba(29, 34, 48, 0.62);
-    backdrop-filter: blur(24px) saturate(150%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.05),
-      0 16px 48px rgba(0, 0, 0, 0.6);
-  }
   .text-display {
     font-family: var(--font-bricolage), Georgia, serif;
-    letter-spacing: -0.025em;
-    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-weight: 800;
   }
   .text-mono {
     font-family: var(--font-jetbrains), Menlo, monospace;
   }
-  .glow-red { box-shadow: 0 0 30px rgba(255, 51, 85, 0.4); }
-  .glow-amber { box-shadow: 0 0 30px rgba(251, 191, 36, 0.4); }
-  .glow-green { box-shadow: 0 0 30px rgba(52, 211, 153, 0.4); }
-  .glow-cyan { box-shadow: 0 0 30px rgba(34, 211, 238, 0.4); }
-  .glow-fuchsia { box-shadow: 0 0 40px rgba(217, 70, 239, 0.5); }
 
-  .scan-overlay {
-    pointer-events: none;
-    position: fixed;
-    inset: 0;
-    z-index: 1;
-    background: repeating-linear-gradient(
-      to bottom,
-      transparent 0,
-      transparent 3px,
-      rgba(255, 255, 255, 0.015) 3px,
-      rgba(255, 255, 255, 0.015) 4px
-    );
-    mix-blend-mode: overlay;
+  /* ════════ CHUNKY DUO BUTTON ════════ */
+  .duo-btn {
+    @apply rounded-2xl font-black text-base px-6 py-4 transition-all;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom-width: 4px;
+    border-bottom-style: solid;
+    border-right-width: 1px;
+    border-right-style: solid;
+    user-select: none;
   }
-  .vignette {
-    pointer-events: none;
-    position: fixed;
-    inset: 0;
-    z-index: 1;
-    box-shadow: inset 0 0 200px rgba(0, 0, 0, 0.6);
+  .duo-btn:active:not(:disabled) {
+    border-bottom-width: 0;
+    transform: translateY(4px);
   }
-  .cinema-bars {
-    pointer-events: none;
-    position: fixed;
-    left: 0; right: 0;
-    z-index: 50;
-    height: 14px;
-    background: black;
+  .duo-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  .duo-green {
+    background: #58CC02;
+    border-bottom-color: #58A700;
+    border-right-color: #58A700;
+    color: white;
+    box-shadow: 0 0 0 0 rgba(88, 204, 2, 0);
+  }
+  .duo-green:hover:not(:disabled) {
+    background: #6BD615;
+    box-shadow: 0 0 0 4px rgba(88, 204, 2, 0.15);
+  }
+  .duo-blue {
+    background: #1CB0F6;
+    border-bottom-color: #1899D6;
+    border-right-color: #1899D6;
+    color: white;
+  }
+  .duo-blue:hover:not(:disabled) {
+    background: #2EBDFA;
+    box-shadow: 0 0 0 4px rgba(28, 176, 246, 0.15);
+  }
+  .duo-yellow {
+    background: #FFC800;
+    border-bottom-color: #E5A100;
+    border-right-color: #E5A100;
+    color: #3C3C3C;
+  }
+  .duo-yellow:hover:not(:disabled) {
+    background: #FFD220;
+    box-shadow: 0 0 0 4px rgba(255, 200, 0, 0.15);
+  }
+  .duo-red {
+    background: #FF4B4B;
+    border-bottom-color: #E03D3D;
+    border-right-color: #E03D3D;
+    color: white;
+  }
+  .duo-red:hover:not(:disabled) {
+    background: #FF6262;
+    box-shadow: 0 0 0 4px rgba(255, 75, 75, 0.15);
+  }
+  .duo-orange {
+    background: #FF9600;
+    border-bottom-color: #E58600;
+    border-right-color: #E58600;
+    color: white;
+  }
+  .duo-purple {
+    background: #CE82FF;
+    border-bottom-color: #A560E8;
+    border-right-color: #A560E8;
+    color: white;
+  }
+  .duo-white {
+    background: white;
+    border-bottom-color: #E5E5E5;
+    border-right-color: #E5E5E5;
+    border-top: 2px solid #E5E5E5;
+    border-left: 2px solid #E5E5E5;
+    border-bottom-width: 4px;
+    color: #3C3C3C;
+  }
+  .duo-white:hover:not(:disabled) {
+    background: #FAFAFA;
+    border-color: #D5D5D5;
+    border-bottom-color: #D5D5D5;
   }
 
-  .btn-primary {
-    @apply px-5 py-2.5 rounded-md font-semibold text-sm transition-all duration-150 border;
-    background: linear-gradient(180deg, rgba(52, 211, 153, 0.16), rgba(52, 211, 153, 0.08));
-    border-color: rgba(52, 211, 153, 0.4);
-    color: rgb(167 243 208);
-    text-shadow: 0 0 12px rgba(52, 211, 153, 0.3);
+  /* Chunky card (like answer cards) */
+  .duo-card {
+    @apply rounded-2xl bg-white transition-all;
+    border: 2px solid #E5E5E5;
+    border-bottom-width: 4px;
+    border-right-width: 3px;
   }
-  .btn-primary:hover {
-    background: linear-gradient(180deg, rgba(52, 211, 153, 0.28), rgba(52, 211, 153, 0.14));
-    box-shadow: 0 0 24px rgba(52, 211, 153, 0.3);
-    transform: translateY(-1px);
+  .duo-card-selected {
+    border-color: #1CB0F6;
+    background: #DDF4FF;
+    color: #1899D6;
   }
-  .btn-ghost {
-    @apply px-4 py-2 rounded-md text-sm transition-all duration-150 border;
-    background: rgba(255, 255, 255, 0.03);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: rgb(209 213 219);
+  .duo-card-correct {
+    border-color: #58CC02;
+    background: #D7FFB8;
+    color: #58A700;
   }
-  .btn-ghost:hover {
-    background: rgba(255, 255, 255, 0.07);
-    border-color: rgba(255, 255, 255, 0.18);
+  .duo-card-wrong {
+    border-color: #FF4B4B;
+    background: #FFDFE0;
+    color: #E03D3D;
+  }
+  .duo-card:hover {
+    background: #FAFAFA;
+    border-color: #D5D5D5;
+  }
+  .duo-card-selected:hover {
+    background: #DDF4FF;
+    border-color: #1CB0F6;
   }
 
-  .severity-edge::before {
-    content: "";
-    position: absolute;
-    top: 0; left: 0;
-    width: 3px; height: 100%;
-    border-radius: 2px 0 0 2px;
+  /* Progress bar segment */
+  .progress-track {
+    background: #E5E5E5;
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+  }
+  .progress-fill {
+    background: linear-gradient(180deg, #FFC800 0%, #FFB000 100%);
+    height: 100%;
+    border-radius: 999px;
+    box-shadow: inset 0 4px 0 rgba(255, 255, 255, 0.35);
+    transition: width 400ms ease-out;
+  }
+  .progress-fill-green {
+    background: linear-gradient(180deg, #58CC02 0%, #58A700 100%);
+  }
+  .progress-fill-blue {
+    background: linear-gradient(180deg, #1CB0F6 0%, #1899D6 100%);
+  }
+  .progress-fill-red {
+    background: linear-gradient(180deg, #FF4B4B 0%, #E03D3D 100%);
+  }
+  .progress-fill-orange {
+    background: linear-gradient(180deg, #FF9600 0%, #E58600 100%);
   }
 
-  .crt-flicker {
-    animation: flicker 6s infinite;
+  /* Chip */
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-bold;
+    border: 2px solid;
+    border-bottom-width: 3px;
   }
-  @keyframes flicker {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.98; }
-    51% { opacity: 1; }
+
+  /* Floating animation */
+  @keyframes float-up {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  .float-anim {
+    animation: float-up 3s ease-in-out infinite;
+  }
+
+  /* Bounce in */
+  @keyframes bounce-in {
+    0% { transform: scale(0.3); opacity: 0; }
+    50% { transform: scale(1.1); opacity: 1; }
+    70% { transform: scale(0.95); }
+    100% { transform: scale(1); }
+  }
+  .bounce-in {
+    animation: bounce-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  /* Wiggle (sad mascot) */
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-4deg); }
+    75% { transform: rotate(4deg); }
+  }
+  .wiggle {
+    animation: wiggle 0.5s ease-in-out;
+  }
+
+  /* Streak fire pulse */
+  @keyframes fire-pulse {
+    0%, 100% { transform: scale(1) rotate(-2deg); }
+    50% { transform: scale(1.1) rotate(2deg); }
+  }
+  .fire-pulse {
+    animation: fire-pulse 1.2s ease-in-out infinite;
+  }
+
+  /* XP sparkle */
+  @keyframes xp-pop {
+    0% { transform: translateY(0) scale(0.8); opacity: 0; }
+    20% { transform: translateY(-10px) scale(1.2); opacity: 1; }
+    100% { transform: translateY(-60px) scale(1); opacity: 0; }
+  }
+  .xp-pop {
+    animation: xp-pop 1.2s ease-out forwards;
+  }
+
+  /* Card press */
+  .card-press {
+    transition: transform 80ms;
+  }
+  .card-press:active {
+    transform: translateY(2px);
   }
 }
 
 @layer utilities {
   .text-balance { text-wrap: balance; }
+  .tabular { font-variant-numeric: tabular-nums; }
 }

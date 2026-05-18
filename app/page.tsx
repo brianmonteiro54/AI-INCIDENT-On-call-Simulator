@@ -1,202 +1,273 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { useGame, bestGradeByIncident } from "@/lib/store";
 import { INCIDENTS } from "@/lib/incidents";
-import { getLevelIdx, formatTime, getTodaysDailyId, getDailyKey, gradeColor } from "@/lib/levels";
+import { getLevel, getLevelIdx, getNextLevel, getTodaysDailyId, getDailyKey, gradeColor, sevLabel } from "@/lib/levels";
 import { ACHIEVEMENTS } from "@/lib/achievements";
-import { PlayerBar } from "@/components/PlayerBar";
-import { IncidentCard } from "@/components/IncidentCard";
-import { BootSequence } from "@/components/BootSequence";
+import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { AchievementToasts } from "@/components/AchievementToasts";
-import { Flame, Crown, Calendar, BarChart3, Sparkles, ChevronRight } from "lucide-react";
+import { Mascot } from "@/components/Mascot";
+import { playSound } from "@/lib/sound";
+import { Sparkles, Flame, Crown, Lock, Check, Star, Heart, Volume2, VolumeX, Trophy, Settings, ChevronRight, Zap } from "lucide-react";
 
 export default function HomePage() {
   const player = useGame((s) => s.player);
   const history = useGame((s) => s.history);
   const hydrated = useGame((s) => s.hydrated);
+  const setName = useGame((s) => s.setName);
+  const setSoundOn = useGame((s) => s.setSoundOn);
+  const reset = useGame((s) => s.reset);
 
-  if (!hydrated) {
-    return (
-      <>
-        <BootSequence />
-        <PlayerBar />
-      </>
-    );
+  // —— Welcome / onboarding flow ——
+  const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null);
+  const [forceReady, setForceReady] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setForceReady(true), 1500);
+    return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated && !forceReady) return;
+    if (typeof window === "undefined") {
+      setNeedsOnboarding(false);
+      return;
+    }
+    const onboarded = localStorage.getItem("ai-incident-onboarded");
+    const hasCustomName = player.name && player.name !== "anon";
+    setNeedsOnboarding(!onboarded && !hasCustomName);
+  }, [hydrated, forceReady, player.name]);
+
+  function handleWelcomeSubmit(name: string) {
+    setName(name);
+    try { localStorage.setItem("ai-incident-onboarded", "1"); } catch {}
+    setNeedsOnboarding(false);
   }
 
+  // —— Name input on home (controlled) ——
+  const [nameDraft, setNameDraft] = useState(player.name);
+  useEffect(() => {
+    setNameDraft(player.name);
+  }, [player.name]);
+
+  function commitName() {
+    const trimmed = nameDraft.trim();
+    if (trimmed && trimmed !== player.name) {
+      setName(trimmed);
+    } else {
+      setNameDraft(player.name);
+    }
+  }
+
+  const bestByInc = useMemo(() => bestGradeByIncident(history), [history]);
   const lvlIdx = getLevelIdx(player.xp);
-  const bestByInc = bestGradeByIncident(history);
+  const lvl = getLevel(player.xp);
+  const next = getNextLevel(player.xp);
   const dailyId = getTodaysDailyId(INCIDENTS.map((i) => i.id));
   const dailyKey = getDailyKey();
   const dailyDoneToday = history.some(
     (h) => h.id === dailyId && new Date(h.at).toISOString().slice(0, 10) === dailyKey
   );
+  const dailyInc = INCIDENTS.find((i) => i.id === dailyId);
 
   const completed = Object.keys(bestByInc).length;
   const aPlus = Object.values(bestByInc).filter((g) => g === "A+").length;
-  const totalAchievements = ACHIEVEMENTS.filter((a) => player.achievements.includes(a.id)).length;
+  const ownedAchievements = ACHIEVEMENTS.filter((a) => player.achievements.includes(a.id));
 
-  const dailyInc = INCIDENTS.find((i) => i.id === dailyId);
+  // Show welcome while we don't know whether to onboard, OR while waiting hydration
+  if (needsOnboarding === null) {
+    return <WelcomeScreen forceShow />;
+  }
+
+  if (needsOnboarding) {
+    return <WelcomeScreen onSubmit={handleWelcomeSubmit} />;
+  }
+
+  const inLevel = player.xp - lvl.min;
+  const span = next ? next.min - lvl.min : 1;
+  const xpPct = next ? Math.min(100, (inLevel / span) * 100) : 100;
 
   return (
     <>
-      <BootSequence />
-      <PlayerBar />
       <AchievementToasts />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 pt-10 pb-20">
-        {/* HERO */}
-        <motion.section
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-12 relative"
-        >
-          <div className="absolute -top-8 -left-8 w-64 h-64 bg-blood-500/8 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute top-8 right-0 w-48 h-48 bg-cyber-400/8 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="relative">
-            <div className="flex items-center gap-2 text-mono text-[10px] text-blood-400 uppercase tracking-widest mb-3">
-              <motion.div
-                className="w-2 h-2 rounded-full bg-blood-500"
-                animate={{ scale: [1, 0.6, 1] }}
-                transition={{ duration: 1.4, repeat: Infinity }}
-              />
-              ACTIVE INCIDENTS · {INCIDENTS.length - completed} open
+      <div className="min-h-screen bg-duo-cream pb-20">
+        {/* ════════ TOP BAR ════════ */}
+        <header className="sticky top-0 z-30 bg-duo-cream/95 backdrop-blur-sm border-b-2 border-duo-line">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3 sm:gap-4">
+            {/* Streak */}
+            <div className="flex items-center gap-1.5">
+              <div className={player.streak >= 1 ? "fire-pulse" : ""}>
+                <Flame className={`w-6 h-6 ${player.streak >= 1 ? "fill-duo-orange text-duo-orange-dark" : "text-duo-ink-faded"}`} strokeWidth={2.5} />
+              </div>
+              <span className={`font-black text-lg tabular ${player.streak >= 1 ? "text-duo-orange-dark" : "text-duo-ink-faded"}`}>
+                {player.streak}
+              </span>
             </div>
-            <h1 className="text-display text-4xl sm:text-6xl font-black leading-[0.95] tracking-tight mb-4 text-balance">
-              3:17AM. <span className="text-blood-500 italic">A produção tá pegando fogo.</span>
-            </h1>
-            <p className="text-gray-400 max-w-2xl leading-relaxed text-balance">
-              Tu é o(a) engineer de plantão. Bedrock alucinando, custo subindo $400/min, cliente reclamando no Twitter. Lê os dashboards, decide a ação certa. Cada decisão te ensina um pedaço da AWS — porque tu <em className="text-acid-400 not-italic">viu</em> a coisa quebrar.
-            </p>
 
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/leaderboard" className="btn-ghost flex items-center gap-2">
-                <BarChart3 className="w-4 h-4" />
-                <span>Leaderboard global</span>
-                <ChevronRight className="w-3 h-3" />
-              </Link>
-              {dailyInc && !dailyDoneToday && (
-                <Link
-                  href={`/incident/${dailyInc.id}?daily=1`}
-                  className="btn-primary flex items-center gap-2"
-                >
-                  <Calendar className="w-4 h-4" />
-                  <span>Daily challenge · {dailyInc.title}</span>
-                  <ChevronRight className="w-3 h-3" />
-                </Link>
-              )}
-              {dailyDoneToday && (
-                <div className="btn-ghost flex items-center gap-2 text-acid-400 border-acid-500/30">
-                  <Calendar className="w-4 h-4" />
-                  <span>Daily ✓ resolvido hoje</span>
-                </div>
-              )}
+            {/* Gems / XP */}
+            <div className="flex items-center gap-1.5">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#1CB0F6" stroke="#1899D6" strokeWidth="2">
+                <path d="M12 2 L22 12 L12 22 L2 12 Z" strokeLinejoin="round" />
+              </svg>
+              <span className="font-black text-lg tabular text-duo-blue-dark">
+                {player.xp}
+              </span>
+            </div>
+
+            {/* Hearts */}
+            <div className="flex items-center gap-1.5">
+              <Heart className="w-6 h-6 fill-duo-red text-duo-red-dark" strokeWidth={2.5} />
+              <span className="font-black text-lg tabular text-duo-red-dark">5</span>
+            </div>
+
+            <div className="flex-1" />
+
+            <button
+              onClick={() => { playSound("click"); setSoundOn(!player.soundOn); }}
+              className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition shrink-0"
+            >
+              {player.soundOn ? <Volume2 className="w-5 h-5 stroke-[2.5]" /> : <VolumeX className="w-5 h-5 stroke-[2.5]" />}
+            </button>
+          </div>
+
+          {/* XP bar */}
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 pb-2.5">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xs font-black text-duo-yellow-dark uppercase tracking-wider shrink-0">
+                {lvl.name}
+              </span>
+              <div className="flex-1 progress-track h-3">
+                <motion.div
+                  className="progress-fill"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${xpPct}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                />
+              </div>
+              <span className="text-xs font-bold text-duo-ink-soft tabular shrink-0">
+                {next ? `${player.xp}/${next.min}` : "MAX"}
+              </span>
             </div>
           </div>
-        </motion.section>
+        </header>
 
-        {/* STATS */}
-        <motion.section
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-12"
-        >
-          {[
-            { label: "Resolvidos", value: completed, sub: `de ${INCIDENTS.length}`, color: "text-white" },
-            { label: "A+ obtidos", value: aPlus, sub: "perfect runs", color: "text-acid-400", icon: Sparkles },
-            { label: "Economizado", value: `$${(player.totalSaved / 1000).toFixed(0)}k`, sub: "vs deixar correr", color: "text-acid-400" },
-            { label: "Achievements", value: `${totalAchievements}/${ACHIEVEMENTS.length}`, sub: "desbloqueados", color: "text-amber-400", icon: Crown },
-          ].map((s, i) => (
-            <motion.div
-              key={s.label}
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.3 + i * 0.06 }}
-              className="glass rounded-lg p-4 relative overflow-hidden"
-            >
-              {s.icon && <s.icon className="absolute top-3 right-3 w-4 h-4 text-white/10" />}
-              <div className="text-mono text-[10px] text-gray-500 uppercase tracking-widest mb-1">{s.label}</div>
-              <div className={`text-display text-3xl font-black ${s.color}`}>{s.value}</div>
-              <div className="text-mono text-[10px] text-gray-600 mt-1">{s.sub}</div>
-            </motion.div>
-          ))}
-        </motion.section>
-
-        {player.streak >= 1 && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="mb-8 glass-elev rounded-lg p-4 flex items-center gap-3 border-amber-500/30"
-          >
-            <Flame className="w-6 h-6 text-amber-400" />
-            <div>
-              <div className="text-display font-bold text-white">Streak: {player.streak} A+ consecutivos</div>
-              <div className="text-mono text-xs text-gray-400">Mantém o ritmo. Próximo A+ aumenta o multiplicador.</div>
+        {/* ════════ HERO ════════ */}
+        <section className="max-w-3xl mx-auto px-4 sm:px-6 pt-8 pb-6">
+          <div className="duo-card p-5 sm:p-6 flex items-center gap-4 sm:gap-5">
+            <Mascot expression="happy" size={100} className="shrink-0" />
+            <div className="flex-1 min-w-0">
+              <h1 className="text-display text-2xl sm:text-3xl font-black text-duo-ink leading-tight mb-1.5">
+                Oi, <input
+                  type="text"
+                  value={nameDraft}
+                  maxLength={14}
+                  onChange={(e) => setNameDraft(e.target.value)}
+                  onBlur={commitName}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  className="bg-transparent outline-none text-duo-blue-dark border-b-2 border-dashed border-duo-line focus:border-duo-blue inline-block max-w-[140px] font-black"
+                />! 👋
+              </h1>
+              <p className="text-duo-ink-soft text-sm sm:text-base font-medium leading-snug">
+                Bora estudar AWS AI Practitioner resolvendo incidentes reais.
+              </p>
             </div>
-          </motion.div>
-        )}
+          </div>
 
-        {/* AVAILABLE INCIDENTS */}
-        <section className="mb-12">
-          <SectionHead title="Available incidents" count={`${INCIDENTS.filter(i => !bestByInc[i.id] && i.minLevel <= lvlIdx).length} abertos · ${INCIDENTS.filter(i => i.minLevel > lvlIdx).length} locked`} />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {INCIDENTS.map((inc, i) => (
-              <motion.div
-                key={inc.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 + i * 0.04 }}
-              >
-                <IncidentCard
-                  incident={inc}
-                  locked={inc.minLevel > lvlIdx}
-                  bestResult={
-                    bestByInc[inc.id]
-                      ? {
-                          grade: bestByInc[inc.id],
-                          cost: history.filter((h) => h.id === inc.id).slice(-1)[0]?.cost ?? 0,
-                          elapsed: history.filter((h) => h.id === inc.id).slice(-1)[0]?.elapsed ?? 0,
-                        }
-                      : undefined
-                  }
-                  daily={inc.id === dailyId && !dailyDoneToday}
-                />
-              </motion.div>
-            ))}
+          {/* Daily challenge */}
+          {dailyInc && !dailyDoneToday && (
+            <Link
+              href={`/incident/${dailyInc.id}?daily=1`}
+              onClick={() => playSound("page")}
+              className="block mt-3 group"
+            >
+              <div className="duo-card duo-card-correct p-4 flex items-center gap-3 hover:bg-duo-green-light transition card-press">
+                <div className="shrink-0 w-12 h-12 rounded-2xl bg-duo-green text-white flex items-center justify-center fire-pulse">
+                  <Sparkles className="w-6 h-6 stroke-[2.5]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-black text-duo-green-dark text-sm uppercase tracking-wider">desafio diário · 2× XP</div>
+                  <div className="font-bold text-duo-ink leading-tight truncate">
+                    {dailyInc.title.replace(/^🔥\s*/, "")}
+                  </div>
+                </div>
+                <ChevronRight className="w-6 h-6 text-duo-green-dark stroke-[3] shrink-0" />
+              </div>
+            </Link>
+          )}
+        </section>
+
+        {/* ════════ STATS STRIP ════════ */}
+        <section className="max-w-3xl mx-auto px-4 sm:px-6 mb-6">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <StatBlock icon="🎯" label="resolvidos" value={`${completed}/${INCIDENTS.length}`} color="green" />
+            <StatBlock icon="⭐" label="A+" value={String(aPlus)} color="yellow" />
+            <StatBlock icon="💰" label="poupados" value={`$${(player.totalSaved / 1000).toFixed(0)}k`} color="blue" />
           </div>
         </section>
 
-        {/* HISTORY */}
-        {history.length > 0 && (
-          <section className="mb-12">
-            <SectionHead title="Incident history" count={`${history.length} resolvidos`} />
-            <div className="glass rounded-lg overflow-hidden divide-y divide-white/5">
-              {history.slice().reverse().slice(0, 20).map((h) => {
-                const inc = INCIDENTS.find((i) => i.id === h.id);
+        {/* ════════ MISSIONS PATH ════════ */}
+        <section className="max-w-3xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="h-1 flex-1 bg-duo-line rounded-full" />
+            <h2 className="text-display text-xl sm:text-2xl font-black text-duo-ink uppercase tracking-wider">
+              missões
+            </h2>
+            <div className="h-1 flex-1 bg-duo-line rounded-full" />
+          </div>
+
+          <div className="relative">
+            {INCIDENTS.map((inc, i) => {
+              const isLocked = inc.minLevel > lvlIdx;
+              const best = bestByInc[inc.id];
+              const isCurrent = !isLocked && !best;
+              const isDone = !!best;
+              // Zigzag path offset
+              const offset = (i % 4 === 1 ? "translate-x-[12%]" : i % 4 === 2 ? "translate-x-[24%]" : i % 4 === 3 ? "translate-x-[12%]" : "");
+
+              return (
+                <MissionNode
+                  key={inc.id}
+                  incident={inc}
+                  isLocked={isLocked}
+                  isDone={isDone}
+                  isCurrent={isCurrent}
+                  best={best}
+                  index={i}
+                  offset={offset}
+                />
+              );
+            })}
+          </div>
+        </section>
+
+        {/* ════════ ACHIEVEMENTS ════════ */}
+        {ownedAchievements.length > 0 && (
+          <section className="max-w-3xl mx-auto px-4 sm:px-6 mt-12">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="h-1 flex-1 bg-duo-line rounded-full" />
+              <h2 className="text-display text-xl sm:text-2xl font-black text-duo-ink uppercase tracking-wider flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-duo-yellow-dark" />
+                conquistas
+              </h2>
+              <div className="h-1 flex-1 bg-duo-line rounded-full" />
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {ACHIEVEMENTS.map((a) => {
+                const owned = player.achievements.includes(a.id);
                 return (
-                  <div key={h.at} className="grid grid-cols-[60px_1fr_auto_auto_auto] items-center px-4 sm:px-5 py-3 gap-3 sm:gap-5 text-sm">
-                    <div className={`text-display text-2xl font-black text-center ${gradeColor(h.grade)}`}>{h.grade}</div>
-                    <div className="min-w-0">
-                      <div className="text-white font-semibold truncate">{inc?.title ?? h.id}</div>
-                      <div className="text-mono text-[10px] text-gray-500 truncate">{inc?.incId ?? ""}</div>
-                    </div>
-                    <div className="text-mono text-xs text-gray-400 text-right">
-                      <div className="text-[9px] text-gray-600 uppercase tracking-widest">Time</div>
-                      <div>{formatTime(h.elapsed)}</div>
-                    </div>
-                    <div className="text-mono text-xs text-gray-400 text-right hidden sm:block">
-                      <div className="text-[9px] text-gray-600 uppercase tracking-widest">Cost</div>
-                      <div className="text-white">${Math.round(h.cost).toLocaleString()}</div>
-                    </div>
-                    <div className="text-mono text-xs text-amber-400 text-right">
-                      <div className="text-[9px] text-gray-600 uppercase tracking-widest">XP</div>
-                      <div>+{h.xp}</div>
-                    </div>
+                  <div key={a.id} className={`duo-card p-4 text-center ${owned ? "" : "opacity-40 grayscale"}`}>
+                    <div className="text-4xl mb-2">{a.icon}</div>
+                    <div className="font-black text-duo-ink text-sm mb-0.5 leading-tight">{a.title}</div>
+                    <div className="text-duo-ink-soft text-xs font-medium leading-snug">{a.description}</div>
                   </div>
                 );
               })}
@@ -204,60 +275,158 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* ACHIEVEMENTS */}
-        <section>
-          <SectionHead title="Achievements" count={`${totalAchievements} / ${ACHIEVEMENTS.length}`} />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {ACHIEVEMENTS.map((a, i) => {
-              const owned = player.achievements.includes(a.id);
-              return (
-                <motion.div
-                  key={a.id}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.5 + i * 0.03 }}
-                  className={`glass rounded-lg p-3 transition-all ${owned ? "border-acid-500/30 bg-acid-500/5" : "opacity-50 grayscale"}`}
-                >
-                  <div className="text-3xl mb-1">{a.icon}</div>
-                  <div className={`text-display text-sm font-bold mb-0.5 ${owned ? "text-white" : "text-gray-500"}`}>
-                    {a.title}
-                  </div>
-                  <div className="text-xs text-gray-500 leading-tight">{a.description}</div>
-                </motion.div>
-              );
-            })}
-          </div>
-        </section>
-
-        <footer className="mt-20 pt-6 border-t border-white/5 text-mono text-[11px] text-gray-600 text-center space-y-2">
-          <div>AI INCIDENT v2.0 · simulador para AWS AI Practitioner</div>
-          <ResetButton />
+        {/* ════════ FOOTER ════════ */}
+        <footer className="max-w-3xl mx-auto px-4 sm:px-6 mt-12 flex items-center justify-between gap-4">
+          <Link
+            href="/leaderboard"
+            onClick={() => playSound("page")}
+            className="text-sm font-bold text-duo-blue-dark hover:underline flex items-center gap-1.5"
+          >
+            <Trophy className="w-4 h-4" />
+            ranking
+          </Link>
+          <button
+            onClick={() => { if (confirm("Apagar TODO o progresso?")) reset(); }}
+            className="text-sm font-medium text-duo-ink-faded hover:text-duo-red-dark transition"
+          >
+            <Settings className="w-4 h-4 inline mr-1" />
+            resetar
+          </button>
         </footer>
-      </main>
+      </div>
     </>
   );
 }
 
-function SectionHead({ title, count }: { title: string; count: string }) {
+// ────────────────────────────────────────────
+// Atoms
+// ────────────────────────────────────────────
+
+function StatBlock({ icon, label, value, color }: { icon: string; label: string; value: string; color: "green" | "yellow" | "blue" | "red" }) {
+  const cfg =
+    color === "green" ? { bg: "bg-duo-green-light", text: "text-duo-green-dark", border: "border-duo-green" } :
+    color === "yellow" ? { bg: "bg-duo-yellow-light", text: "text-duo-yellow-dark", border: "border-duo-yellow" } :
+    color === "blue" ? { bg: "bg-duo-blue-light", text: "text-duo-blue-dark", border: "border-duo-blue" } :
+    { bg: "bg-duo-red-light", text: "text-duo-red-dark", border: "border-duo-red" };
   return (
-    <div className="flex items-center gap-4 mb-5">
-      <h2 className="text-mono text-xs font-bold text-gray-400 uppercase tracking-[0.25em]">{title}</h2>
-      <div className="flex-1 h-px bg-gradient-to-r from-white/10 to-transparent" />
-      <span className="text-mono text-[10px] text-gray-500">{count}</span>
+    <div className={`rounded-2xl p-3 sm:p-4 ${cfg.bg} border-2 ${cfg.border} text-center`} style={{ borderBottomWidth: 4 }}>
+      <div className="text-2xl sm:text-3xl mb-1">{icon}</div>
+      <div className={`font-black text-xl sm:text-2xl tabular ${cfg.text} leading-none`}>{value}</div>
+      <div className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider mt-1 ${cfg.text} opacity-80`}>
+        {label}
+      </div>
     </div>
   );
 }
 
-function ResetButton() {
-  const reset = useGame((s) => s.reset);
-  return (
-    <button
-      onClick={() => {
-        if (confirm("Vai apagar TODO o progresso. Continuar?")) reset();
-      }}
-      className="text-gray-600 hover:text-blood-400 underline decoration-dotted underline-offset-2"
+function MissionNode({
+  incident,
+  isLocked,
+  isDone,
+  isCurrent,
+  best,
+  index,
+  offset,
+}: {
+  incident: typeof INCIDENTS[0];
+  isLocked: boolean;
+  isDone: boolean;
+  isCurrent: boolean;
+  best: string | undefined;
+  index: number;
+  offset: string;
+}) {
+  const cfg =
+    incident.isBoss ? { bg: "bg-duo-purple", border: "border-duo-purple-dark", text: "text-white", glow: "shadow-[0_0_30px_rgba(206,130,255,0.5)]" } :
+    isLocked ? { bg: "bg-duo-line", border: "border-duo-line", text: "text-duo-ink-faded", glow: "" } :
+    isDone ? { bg: "bg-duo-yellow", border: "border-duo-yellow-dark", text: "text-white", glow: "" } :
+    isCurrent ? { bg: "bg-duo-green", border: "border-duo-green-dark", text: "text-white", glow: "shadow-[0_0_24px_rgba(88,204,2,0.35)]" } :
+    { bg: "bg-duo-blue", border: "border-duo-blue-dark", text: "text-white", glow: "" };
+
+  const titleClean = incident.title.replace(/^🔥\s*/, "");
+
+  const inner = (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      className={`relative flex items-center gap-4 ${offset}`}
     >
-      apagar progresso local
-    </button>
+      {/* Node circle */}
+      <div className={`relative shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center ${cfg.bg} border-4 ${cfg.border} ${cfg.glow} ${isCurrent ? "card-press" : ""} transition-all`}
+        style={{ borderBottomWidth: 8 }}>
+        {isLocked && <Lock className={`w-8 h-8 sm:w-9 sm:h-9 ${cfg.text} stroke-[2.5]`} />}
+        {isDone && !incident.isBoss && (
+          <div className={`text-display font-black ${cfg.text} text-3xl sm:text-4xl drop-shadow-md`}>{best}</div>
+        )}
+        {isDone && incident.isBoss && <Crown className={`w-10 h-10 ${cfg.text} fill-current drop-shadow-md`} />}
+        {isCurrent && !incident.isBoss && <Star className={`w-9 h-9 sm:w-10 sm:h-10 ${cfg.text} fill-current drop-shadow-md`} strokeWidth={2.5} />}
+        {isCurrent && incident.isBoss && <Crown className={`w-10 h-10 ${cfg.text} fill-current drop-shadow-md`} />}
+
+        {isCurrent && (
+          <motion.div
+            className="absolute -top-12 left-1/2 -translate-x-1/2 chip border-duo-yellow-dark bg-duo-yellow text-duo-yellow-dark text-xs font-black uppercase tracking-wider px-2 py-1 whitespace-nowrap"
+            animate={{ y: [0, -3, 0] }}
+            transition={{ duration: 1.4, repeat: Infinity }}
+          >
+            COMEÇAR
+          </motion.div>
+        )}
+      </div>
+
+      {/* Info card */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
+          <span className="text-[10px] font-black uppercase tracking-widest text-duo-ink-faded">
+            missão {String(index + 1).padStart(2, "0")}
+          </span>
+          {incident.isBoss && (
+            <span className="chip border-duo-purple-dark bg-duo-purple/15 text-duo-purple-dark text-[10px] px-2 py-0">
+              BOSS
+            </span>
+          )}
+          {isLocked && (
+            <span className="text-[10px] font-bold text-duo-ink-faded">
+              level {incident.minLevel + 1}+
+            </span>
+          )}
+        </div>
+        <h3 className={`text-display text-base sm:text-xl font-black leading-tight ${isLocked ? "text-duo-ink-faded" : "text-duo-ink"}`}>
+          {titleClean}
+        </h3>
+        <p className={`text-xs sm:text-sm font-medium leading-snug mt-0.5 line-clamp-1 sm:line-clamp-2 ${isLocked ? "text-duo-ink-faded" : "text-duo-ink-soft"}`}>
+          {incident.short}
+        </p>
+        {!isLocked && incident.services && incident.services.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {incident.services.slice(0, 3).map((s) => (
+              <span
+                key={s.name}
+                className="text-[10px] font-bold tracking-wide px-2 py-0.5 rounded-md bg-duo-orange-light text-duo-orange-dark border border-duo-orange/30"
+              >
+                {s.name}
+              </span>
+            ))}
+            {incident.services.length > 3 && (
+              <span className="text-[10px] font-bold text-duo-ink-faded">+{incident.services.length - 3}</span>
+            )}
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+
+  if (isLocked) {
+    return <div className="py-3">{inner}</div>;
+  }
+
+  return (
+    <Link
+      href={`/incident/${incident.id}`}
+      onClick={() => playSound("page")}
+      className="block py-3 hover:scale-[1.01] transition-transform"
+    >
+      {inner}
+    </Link>
   );
 }

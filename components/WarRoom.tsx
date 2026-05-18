@@ -1,223 +1,234 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, AlertTriangle, MessageSquare, User, Clock, Activity, Search, ChevronRight, FileText, Check, Eye, Sparkles } from "lucide-react";
 import Link from "next/link";
-import type { Incident, IncidentResult, Grade, Action, InvestigateAction, DecisionAction, BossPhase, Metric, LogLine } from "@/lib/types";
-import { sevColor, sevBg, sevLabel, formatTime, gradeColor } from "@/lib/levels";
+import { X, Search, ChevronRight, Check, Flame, Sparkles, Volume2, VolumeX, ArrowRight, Eye, AlertCircle, MessageSquare } from "lucide-react";
+import type { Incident, IncidentResult, Grade, Action, InvestigateAction, DecisionAction, Metric, LogLine } from "@/lib/types";
+import { sevLabel, formatTime } from "@/lib/levels";
 import { gradeRank } from "@/lib/achievements";
 import { FINDINGS } from "@/lib/findings";
 import { useGame } from "@/lib/store";
-import {
-  playSound,
-  startAlarmLoop,
-  stopAlarmLoop,
-} from "@/lib/sound";
-import { CostTicker } from "./CostTicker";
-import { Spark } from "./Spark";
-import { LogConsole } from "./LogConsole";
+import { playSound, startAlarmLoop, stopAlarmLoop } from "@/lib/sound";
+import { Mascot, type MascotExpression } from "./Mascot";
 import { ResultScreen } from "./ResultScreen";
-import { InvestigationModal } from "./InvestigationModal";
-import { DecisionConfirmModal } from "./DecisionConfirmModal";
-import { DeploymentOverlay } from "./DeploymentOverlay";
+import { ConsoleFrame } from "./ConsoleFrame";
+import { SlackThread } from "./SlackThread";
 
 interface Props {
   incident: Incident;
   isDaily: boolean;
 }
 
+type Step = "briefing" | "investigation" | "finding" | "decide" | "checking" | "feedback";
+
 export function WarRoom({ incident, isDaily }: Props) {
   const player = useGame((s) => s.player);
+  const setSoundOn = useGame((s) => s.setSoundOn);
   const recordResult = useGame((s) => s.recordResult);
 
   const isBoss = !!incident.isBoss && !!incident.phases?.length;
   const [phaseIdx, setPhaseIdx] = useState(0);
-  const [phaseTimeLeft, setPhaseTimeLeft] = useState(
-    isBoss ? incident.phases![0].duration : 0
-  );
+  const [phaseTimeLeft, setPhaseTimeLeft] = useState(isBoss ? incident.phases![0].duration : 0);
   const [bossGrades, setBossGrades] = useState<Grade[]>([]);
 
+  const [step, setStep] = useState<Step>("briefing");
   const [elapsed, setElapsed] = useState(incident.initialElapsed);
   const [cost, setCost] = useState(incident.initialCost);
   const [revealed, setRevealed] = useState<string[]>([]);
+  const [currentFinding, setCurrentFinding] = useState<string | null>(null);
+  const [selectedAction, setSelectedAction] = useState<DecisionAction | null>(null);
+  const [feedback, setFeedback] = useState<{ correct: boolean; grade: Grade; verdict: string; sub: string; xp: number; perfect: boolean; costDelta: number; actionId: string } | null>(null);
+  const [speedBonus, setSpeedBonus] = useState(0);
+  const [wrongActions, setWrongActions] = useState<string[]>([]);
+  const [attempts, setAttempts] = useState(0);
+  const [wrongFeedback, setWrongFeedback] = useState<{ name: string; sub: string } | null>(null);
   const [result, setResult] = useState<IncidentResult | null>(null);
-  const [decided, setDecided] = useState(false);
 
-  // modals
-  const [activeFindingKey, setActiveFindingKey] = useState<string | null>(null);
-  const [pendingDecision, setPendingDecision] = useState<DecisionAction | null>(null);
-  const [showNotebook, setShowNotebook] = useState(false);
-  const [deploying, setDeploying] = useState<{ action: DecisionAction; grade: Grade; actionId: string; verdict: string; sub: string; costDelta: number; xp: number; perfect: boolean; isBossNonFinal: boolean } | null>(null);
+  // Real player time (since this WarRoom mounted) — used for display & speed bonus
+  const playerStartedAtRef = useRef<number>(Date.now());
 
-  // current phase data (boss) or root incident
-  const currentMetrics: Metric[] = isBoss
-    ? incident.phases![phaseIdx].metrics
-    : incident.metrics;
+  const currentMetrics: Metric[] = isBoss ? incident.phases![phaseIdx].metrics : incident.metrics;
   const currentLogs: LogLine[] = isBoss
     ? [...incident.logs.slice(0, 3), ...incident.phases![phaseIdx].logs]
     : incident.logs;
-  const currentActions: Action[] = isBoss
-    ? incident.phases![phaseIdx].actions
-    : incident.actions;
+  const currentActions: Action[] = isBoss ? incident.phases![phaseIdx].actions : incident.actions;
 
-  // alarms for SEV-0/SEV-1
-  useEffect(() => {
-    if (incident.sev <= 1 && !decided) {
-      const t = setTimeout(() => startAlarmLoop(), 600);
-      return () => {
-        clearTimeout(t);
-        stopAlarmLoop();
-      };
-    }
-    return () => stopAlarmLoop();
-  }, [incident.sev, decided]);
+  const investigateActions = useMemo(
+    () => currentActions.filter((a): a is InvestigateAction => "type" in a && a.type === "investigate"),
+    [currentActions]
+  );
+  const decisionActions = useMemo(
+    () => currentActions.filter((a): a is DecisionAction => !("type" in a) || a.type !== "investigate"),
+    [currentActions]
+  );
+  const allInvestigated = investigateActions.length > 0 && investigateActions.every((a) => revealed.includes(a.reveals));
 
-  // cost + elapsed ticker
+  // —— Cost ticker (silent background) ——
   useEffect(() => {
-    if (decided || deploying) return;
+    if (step === "feedback" || step === "checking") return;
     const t = setInterval(() => {
       setElapsed((e) => e + 1);
       setCost((c) => c + incident.ratePerMin / 60);
     }, 1000);
     return () => clearInterval(t);
-  }, [decided, deploying, incident.ratePerMin]);
+  }, [step, incident.ratePerMin]);
 
-  // phase auto-escalate (boss)
+  // —— Boss phase timer ——
   useEffect(() => {
-    if (!isBoss || decided || deploying) return;
+    if (!isBoss || step === "feedback" || step === "checking") return;
     setPhaseTimeLeft(incident.phases![phaseIdx].duration);
     const t = setInterval(() => {
       setPhaseTimeLeft((p) => {
-        if (p <= 1) {
-          // auto-fail this phase
-          clearInterval(t);
-          handleBossPhaseTimeout();
-          return 0;
-        }
+        if (p <= 1) { clearInterval(t); handleBossPhaseTimeout(); return 0; }
         return p - 1;
       });
     }, 1000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phaseIdx, isBoss, decided, deploying]);
+  }, [phaseIdx, isBoss, step]);
 
+  // Stop alarm always (this is friendly UX, no alarm)
+  useEffect(() => {
+    stopAlarmLoop();
+    return () => stopAlarmLoop();
+  }, []);
+
+  // —— Handlers ——
   function handleBossPhaseTimeout() {
     playSound("fail");
-    // timeout = D grade in this phase
     setBossGrades((g) => [...g, "D"]);
     advanceBossOrFinish("D", "timeout", "Sistema escalou automaticamente.", "Tempo da fase esgotou.", 8000, 20);
   }
 
   function advanceBossOrFinish(grade: Grade, actionId: string, verdict: string, sub: string, costDelta: number, xp: number) {
     if (phaseIdx < incident.phases!.length - 1) {
-      // advance
       setCost((c) => c + costDelta);
       setPhaseIdx((p) => p + 1);
+      setStep("briefing");
+      setRevealed([]);
+      setSelectedAction(null);
       playSound("success");
     } else {
-      // final phase — compute overall grade as worst of all phases
       const all = [...bossGrades, grade];
       const worst = all.reduce((acc, g) => (gradeRank(g) < gradeRank(acc) ? g : acc), "A+" as Grade);
       finalizeResult(worst, actionId, verdict, sub, costDelta, xp + (worst === "A+" ? 200 : 0));
     }
   }
 
-  function handleInvestigate(a: InvestigateAction) {
-    if (revealed.includes(a.reveals)) {
-      // re-open the modal to revisit
-      setActiveFindingKey(a.reveals);
-      return;
+  function startInvestigation() {
+    if (investigateActions.length === 0) {
+      setStep("decide");
+    } else {
+      setStep("investigation");
     }
-    playSound("investigate");
-    setRevealed((r) => [...r, a.reveals]);
-    setElapsed((e) => e + a.timeCost);
-    setActiveFindingKey(a.reveals);
+    playSound("tick");
   }
 
-  function openFinding(key: string) {
-    setActiveFindingKey(key);
+  function openFinding(a: InvestigateAction) {
+    if (!revealed.includes(a.reveals)) {
+      setRevealed((r) => [...r, a.reveals]);
+      setElapsed((e) => e + a.timeCost);
+    }
+    setCurrentFinding(a.reveals);
+    setStep("finding");
     playSound("investigate");
   }
 
-  function handleDecide(a: DecisionAction, force = false) {
-    // Confirmation gate: if non-boss, has investigations, none done, and not forced
-    if (!isBoss && !force && investigateActions.length > 0 && revealed.length === 0) {
-      setPendingDecision(a);
-      playSound("alarm");
-      return;
-    }
+  function closeFinding() {
+    setCurrentFinding(null);
+    setStep("investigation");
+    playSound("tick");
+  }
 
+  function goToDecide() {
+    setStep("decide");
+    setSelectedAction(null);
+    playSound("page");
+  }
+
+  function checkAnswer() {
+    if (!selectedAction) return;
+    setStep("checking");
     playSound("click");
-    stopAlarmLoop();
 
-    // freeze cost ticker by setting decided early-ish via deploying flag
-    if (isBoss) {
-      const isFinal = a.grade === "F" || phaseIdx === incident.phases!.length - 1;
-      if (!isFinal) {
-        // mid-boss phase advance — quick animation
-        setDeploying({
-          action: a,
-          grade: a.grade,
-          actionId: a.id,
+    setTimeout(() => {
+      const a = selectedAction;
+      const isCorrect = a.grade === "A+" || a.grade === "A";
+      const newAttempts = attempts + 1;
+      setAttempts(newAttempts);
+
+      if (isCorrect) {
+        // Compute final grade — downgrade by attempts
+        let finalGrade: Grade = a.grade;
+        if (newAttempts === 2) finalGrade = a.grade === "A+" ? "A" : "A-";
+        else if (newAttempts === 3) finalGrade = "B";
+        else if (newAttempts >= 4) finalGrade = "C";
+
+        // Investigation bonus: only on first try
+        const perfect = newAttempts === 1 && revealed.length > 0 && allInvestigated;
+        const xpBonus = perfect ? 30 : 0;
+        const xpPenalty = (newAttempts - 1) * 15;
+
+        // SPEED BONUS — based on REAL player time (since opened the mission)
+        // Full bonus (+30) if player took < 60s, decays linearly to 0 at 240s
+        const playerElapsedSec = Math.floor((Date.now() - playerStartedAtRef.current) / 1000);
+        const speedBonus = Math.max(0, Math.round(30 * (1 - Math.max(0, playerElapsedSec - 60) / 180)));
+
+        const xpEarned = Math.max(10, a.xp + xpBonus + speedBonus - xpPenalty);
+
+        const grade: Grade = isBoss
+          ? (phaseIdx === incident.phases!.length - 1
+            ? [...bossGrades, finalGrade].reduce((acc, g) => (gradeRank(g) < gradeRank(acc) ? g : acc), "A+" as Grade)
+            : finalGrade)
+          : finalGrade;
+
+        setFeedback({
+          correct: true,
+          grade,
           verdict: a.verdict,
           sub: a.sub,
+          xp: xpEarned,
+          perfect,
           costDelta: a.costDelta,
-          xp: a.xp,
-          perfect: false,
-          isBossNonFinal: true,
+          actionId: a.id,
         });
-        return;
-      }
-      // final boss decision — show overlay, then finalize
-      const all = [...bossGrades, a.grade];
-      const worst = all.reduce((acc, g) => (gradeRank(g) < gradeRank(acc) ? g : acc), "A+" as Grade);
-      setBossGrades(all);
-      setDeploying({
-        action: a,
-        grade: worst,
-        actionId: a.id,
-        verdict: a.verdict,
-        sub: a.sub,
-        costDelta: a.costDelta,
-        xp: a.xp,
-        perfect: false,
-        isBossNonFinal: false,
-      });
-      return;
-    }
+        // expose speed bonus via feedback state extension below
+        setSpeedBonus(speedBonus);
+        playSound("success");
+        setStep("feedback");
+      } else {
+        // WRONG — marca opção, volta pro decide (sem game over, tenta até acertar)
+        setWrongActions((w) => [...w, a.id]);
+        setWrongFeedback({ name: a.name, sub: a.sub });
+        playSound("fail");
 
-    // non-boss: queue deployment animation
-    const perfect = revealed.length > 0 && (a.grade === "A" || a.grade === "A+");
-    const xpBonus = perfect ? 30 : 0;
-    setDeploying({
-      action: a,
-      grade: a.grade,
-      actionId: a.id,
-      verdict: a.verdict,
-      sub: a.sub,
-      costDelta: a.costDelta,
-      xp: a.xp + xpBonus,
-      perfect,
-      isBossNonFinal: false,
-    });
+        setSelectedAction(null);
+        setStep("decide");
+        setTimeout(() => setWrongFeedback(null), 3000);
+      }
+    }, 500);
   }
 
-  function onDeploymentComplete() {
-    if (!deploying) return;
-    const d = deploying;
-    setDeploying(null);
+  function handleContinue() {
+    if (!feedback) return;
 
-    if (d.isBossNonFinal) {
-      // advance boss phase
-      setBossGrades((g) => [...g, d.action.grade]);
-      setCost((c) => c + d.costDelta);
+    if (isBoss && phaseIdx < incident.phases!.length - 1) {
+      // mid-boss, advance phase
+      setCost((c) => c + feedback.costDelta);
+      setBossGrades((g) => [...g, selectedAction!.grade]);
       setPhaseIdx((p) => p + 1);
-      playSound("success");
+      setStep("briefing");
+      setRevealed([]);
+      setSelectedAction(null);
+      setFeedback(null);
+      setWrongActions([]);
+      setAttempts(0);
+      setWrongFeedback(null);
       return;
     }
 
-    finalizeResult(d.grade, d.actionId, d.verdict, d.sub, d.costDelta, d.xp, d.perfect);
+    finalizeResult(feedback.grade, feedback.actionId, feedback.verdict, feedback.sub, feedback.costDelta, feedback.xp, feedback.perfect);
   }
 
   function finalizeResult(grade: Grade, actionId: string, verdict: string, sub: string, costDelta: number, xp: number, perfect = false) {
@@ -226,12 +237,14 @@ export function WarRoom({ incident, isDaily }: Props) {
     const wouldveContinued = (1000 - elapsed) * (incident.ratePerMin / 60);
     const saved = Math.max(0, wouldveContinued - costDelta);
     const action = currentActions.find((x) => x.id === actionId);
+    // result.elapsed = REAL player time (not the incident clock)
+    const playerElapsedSec = Math.floor((Date.now() - playerStartedAtRef.current) / 1000);
     const r: IncidentResult = {
       id: incident.id,
       grade,
       xp,
       cost: finalCost,
-      elapsed: elapsed,
+      elapsed: playerElapsedSec,
       saved,
       wouldve: wouldveContinued,
       actionId,
@@ -243,395 +256,576 @@ export function WarRoom({ incident, isDaily }: Props) {
       isDaily,
     };
     setCost(finalCost);
-    setDecided(true);
     setResult(r);
     recordResult(r);
-    if (grade === "A" || grade === "A+") {
-      playSound("success");
-    } else if (grade === "F" || grade === "D") {
-      playSound("fail");
-    } else {
-      playSound("click");
-    }
   }
 
-  const investigateActions = currentActions.filter((a): a is InvestigateAction => "type" in a && a.type === "investigate");
-  const decisionActions = currentActions.filter((a): a is DecisionAction => !("type" in a) || a.type !== "investigate");
-  const allInvestigated = investigateActions.length > 0 && investigateActions.every((a) => revealed.includes(a.reveals));
+  // —— Mascot expression mapping ——
+  const mascotExpr: MascotExpression =
+    step === "briefing" ? (incident.sev <= 1 ? "alert" : "default") :
+    step === "investigation" ? "thinking" :
+    step === "finding" ? "happy" :
+    step === "decide" ? "thinking" :
+    step === "checking" ? "thinking" :
+    step === "feedback" ? (feedback?.correct ? "celebrate" : "sad") :
+    "default";
 
-  const sevAccentClass =
-    incident.sev === 0 ? "text-fuchsia-400" :
-    incident.sev === 1 ? "text-blood-400" :
-    incident.sev === 2 ? "text-amber-400" :
-    "text-cyber-400";
+  // —— Progress percentage ——
+  const totalSteps = (investigateActions.length > 0 ? 3 : 2); // briefing + (invest?) + decide
+  const stepIndex =
+    step === "briefing" ? 0 :
+    step === "investigation" || step === "finding" ? 1 :
+    step === "decide" || step === "checking" ? (investigateActions.length > 0 ? 2 : 1) :
+    totalSteps;
+  const progressPct = Math.min(100, (stepIndex / totalSteps) * 100);
 
   return (
-    <>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 pb-20">
-        {/* Top nav */}
-        <div className="flex items-center justify-between mb-6">
-          <Link
-            href="/"
-            onClick={() => { stopAlarmLoop(); playSound("page"); }}
-            className="flex items-center gap-2 text-mono text-xs text-gray-500 hover:text-white transition-colors"
+    <div className="min-h-screen bg-duo-cream text-duo-ink flex flex-col">
+      {/* ════════ TOP BAR ════════ */}
+      <header className="sticky top-0 z-30 bg-duo-cream/95 backdrop-blur-sm border-b-2 border-duo-line">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3 sm:gap-4">
+          <button
+            onClick={() => {
+              if (confirm("Sair da missão? Tua progresso atual nesse incident será perdido.")) {
+                stopAlarmLoop();
+                playSound("page");
+                window.location.href = "/";
+              }
+            }}
+            className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition"
+            aria-label="fechar"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>back to incidents</span>
-          </Link>
-          {isDaily && (
-            <div className="text-mono text-[10px] text-acid-400 uppercase tracking-widest flex items-center gap-2">
-              <motion.span
-                animate={{ opacity: [1, 0.4, 1] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-                className="w-1.5 h-1.5 rounded-full bg-acid-400"
-              />
-              DAILY CHALLENGE · 2x XP
+            <X className="w-6 h-6 stroke-[3]" />
+          </button>
+
+          {/* Progress bar */}
+          <div className="flex-1 progress-track h-4">
+            <motion.div
+              className={`progress-fill ${
+                step === "feedback" && !feedback?.correct ? "progress-fill-red" :
+                step === "feedback" && feedback?.correct ? "progress-fill-green" :
+                "progress-fill"
+              }`}
+              style={{ width: `${progressPct}%` }}
+              initial={false}
+            />
+          </div>
+
+          {/* Attempts counter (only shows if there were wrong attempts) */}
+          {wrongActions.length > 0 && (
+            <div className="flex items-center gap-1 shrink-0 chip border-duo-orange-dark bg-duo-orange-light text-duo-orange-dark text-xs px-2 py-0.5">
+              <span>↩</span>
+              <span className="font-black tabular">{wrongActions.length + 1}ª tentativa</span>
             </div>
           )}
+
+          {/* Sound toggle */}
+          <button
+            onClick={() => { playSound("click"); setSoundOn(!player.soundOn); }}
+            className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition shrink-0"
+          >
+            {player.soundOn ? <Volume2 className="w-5 h-5 stroke-[2.5]" /> : <VolumeX className="w-5 h-5 stroke-[2.5]" />}
+          </button>
         </div>
 
-        {/* SEV-0 / SEV-1 alarm banner */}
-        {incident.sev <= 1 && !decided && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`mb-4 rounded-lg p-3 flex items-center gap-3 border ${
-              incident.sev === 0
-                ? "bg-fuchsia-500/15 border-fuchsia-500/40 animate-siren"
-                : "bg-blood-500/15 border-blood-500/40 animate-siren"
-            }`}
-          >
-            <AlertTriangle className={`w-5 h-5 ${incident.sev === 0 ? "text-fuchsia-400" : "text-blood-400"} animate-pulse`} />
-            <div className="flex-1 text-sm">
-              <b className="text-white">{sevLabel(incident.sev)} ACTIVE</b>
-              <span className="text-gray-300 ml-2">· {incident.short}</span>
-            </div>
-            <div className="text-mono text-[10px] text-white/80 uppercase tracking-widest">⚠ alarm active</div>
-          </motion.div>
-        )}
-
-        {/* Boss phase tracker */}
-        {isBoss && !decided && (
-          <motion.div
-            key={phaseIdx}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-4 glass-elev rounded-lg p-4 border-fuchsia-500/30 glow-fuchsia"
-          >
-            <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-              <div className="text-mono text-[10px] text-fuchsia-300 uppercase tracking-widest">
-                BOSS · Fase {phaseIdx + 1}/{incident.phases!.length}
-              </div>
-              <div className="text-mono text-xs text-fuchsia-200">
-                ⏱ <b className="text-white">{formatTime(phaseTimeLeft)}</b> antes da auto-escalação
-              </div>
-            </div>
-            <div className="text-display text-xl font-bold text-white">
-              {incident.phases![phaseIdx].name}
-            </div>
-            <p className="text-sm text-gray-400 mt-1">{incident.phases![phaseIdx].description}</p>
-            <div className="flex gap-1 mt-3">
-              {incident.phases!.map((_, i) => (
-                <div
-                  key={i}
-                  className={`h-1 flex-1 rounded ${
-                    i < phaseIdx
-                      ? "bg-acid-500"
-                      : i === phaseIdx
-                      ? "bg-fuchsia-400"
-                      : "bg-white/10"
-                  }`}
-                />
-              ))}
-            </div>
-          </motion.div>
-        )}
-
-        {/* HEADER */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <div className="flex items-center gap-3 mb-2 flex-wrap">
-            <span className={`text-mono text-[10px] font-black px-2.5 py-1 rounded ${sevBg(incident.sev)} text-${incident.sev === 2 ? "black" : "white"} tracking-widest`}>
-              {sevLabel(incident.sev)}
+        {/* Boss phase pill */}
+        {isBoss && (
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-2 flex items-center gap-2 text-sm">
+            <span className="chip border-duo-purple-dark bg-duo-purple-dark/10 text-duo-purple-dark">
+              👑 BOSS
             </span>
-            <span className="text-mono text-[10px] text-gray-500 break-all">{incident.incId}</span>
+            <span className="font-bold text-duo-purple-dark">
+              Fase {phaseIdx + 1}/{incident.phases!.length} · {incident.phases![phaseIdx].name}
+            </span>
+            <div className="flex-1" />
+            <span className="text-duo-ink-soft text-sm font-bold tabular">⏱ {formatTime(phaseTimeLeft)}</span>
           </div>
-          <h1 className="text-display text-3xl sm:text-5xl font-black text-white leading-tight tracking-tight mb-3">
-            {incident.title}
-          </h1>
+        )}
 
-          <div className="flex flex-wrap gap-4 text-mono text-[11px] text-gray-400">
-            <div className="flex items-center gap-1.5">
-              <User className="w-3 h-3" />
-              <span>cliente · <b className="text-white">{incident.customer}</b></span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <MessageSquare className="w-3 h-3" />
-              <span>slack · <b className="text-cyber-400">{incident.slack}</b></span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-3 h-3" />
-              <span>elapsed · <b className="text-blood-400">{formatTime(elapsed)}</b></span>
-            </div>
+        {isDaily && (
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-2 flex items-center gap-2 text-sm">
+            <span className="chip border-duo-green-dark bg-duo-green-light text-duo-green-dark">
+              <Sparkles className="w-3.5 h-3.5" /> DAILY · 2× XP
+            </span>
           </div>
-        </motion.div>
+        )}
+      </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* LEFT: situation */}
-          <div className="lg:col-span-2 space-y-5">
-            <p className="text-gray-300 leading-relaxed glass-strong rounded-lg p-5">{incident.desc}</p>
+      {/* ════════ MAIN STAGE ════════ */}
+      <main className="flex-1 flex flex-col">
+        <AnimatePresence mode="wait">
 
-            {/* metrics */}
-            <div className={`glass rounded-lg p-5 ${decided ? "" : "animate-breath"}`}>
-              <div className="flex items-center gap-2 mb-4">
-                <Activity className={`w-4 h-4 ${sevAccentClass}`} />
-                <h3 className="text-mono text-xs uppercase tracking-widest text-gray-400 font-bold">live metrics</h3>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {currentMetrics.map((m, i) => (
-                  <motion.div
-                    key={`${phaseIdx}-${i}`}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="bg-white/[0.02] border border-white/5 rounded-md p-3"
-                  >
-                    <div className="text-mono text-[9px] text-gray-500 uppercase tracking-widest">{m.label}</div>
-                    <div className={`text-display text-2xl font-bold mt-1 ${
-                      m.cls === "red" ? "text-blood-400" :
-                      m.cls === "amber" ? "text-amber-400" :
-                      m.cls === "green" ? "text-acid-400" :
-                      m.cls === "cyan" ? "text-cyber-400" : "text-white"
-                    }`}>{m.value}</div>
-                    {m.delta && (
-                      <div className={`text-mono text-[10px] mt-1 ${
-                        m.deltaCls === "up" ? "text-blood-400" :
-                        m.deltaCls === "down" ? "text-acid-400" : "text-gray-500"
-                      }`}>{m.delta}</div>
-                    )}
-                  </motion.div>
-                ))}
-              </div>
-
-              <div className="mt-4">
-                <Spark type={incident.sparkType} />
-              </div>
-            </div>
-
-            {/* timeline */}
-            {!isBoss && (
-              <div className="glass rounded-lg p-5">
-                <h3 className="text-mono text-xs uppercase tracking-widest text-gray-400 font-bold mb-3">timeline</h3>
-                <div className="space-y-2">
-                  {incident.timeline.map((ev, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.08 }}
-                      className={`flex items-start gap-3 p-2 rounded text-sm ${
-                        ev.bad ? "bg-blood-500/5 border-l-2 border-blood-500" : "bg-white/[0.015]"
-                      }`}
-                    >
-                      <span className="text-mono text-[10px] text-gray-500 shrink-0 w-16 pt-0.5">{ev.t}</span>
-                      <span className="text-gray-300 [&_b]:text-white [&_b]:font-semibold" dangerouslySetInnerHTML={{ __html: ev.ev }} />
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* logs */}
-            <div className="glass rounded-lg p-5">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-mono text-xs uppercase tracking-widest text-gray-400 font-bold">cloudwatch logs · live</h3>
-                <motion.div
-                  className="w-2 h-2 rounded-full bg-blood-500"
-                  animate={{ opacity: [1, 0.3, 1] }}
-                  transition={{ duration: 1.2, repeat: Infinity }}
-                />
-              </div>
-              <LogConsole logs={currentLogs} />
-            </div>
-
-            {/* findings notebook · compact strip */}
-            <AnimatePresence>
-              {revealed.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  className="glass rounded-lg p-3 border-cyber-500/20"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileText className="w-3.5 h-3.5 text-cyber-400" />
-                    <h3 className="text-mono text-[10px] uppercase tracking-widest text-cyber-400 font-bold">notebook</h3>
-                    <span className="text-mono text-[10px] text-gray-500">· {revealed.length} {revealed.length === 1 ? "anotação" : "anotações"}</span>
-                    {allInvestigated && (
-                      <motion.span
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        className="ml-auto flex items-center gap-1 text-mono text-[10px] text-acid-400 font-bold"
-                      >
-                        <Sparkles className="w-3 h-3" />
-                        FULL CONTEXT
-                      </motion.span>
-                    )}
+          {/* ─── STEP 1: BRIEFING ─── */}
+          {step === "briefing" && (
+            <motion.section
+              key="briefing"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6"
+            >
+              <div className="max-w-2xl w-full mx-auto">
+                {/* Mascot + speech bubble */}
+                <div className="flex items-end gap-3 sm:gap-5 mb-6">
+                  <Mascot expression={mascotExpr} size={140} />
+                  <div className="duo-card flex-1 p-5 relative -mb-1">
+                    {/* Speech bubble tail */}
+                    <div className="absolute -left-3 bottom-6 w-0 h-0 border-t-[10px] border-t-transparent border-r-[14px] border-r-white border-b-[10px] border-b-transparent" />
+                    <div className="absolute -left-[14px] bottom-6 w-0 h-0 border-t-[10px] border-t-transparent border-r-[14px] border-r-duo-line border-b-[10px] border-b-transparent" />
+                    <div className="flex items-center gap-2 mb-2">
+                      <SevPill sev={incident.sev} />
+                      <span className="text-duo-ink-soft text-xs font-bold tabular">@{incident.customer}</span>
+                    </div>
+                    <p className="text-duo-ink font-bold text-base sm:text-lg leading-snug">
+                      {incident.sev <= 1 ? "Eita, deu ruim! " : "Tem um problema rolando. "}
+                      Bora resolver?
+                    </p>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {revealed.map((key) => {
-                      const f = FINDINGS[key];
-                      if (!f) return null;
-                      return (
-                        <button
-                          key={key}
-                          onClick={() => openFinding(key)}
-                          className="text-mono text-[10px] px-2 py-1 rounded bg-cyber-500/10 border border-cyber-500/20 text-cyber-300 hover:bg-cyber-500/20 hover:border-cyber-500/40 transition-all flex items-center gap-1"
-                        >
-                          <Eye className="w-2.5 h-2.5" />
-                          <span>{f.title.length > 28 ? f.title.slice(0, 26) + "…" : f.title}</span>
-                        </button>
-                      );
-                    })}
+                </div>
+
+                {/* Big incident title card */}
+                <motion.div
+                  initial={{ scale: 0.95, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.15, type: "spring", stiffness: 200, damping: 18 }}
+                  className="duo-card p-6 sm:p-8 mb-6"
+                >
+                  <h1 className="text-display text-3xl sm:text-5xl font-black text-duo-ink leading-tight mb-3 tracking-tight">
+                    {incident.title.replace(/^🔥\s*/, "")}
+                  </h1>
+                  <p className="text-duo-ink-soft text-base sm:text-lg leading-relaxed">
+                    {incident.desc}
+                  </p>
+
+                  {/* Meta chips */}
+                  <div className="flex flex-wrap gap-2 mt-5">
+                    <span className="chip border-duo-blue-dark bg-duo-blue-light text-duo-blue-dark">
+                      💬 {incident.slack}
+                    </span>
+                    {!isBoss && incident.short && (
+                      <span className="chip border-duo-orange-dark bg-duo-orange-light text-duo-orange-dark">
+                        ⚠ {incident.short}
+                      </span>
+                    )}
                   </div>
                 </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
 
-          {/* RIGHT: cost + actions */}
-          <div className="space-y-5">
-            <CostTicker cost={cost} rate={incident.ratePerMin} highIntensity={incident.sev <= 1} />
+                {/* AWS Services Refresher */}
+                {incident.services && incident.services.length > 0 && (
+                  <ServicesRefresher services={incident.services} />
+                )}
 
-            {/* investigate actions */}
-            {!isBoss && investigateActions.length > 0 && (
-              <div className="glass rounded-lg p-5">
-                <div className="flex items-center gap-2 mb-2">
-                  <Search className="w-4 h-4 text-cyber-400" />
-                  <h3 className="text-mono text-xs uppercase tracking-widest text-cyber-400 font-bold">investigate first</h3>
-                  <div className="ml-auto text-mono text-[10px] text-cyber-300">
-                    {revealed.length}/{investigateActions.length}
+                {/* CTA */}
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {!isBoss && investigateActions.length > 0 ? (
+                    <>
+                      <button onClick={startInvestigation} className="duo-btn duo-green flex-1 flex items-center justify-center gap-2">
+                        <Search className="w-5 h-5" />
+                        <span>investigar primeiro</span>
+                      </button>
+                      <button onClick={goToDecide} className="duo-btn duo-white">
+                        pular
+                      </button>
+                    </>
+                  ) : (
+                    <button onClick={goToDecide} className="duo-btn duo-green w-full flex items-center justify-center gap-2">
+                      <span>bora decidir</span>
+                      <ArrowRight className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </motion.section>
+          )}
+
+          {/* ─── STEP 2: INVESTIGATION HUB ─── */}
+          {step === "investigation" && (
+            <motion.section
+              key="investigation"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6"
+            >
+              <div className="max-w-2xl w-full mx-auto">
+                <div className="flex items-center gap-3 mb-4">
+                  <Mascot expression="thinking" size={90} />
+                  <div>
+                    <h2 className="text-display text-2xl sm:text-3xl font-black text-duo-ink leading-tight">
+                      Olha as pistas antes de decidir
+                    </h2>
+                    <p className="text-duo-ink-soft text-sm mt-1">
+                      Investigar = mais contexto = nota melhor. {revealed.length}/{investigateActions.length} checadas.
+                    </p>
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 mb-3 leading-relaxed">
-                  Sêniores investigam antes de agir. <span className="text-cyber-300">+30 XP</span> de bonus se a decisão for A/A+.
-                </p>
-                <div className="space-y-2">
-                  {investigateActions.map((a) => {
+
+                <div className="grid grid-cols-1 gap-3 mb-6">
+                  {investigateActions.map((a, i) => {
                     const done = revealed.includes(a.reveals);
                     return (
-                      <button
+                      <motion.button
                         key={a.id}
-                        onClick={() => handleInvestigate(a)}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.06 }}
+                        onClick={() => openFinding(a)}
                         onMouseEnter={() => playSound("hover")}
-                        disabled={decided || !!deploying}
-                        className={`w-full text-left rounded-md px-3 py-2.5 border transition-all text-sm group ${
-                          done
-                            ? "bg-cyber-500/8 border-cyber-500/25 text-cyber-200 hover:bg-cyber-500/15 hover:border-cyber-500/40"
-                            : "bg-white/[0.02] border-white/8 hover:border-cyber-500/40 hover:bg-cyber-500/10 text-gray-200"
+                        className={`duo-card text-left p-4 sm:p-5 flex items-center gap-4 card-press ${
+                          done ? "duo-card-correct" : ""
                         }`}
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium flex items-center gap-2 min-w-0">
-                            {done && <Check className="w-3 h-3 text-acid-400 shrink-0" />}
-                            <span className="truncate">{a.name}</span>
-                          </span>
-                          <span className="text-mono text-[10px] text-cyber-400 shrink-0 group-hover:text-cyber-300">
-                            {done ? "revisar →" : a.hint}
-                          </span>
+                        <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center ${
+                          done ? "bg-duo-green text-white" : "bg-duo-blue-light text-duo-blue-dark"
+                        }`}>
+                          {done ? <Check className="w-6 h-6 stroke-[3]" /> : <Eye className="w-6 h-6 stroke-[2.5]" />}
                         </div>
-                      </button>
+                        <div className="flex-1 min-w-0">
+                          <div className={`font-black text-base sm:text-lg leading-tight ${done ? "text-duo-green-dark" : "text-duo-ink"}`}>
+                            {a.name}
+                          </div>
+                          <div className="text-duo-ink-soft text-sm mt-0.5 font-medium">
+                            {done ? "✓ visto · clique pra revisar" : a.hint}
+                          </div>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-duo-ink-faded stroke-[3] shrink-0" />
+                      </motion.button>
                     );
                   })}
                 </div>
-              </div>
-            )}
 
-            {/* decision actions */}
-            <div className={`glass rounded-lg p-5 transition-all ${allInvestigated ? "border-acid-500/30 glow-green" : ""}`}>
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-mono text-xs uppercase tracking-widest text-acid-400 font-bold">decide & act</h3>
                 {allInvestigated && (
-                  <motion.span
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ type: "spring", stiffness: 200 }}
-                    className="text-mono text-[9px] bg-acid-500/20 text-acid-300 px-1.5 py-0.5 rounded-full border border-acid-500/30 font-bold"
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="duo-card duo-card-correct p-4 mb-4 flex items-center gap-3"
                   >
-                    +30 XP READY
-                  </motion.span>
-                )}
-              </div>
-              <p className="text-xs text-gray-500 mb-3">A escolha define a nota. O custo do incidente para no momento que tu age.</p>
-              {!isBoss && !allInvestigated && investigateActions.length > 0 && revealed.length > 0 && (
-                <p className="text-mono text-[10px] text-amber-400/80 mb-3 flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" />
-                  <span>ainda tem {investigateActions.length - revealed.length} pista pra checar pro full context bonus.</span>
-                </p>
-              )}
-              <div className="space-y-2">
-                {decisionActions.map((a) => (
-                  <button
-                    key={a.id}
-                    onClick={() => handleDecide(a)}
-                    onMouseEnter={() => playSound("hover")}
-                    disabled={decided || !!deploying}
-                    className="w-full text-left rounded-md px-3 py-3 border bg-white/[0.02] border-white/8 hover:border-acid-500/40 hover:bg-acid-500/8 transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="font-semibold text-sm text-gray-100 group-hover:text-white">{a.name}</span>
-                      <ChevronRight className="w-3.5 h-3.5 text-gray-600 group-hover:text-acid-400 group-hover:translate-x-0.5 transition-all shrink-0 mt-0.5" />
+                    <Sparkles className="w-6 h-6 fill-duo-yellow text-duo-yellow-dark shrink-0" />
+                    <div className="flex-1 font-bold text-duo-green-dark text-sm sm:text-base">
+                      Investigaste tudo! A/A+ agora vale +30 XP bônus 🎯
                     </div>
-                    <div className="text-mono text-[10px] text-gray-500 mt-1">{a.hint}</div>
-                  </button>
-                ))}
+                  </motion.div>
+                )}
+
+                <button onClick={goToDecide} className="duo-btn duo-green w-full flex items-center justify-center gap-2">
+                  <span>{allInvestigated ? "pronto pra decidir" : "decidir agora"}</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
+            </motion.section>
+          )}
 
-      {/* Investigation modal */}
-      <AnimatePresence>
-        {activeFindingKey && FINDINGS[activeFindingKey] && (
-          <InvestigationModal
-            findingKey={activeFindingKey}
-            finding={FINDINGS[activeFindingKey]}
-            onClose={() => setActiveFindingKey(null)}
-          />
-        )}
-      </AnimatePresence>
+          {/* ─── STEP 3: FINDING REVEAL (modal-like inline) ─── */}
+          {step === "finding" && currentFinding && FINDINGS[currentFinding] && (
+            <motion.section
+              key="finding"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.3 }}
+              className="flex-1 flex flex-col px-4 sm:px-6 py-6"
+            >
+              <div className="max-w-2xl w-full mx-auto flex-1 flex flex-col">
+                <div className="flex items-start gap-3 mb-5">
+                  <div className="shrink-0 w-12 h-12 rounded-2xl bg-duo-blue text-white flex items-center justify-center">
+                    <Eye className="w-6 h-6 stroke-[2.5]" />
+                  </div>
+                  <div>
+                    <div className="text-duo-blue-dark text-xs font-black uppercase tracking-widest mb-1">pista encontrada · você está em</div>
+                    <h2 className="text-display text-2xl sm:text-3xl font-black text-duo-ink leading-tight">
+                      {FINDINGS[currentFinding].title}
+                    </h2>
+                  </div>
+                </div>
 
-      {/* Decision confirmation */}
-      <AnimatePresence>
-        {pendingDecision && (
-          <DecisionConfirmModal
-            actionName={pendingDecision.name}
-            pendingCount={investigateActions.length - revealed.length}
-            onCancel={() => setPendingDecision(null)}
-            onConfirm={() => {
-              const a = pendingDecision;
-              setPendingDecision(null);
-              handleDecide(a, true);
-            }}
-          />
-        )}
-      </AnimatePresence>
+                {/* Finding rendered inside AWS Console frame */}
+                <div className="mb-5 flex-1">
+                  <ConsoleFrame findingKey={currentFinding}>
+                    <div dangerouslySetInnerHTML={{ __html: FINDINGS[currentFinding].body }} />
+                  </ConsoleFrame>
+                </div>
 
-      {/* Deployment animation */}
-      <AnimatePresence>
-        {deploying && (
-          <DeploymentOverlay
-            actionName={deploying.action.name}
-            isGood={deploying.grade === "A+" || deploying.grade === "A" || deploying.grade === "A-" || deploying.grade === "B"}
-            onComplete={onDeploymentComplete}
-          />
-        )}
-      </AnimatePresence>
+                <button onClick={closeFinding} className="duo-btn duo-green w-full flex items-center justify-center gap-2">
+                  <span>entendi, próxima</span>
+                  <ArrowRight className="w-5 h-5" />
+                </button>
+              </div>
+            </motion.section>
+          )}
 
+          {/* ─── STEP 4: DECISION ─── */}
+          {step === "decide" && (
+            <motion.section
+              key="decide"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="flex-1 flex flex-col px-4 sm:px-6 py-6"
+            >
+              <div className="max-w-2xl w-full mx-auto flex-1 flex flex-col">
+                <div className="flex items-center gap-3 mb-5">
+                  <Mascot expression={mascotExpr} size={90} />
+                  <div className="flex-1">
+                    <h2 className="text-display text-2xl sm:text-3xl font-black text-duo-ink leading-tight">
+                      {attempts === 0 ? "Qual a melhor decisão?" : "Tenta outra"}
+                    </h2>
+                    <p className="text-duo-ink-soft text-sm mt-1">
+                      {attempts === 0 ? (
+                        <>Escolhe uma opção e bate em <b className="text-duo-green-dark">VERIFICAR</b>.</>
+                      ) : (
+                        <>Esse não foi · tenta outra. Cada erro tira pontos do XP final.</>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Wrong toast — appears after a wrong attempt */}
+                <AnimatePresence>
+                  {wrongFeedback && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      transition={{ type: "spring", stiffness: 250, damping: 18 }}
+                      className="duo-card duo-card-wrong p-4 mb-4 flex items-center gap-3"
+                    >
+                      <div className="shrink-0 w-10 h-10 rounded-2xl bg-duo-red text-white flex items-center justify-center font-black text-xl">
+                        ✗
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-black text-duo-red-dark text-sm sm:text-base leading-tight">
+                          Não foi essa! −1 ❤️
+                        </div>
+                        <div className="text-duo-red-dark/80 text-xs font-medium mt-0.5 leading-snug">
+                          {wrongFeedback.sub}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Case briefing — Slack-style war room thread */}
+                <div className="mb-4">
+                  <SlackThread incident={incident} playerName={player.name} />
+                </div>
+
+                {/* Pistas encontradas */}
+                {revealed.length > 0 && (
+                  <FindingsRecap
+                    keys={revealed}
+                    pendingCount={investigateActions.length - revealed.length}
+                    onGoBack={!isBoss && investigateActions.length > revealed.length ? () => { playSound("page"); setStep("investigation"); setSelectedAction(null); } : undefined}
+                  />
+                )}
+
+                {!isBoss && investigateActions.length > 0 && revealed.length === 0 && (
+                  <div className="duo-card p-4 mb-4 bg-duo-yellow-light border-duo-yellow flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-duo-yellow-dark shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-black text-duo-yellow-dark text-sm leading-tight">
+                        Decidir sem investigar é arriscado
+                      </div>
+                      <div className="text-duo-yellow-dark/80 text-xs font-bold mt-0.5 leading-snug mb-2">
+                        Tem <b>{investigateActions.length} pista{investigateActions.length > 1 ? "s" : ""}</b> esperando. Investigar dá contexto e XP bônus.
+                      </div>
+                      <button
+                        onClick={() => { playSound("page"); setStep("investigation"); setSelectedAction(null); }}
+                        className="text-xs font-black text-duo-yellow-dark underline underline-offset-2 hover:text-duo-ink"
+                      >
+                        ← voltar e investigar
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Options */}
+                <div className="space-y-2.5 flex-1 mb-5">
+                  {decisionActions.map((a, i) => {
+                    const letter = String.fromCharCode(65 + i);
+                    const isSelected = selectedAction?.id === a.id;
+                    const isWrong = wrongActions.includes(a.id);
+                    return (
+                      <motion.button
+                        key={a.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        onClick={() => {
+                          if (isWrong) return;
+                          playSound("tick");
+                          setSelectedAction(a);
+                        }}
+                        disabled={isWrong}
+                        onMouseEnter={() => !isWrong && playSound("hover")}
+                        className={`duo-card w-full text-left p-4 flex items-center gap-3 card-press transition-opacity ${
+                          isWrong ? "duo-card-wrong opacity-60 cursor-not-allowed" :
+                          isSelected ? "duo-card-selected" : ""
+                        }`}
+                      >
+                        <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg ${
+                          isWrong ? "bg-duo-red text-white" :
+                          isSelected ? "bg-duo-blue text-white" :
+                          "bg-duo-line-soft text-duo-ink-soft"
+                        }`}>
+                          {isWrong ? "✗" : letter}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className={`font-black text-base sm:text-lg leading-tight ${
+                            isWrong ? "text-duo-red-dark line-through" :
+                            isSelected ? "text-duo-blue-dark" :
+                            "text-duo-ink"
+                          }`}>
+                            {a.name}
+                          </div>
+                          {(() => {
+                            const svc = inferDecisionService(a.name);
+                            if (!svc) return null;
+                            return (
+                              <div className="text-xs font-bold mt-1 flex items-center gap-1 text-duo-ink-faded">
+                                <span>via</span>
+                                <span className={`${
+                                  isWrong ? "text-duo-red-dark" :
+                                  isSelected ? "text-duo-blue-dark" :
+                                  "text-duo-orange-dark"
+                                } font-black`}>{svc}</span>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </motion.button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={checkAnswer}
+                  disabled={!selectedAction}
+                  className={`duo-btn w-full ${selectedAction ? "duo-green" : "duo-white"}`}
+                >
+                  verificar
+                </button>
+              </div>
+            </motion.section>
+          )}
+
+          {/* ─── STEP 5: CHECKING ─── */}
+          {step === "checking" && (
+            <motion.section
+              key="checking"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex-1 flex items-center justify-center"
+            >
+              <Mascot expression="thinking" size={140} />
+            </motion.section>
+          )}
+
+          {/* ─── STEP 6: FEEDBACK ─── */}
+          {step === "feedback" && feedback && (
+            <motion.section
+              key="feedback"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex-1 flex flex-col"
+            >
+              <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6">
+                <div className="max-w-2xl w-full mx-auto text-center">
+                  <motion.div
+                    initial={{ scale: 0.3, opacity: 0, rotate: -10 }}
+                    animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                    transition={{ type: "spring", stiffness: 200, damping: 14 }}
+                    className="mb-6 flex justify-center"
+                  >
+                    <Mascot expression={feedback.correct ? "celebrate" : "sad"} size={180} />
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ y: 20, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    transition={{ delay: 0.15 }}
+                  >
+                    <div className={`text-display font-black mb-2 text-4xl sm:text-5xl tracking-tight ${
+                      feedback.correct ? "text-duo-green" : "text-duo-red"
+                    }`}>
+                      {feedback.correct ? (
+                        attempts === 1 ? (
+                          <>Mandou bem! <span className="underline decoration-wavy">{feedback.grade}</span></>
+                        ) : (
+                          <>Acertou! <span className="underline decoration-wavy">{feedback.grade}</span></>
+                        )
+                      ) : (
+                        <>Sem vidas · Nota {feedback.grade}</>
+                      )}
+                    </div>
+
+                    <p className="text-duo-ink text-lg sm:text-xl font-bold leading-snug mb-2 max-w-xl mx-auto">
+                      {feedback.verdict}
+                    </p>
+                    <p className="text-duo-ink-soft text-sm sm:text-base leading-relaxed max-w-xl mx-auto mb-6">
+                      {feedback.sub}
+                    </p>
+
+                    {/* XP gain pill */}
+                    {feedback.xp > 0 && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.4, type: "spring", stiffness: 250 }}
+                        className="inline-flex items-center gap-2 chip border-duo-yellow-dark bg-duo-yellow-light text-duo-yellow-dark text-base px-4 py-2 mb-2"
+                      >
+                        <Sparkles className="w-4 h-4 fill-duo-yellow-dark" />
+                        <span className="font-black">+{feedback.xp} XP</span>
+                        {feedback.perfect && <span className="text-duo-green-dark">· 🎯 perfeito</span>}
+                      </motion.div>
+                    )}
+
+                    {feedback.correct && speedBonus > 0 && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.55, type: "spring", stiffness: 250 }}
+                        className="inline-flex items-center gap-2 chip border-duo-blue-dark bg-duo-blue-light text-duo-blue-dark text-base px-4 py-2 mb-2 ml-2"
+                      >
+                        <span className="text-base">⚡</span>
+                        <span className="font-black">+{speedBonus} velocidade</span>
+                      </motion.div>
+                    )}
+
+                    {!feedback.correct && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.5, type: "spring", stiffness: 250 }}
+                        className="inline-flex items-center gap-2 chip border-duo-red-dark bg-duo-red-light text-duo-red-dark text-base px-4 py-2 mb-2 ml-2"
+                      >
+                        <span>↩</span>
+                        <span className="font-black">tentou {attempts} vezes</span>
+                      </motion.div>
+                    )}
+                  </motion.div>
+                </div>
+              </div>
+
+              <div className="sticky bottom-0 left-0 right-0 bg-duo-cream/95 backdrop-blur-sm border-t-2 border-duo-line p-4">
+                <div className="max-w-2xl mx-auto">
+                  <button onClick={handleContinue} className={`duo-btn w-full ${feedback.correct ? "duo-green" : "duo-red"}`}>
+                    {isBoss && phaseIdx < incident.phases!.length - 1 ? "próxima fase →" : "continuar"}
+                  </button>
+                </div>
+              </div>
+            </motion.section>
+          )}
+
+        </AnimatePresence>
+      </main>
+
+      {/* Confete on correct */}
+      {step === "feedback" && feedback?.correct && <Confetti />}
+
+      {/* Result modal */}
       <AnimatePresence>
         {result && (
           <ResultScreen
@@ -641,6 +835,311 @@ export function WarRoom({ incident, isDaily }: Props) {
           />
         )}
       </AnimatePresence>
-    </>
+
+      <style jsx global>{`
+        .prose-finding b { color: #3C3C3C; font-weight: 800; }
+        .prose-finding code {
+          background: #FFF1AA;
+          color: #3C3C3C;
+          padding: 2px 6px;
+          border-radius: 6px;
+          font-family: var(--font-jetbrains), monospace;
+          font-size: 0.92em;
+          font-weight: 700;
+        }
+        .prose-finding p { margin: 0.5em 0; }
+        .prose-finding ul { margin: 0.5em 0; padding-left: 1.2em; list-style: disc; }
+        .prose-finding li { margin: 0.2em 0; }
+      `}</style>
+    </div>
+  );
+}
+
+// ───── Atoms ─────
+
+function FindingsRecap({ keys, pendingCount, onGoBack }: { keys: string[]; pendingCount: number; onGoBack?: () => void }) {
+  const [expanded, setExpanded] = useState(true);
+  return (
+    <div className="duo-card duo-card-correct p-4 mb-4">
+      <button
+        onClick={() => { playSound("tick"); setExpanded((v) => !v); }}
+        className="w-full flex items-center gap-3 text-left"
+      >
+        <div className="shrink-0 w-10 h-10 rounded-2xl bg-duo-green text-white flex items-center justify-center font-black text-lg">
+          🔍
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-black uppercase tracking-widest text-duo-green-dark">
+            pistas que tu já tem · {keys.length}
+          </div>
+          <div className="text-duo-green-dark font-bold text-sm leading-tight">
+            {expanded ? "click pra ocultar" : "click pra revisar"}
+          </div>
+        </div>
+        <ChevronRight
+          className={`w-5 h-5 text-duo-green-dark stroke-[3] shrink-0 transition-transform ${expanded ? "rotate-90" : ""}`}
+        />
+      </button>
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-3 space-y-2">
+              {keys.map((k, i) => {
+                const f = FINDINGS[k];
+                if (!f) return null;
+                // strip HTML tags for the recap excerpt
+                const plain = f.body.replace(/<[^>]*>/g, "").trim().slice(0, 140);
+                return (
+                  <div key={k} className="bg-white rounded-xl p-3 border-2 border-duo-green/20" style={{ borderBottomWidth: 3 }}>
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-duo-green-dark shrink-0">
+                        #{i + 1}
+                      </span>
+                      <span className="font-black text-duo-ink text-sm leading-tight">{f.title}</span>
+                    </div>
+                    <p className="text-duo-ink-soft text-xs font-medium leading-snug">
+                      {plain}{plain.length >= 140 ? "…" : ""}
+                    </p>
+                  </div>
+                );
+              })}
+
+              {pendingCount > 0 && onGoBack && (
+                <button
+                  onClick={onGoBack}
+                  className="w-full text-center text-xs font-black text-duo-green-dark hover:text-duo-ink py-2 underline underline-offset-2"
+                >
+                  ← voltar e ver as outras {pendingCount} pista{pendingCount > 1 ? "s" : ""}
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function inferDecisionService(name: string): string | null {
+  const n = name.toLowerCase();
+  if (n.includes("rollback")) return "CodeDeploy";
+  if (n.includes("guardrail")) return "Bedrock Guardrails";
+  if (n.includes("scale") || n.includes("escala") || n.includes("autoscaling")) return "Auto Scaling";
+  if (n.includes("page") || n.includes("escalar") || n.includes("staff")) return "PagerDuty";
+  if (n.includes("disable") || n.includes("desabilita")) return "IAM";
+  if (n.includes("reindex") || n.includes("reindexar")) return "OpenSearch";
+  if (n.includes("glossário") || n.includes("glossary") || n.includes("terminolog")) return "Amazon Translate";
+  if (n.includes("retreinar") || n.includes("retrain") || n.includes("retreinamento")) return "SageMaker";
+  if (n.includes("threshold") || n.includes("limiar")) return "Rekognition";
+  if (n.includes("prompt")) return "Bedrock";
+  if (n.includes("guardduty") || n.includes("macie")) return "Amazon Macie";
+  if (n.includes("vocabulario") || n.includes("vocabulary") || n.includes("vocab")) return "Transcribe Medical";
+  if (n.includes("budget") || n.includes("custo") || n.includes("orçamento")) return "AWS Budgets";
+  if (n.includes("cache")) return "ElastiCache";
+  if (n.includes("dlq") || n.includes("queue") || n.includes("fila")) return "SQS";
+  if (n.includes("policy") || n.includes("política")) return "IAM";
+  if (n.includes("retry")) return "Lambda Config";
+  if (n.includes("limite") || n.includes("limit") || n.includes("quota")) return "Service Quotas";
+  if (n.includes("schedule") || n.includes("cron") || n.includes("agenda")) return "EventBridge";
+  if (n.includes("filter") || n.includes("filtrar")) return "Bedrock Guardrails";
+  if (n.includes("modelo") || n.includes("model")) return "Bedrock";
+  return null;
+}
+
+function ServicesRefresher({ services }: { services: Array<{ name: string; role: string; description: string }> }) {
+  const [open, setOpen] = useState(false);
+
+  // Pick an emoji for each service or concept based on name
+  const iconFor = (name: string) => {
+    const n = name.toLowerCase();
+    // —— AWS services ——
+    if (n.includes("bedrock")) return "🤖";
+    if (n.includes("cloudwatch")) return "📊";
+    if (n.includes("sagemaker") && n.includes("monitor")) return "👁️";
+    if (n.includes("sagemaker")) return "🧠";
+    if (n.includes("lambda")) return "λ";
+    if (n.includes("s3")) return "📦";
+    if (n.includes("iam")) return "🔐";
+    if (n.includes("dynamo")) return "🗄️";
+    if (n.includes("rekognition")) return "👁️";
+    if (n.includes("transcribe")) return "🎙️";
+    if (n.includes("translate")) return "🌐";
+    if (n.includes("comprehend")) return "📝";
+    if (n.includes("textract")) return "📄";
+    if (n.includes("polly")) return "🔊";
+    if (n.includes("kendra")) return "🔍";
+    if (n.includes("opensearch")) return "🔎";
+    if (n.includes("aurora") || n.includes("rds")) return "💾";
+    if (n.includes("glue")) return "🔗";
+    if (n.includes("eventbridge")) return "⚡";
+    if (n.includes("macie")) return "🛡️";
+    if (n.includes("guardduty")) return "🚨";
+    if (n.includes("kms")) return "🔑";
+    if (n.includes("codedeploy") || n.includes("codebuild") || n.includes("codepipeline")) return "🚀";
+    if (n.includes("personalize")) return "🎁";
+    if (n.includes("lex")) return "💬";
+    if (n.includes("fraud detector")) return "🛡️";
+    if (n.includes("trainium") || n.includes("trn")) return "🧠";
+    if (n.includes("inferentia")) return "⚡";
+    if (n.includes("p4d") || n.includes("a100")) return "🎮";
+    if (n.includes("spot instance")) return "🎲";
+    if (n.includes("savings plan")) return "💰";
+    if (n.includes("a2i") || n.includes("human-in")) return "👥";
+    if (n.includes("clarify")) return "🔍";
+    if (n.includes("guardrail")) return "🛡️";
+    if (n.includes("ssml") || n.includes("lexicon")) return "📖";
+    if (n.includes("custom vocabulary")) return "📖";
+    if (n.includes("fault injection")) return "💥";
+    if (n.includes("step functions")) return "🔀";
+    if (n.includes("sqs") || n.includes("dlq")) return "📬";
+    if (n.includes("auto scaling")) return "📈";
+    if (n.includes("budgets")) return "💰";
+    if (n.includes("cost explorer")) return "💵";
+    // —— Concepts / theory ——
+    if (n.includes("accuracy") || n.includes("acurácia")) return "🎯";
+    if (n.includes("precision") || n.includes("recall") || n.includes("f1") || n.includes("auc")) return "🎯";
+    if (n.includes("confusion")) return "📋";
+    if (n.includes("mae") || n.includes("mse") || n.includes("rmse") || n.includes("r²") || n.includes("r-squared")) return "📏";
+    if (n.includes("classifica")) return "🗂️";
+    if (n.includes("regress")) return "📈";
+    if (n.includes("clustering") || n.includes("cluster")) return "🧬";
+    if (n.includes("xgboost") || n.includes("decision tree") || n.includes("random forest")) return "🌳";
+    if (n.includes("k-nn") || n.includes("knn")) return "🔗";
+    if (n.includes("k-means") || n.includes("kmeans")) return "🧬";
+    if (n.includes("deepar") || n.includes("forecast")) return "📈";
+    if (n.includes("rag") || n.includes("retrieval")) return "🔍";
+    if (n.includes("embedding")) return "🧩";
+    if (n.includes("token")) return "🔤";
+    if (n.includes("real-time") || n.includes("realtime") || n.includes("tempo real")) return "⚡";
+    if (n.includes("async") || n.includes("assíncron")) return "📬";
+    if (n.includes("serverless")) return "☁️";
+    if (n.includes("batch")) return "📦";
+    if (n.includes("model monitor")) return "👁️";
+    if (n.includes("feature store") || n.includes("feature")) return "🧱";
+    if (n.includes("training") || n.includes("treinamento")) return "🏋️";
+    if (n.includes("fine-tun") || n.includes("fine tun")) return "🎚️";
+    if (n.includes("hyperpar")) return "🎚️";
+    if (n.includes("prompt")) return "📝";
+    if (n.includes("pii") || n.includes("privac")) return "🔐";
+    if (n.includes("data wrangler") || n.includes("eda")) return "📊";
+    if (n.includes("intent") || n.includes("utterance")) return "💬";
+    return "📘"; // default: conceito teórico
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.25 }}
+      className="mb-6"
+    >
+      <button
+        onClick={() => { playSound("tick"); setOpen((v) => !v); }}
+        className="duo-card w-full p-4 flex items-center gap-3 hover:bg-duo-yellow-light transition card-press"
+      >
+        <div className="shrink-0 w-10 h-10 rounded-2xl bg-duo-yellow-light text-duo-yellow-dark flex items-center justify-center text-xl">
+          📚
+        </div>
+        <div className="flex-1 text-left min-w-0">
+          <div className="font-black text-duo-ink text-sm sm:text-base leading-tight">
+            Refresher · {services.length} {services.length > 1 ? "tópicos" : "tópico"}
+          </div>
+          <div className="text-duo-ink-soft text-xs font-medium leading-snug">
+            {open ? "ocultar" : "vê o que cai antes de começar"}
+          </div>
+        </div>
+        <motion.div animate={{ rotate: open ? 90 : 0 }} className="shrink-0">
+          <ChevronRight className="w-5 h-5 text-duo-ink-soft stroke-[2.5]" />
+        </motion.div>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25 }}
+            className="overflow-hidden"
+          >
+            <div className="mt-3 space-y-2.5">
+              {services.map((s, i) => (
+                <motion.div
+                  key={s.name}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.06 }}
+                  className="duo-card p-4 flex items-start gap-3"
+                >
+                  <div className="shrink-0 w-12 h-12 rounded-2xl bg-duo-blue-light text-duo-blue-dark flex items-center justify-center text-2xl">
+                    {iconFor(s.name)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="font-black text-duo-ink text-base">{s.name}</span>
+                      <span className="text-[10px] uppercase tracking-widest font-black text-duo-blue-dark">{s.role}</span>
+                    </div>
+                    <p
+                      className="text-duo-ink-soft text-sm font-medium leading-snug mt-0.5 [&_code]:bg-duo-yellow-light [&_code]:text-duo-ink [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-mono [&_code]:font-bold [&_code]:text-xs [&_b]:font-black [&_b]:text-duo-ink"
+                      dangerouslySetInnerHTML={{ __html: s.description }}
+                    />
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+function SevPill({ sev }: { sev: number }) {
+  const cfg =
+    sev === 0 ? { bg: "bg-duo-purple", text: "text-white", border: "border-duo-purple-dark", label: "BOSS" } :
+    sev === 1 ? { bg: "bg-duo-red", text: "text-white", border: "border-duo-red-dark", label: "URGENTE" } :
+    sev === 2 ? { bg: "bg-duo-orange", text: "text-white", border: "border-duo-orange-dark", label: "ALTA" } :
+    { bg: "bg-duo-blue", text: "text-white", border: "border-duo-blue-dark", label: "BAIXA" };
+
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black tracking-wider border-2 ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+      {cfg.label}
+    </span>
+  );
+}
+
+function Confetti() {
+  const pieces = Array.from({ length: 40 });
+  const colors = ["#58CC02", "#1CB0F6", "#FFC800", "#FF4B4B", "#CE82FF", "#FF9600"];
+  return (
+    <div className="fixed inset-0 pointer-events-none z-40 overflow-hidden">
+      {pieces.map((_, i) => {
+        const left = Math.random() * 100;
+        const delay = Math.random() * 0.5;
+        const duration = 2 + Math.random() * 1.5;
+        const rotation = Math.random() * 360;
+        const color = colors[i % colors.length];
+        return (
+          <motion.div
+            key={i}
+            initial={{ y: -20, x: 0, opacity: 1, rotate: 0 }}
+            animate={{ y: "110vh", x: (Math.random() - 0.5) * 200, opacity: [1, 1, 0], rotate: rotation }}
+            transition={{ duration, delay, ease: "easeIn" }}
+            className="absolute top-0 w-2.5 h-3.5 rounded-sm"
+            style={{
+              left: `${left}%`,
+              backgroundColor: color,
+            }}
+          />
+        );
+      })}
+    </div>
   );
 }

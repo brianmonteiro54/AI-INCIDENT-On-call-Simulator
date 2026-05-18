@@ -13,7 +13,7 @@ export function AchievementToasts() {
   useEffect(() => {
     if (newAchievements.length > 0) {
       playSound("achievement");
-      const t = setTimeout(() => clear(), 6500);
+      const t = setTimeout(() => clear(), 5500);
       return () => clearTimeout(t);
     }
   }, [newAchievements, clear]);
@@ -30,19 +30,20 @@ export function AchievementToasts() {
               initial={{ opacity: 0, x: 60, scale: 0.9 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
               exit={{ opacity: 0, x: 60 }}
-              transition={{ delay: i * 0.15, type: "spring", stiffness: 200, damping: 20 }}
-              className="glass-elev rounded-lg border-l-4 border-acid-400 px-4 py-3 max-w-xs shadow-xl"
+              transition={{ delay: i * 0.15, type: "spring", stiffness: 220, damping: 18 }}
+              className="bg-duo-yellow-light border-2 border-duo-yellow rounded-2xl px-4 py-3 max-w-xs shadow-lg"
+              style={{ borderBottomWidth: 4, borderRightWidth: 3 }}
             >
-              <div className="text-mono text-[9px] text-acid-400 uppercase tracking-widest font-bold mb-0.5">
-                Achievement unlocked
+              <div className="text-[10px] uppercase tracking-widest text-duo-yellow-dark font-black mb-1 flex items-center gap-1">
+                <span>⭐</span> CONQUISTA DESBLOQUEADA
               </div>
-              <div className="flex items-center gap-2.5">
-                <span className="text-2xl">{ach.icon}</span>
+              <div className="flex items-center gap-3">
+                <span className="text-4xl">{ach.icon}</span>
                 <div>
-                  <div className="text-display font-bold text-white text-sm leading-tight">
+                  <div className="font-black text-duo-ink text-base leading-tight">
                     {ach.title}
                   </div>
-                  <div className="text-xs text-gray-400 leading-tight mt-0.5">
+                  <div className="text-xs text-duo-ink-soft font-medium leading-tight mt-0.5">
                     {ach.description}
                   </div>
                 </div>
