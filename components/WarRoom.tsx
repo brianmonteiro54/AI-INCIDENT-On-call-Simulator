@@ -166,6 +166,10 @@ export function WarRoom({ incident, isDaily }: Props) {
   function startInvestigation() {
     if (investigateActions.length === 0) {
       setStep("decide");
+    } else if (investigateActions.length === 1) {
+      // Shortcut: only one clue, skip the list and open it directly.
+      openFinding(investigateActions[0]);
+      return; // openFinding already plays sound
     } else {
       setStep("investigation");
     }
@@ -184,6 +188,13 @@ export function WarRoom({ incident, isDaily }: Props) {
 
   function closeFinding() {
     setCurrentFinding(null);
+    // If there was only one clue, no point going back to an empty list — go to decide.
+    if (investigateActions.length === 1) {
+      setStep("decide");
+      setSelectedAction(null);
+      playSound("page");
+      return;
+    }
     setStep("investigation");
     playSound("tick");
   }
@@ -509,7 +520,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                     <>
                       <button onClick={startInvestigation} className="duo-btn duo-green flex-1 flex items-center justify-center gap-2">
                         <Search className="w-5 h-5" />
-                        <span>investigar primeiro</span>
+                        <span>{investigateActions.length === 1 ? "ver a pista" : "investigar primeiro"}</span>
                       </button>
                       <button onClick={goToDecide} className="duo-btn duo-white">
                         pular
@@ -744,13 +755,16 @@ export function WarRoom({ incident, isDaily }: Props) {
                         Decidir sem investigar é arriscado
                       </div>
                       <div className="text-duo-yellow-dark/80 text-xs font-bold mt-0.5 leading-snug mb-2">
-                        Tem <b>{investigateActions.length} pista{investigateActions.length > 1 ? "s" : ""}</b> esperando. Investigar dá contexto e XP bônus.
+                        {investigateActions.length === 1
+                          ? <>Tem <b>1 pista</b> esperando. Vale dar uma olhada antes — dá contexto e XP bônus.</>
+                          : <>Tem <b>{investigateActions.length} pistas</b> esperando. Investigar dá contexto e XP bônus.</>
+                        }
                       </div>
                       <button
-                        onClick={() => { playSound("page"); setStep("investigation"); setSelectedAction(null); }}
+                        onClick={() => { setSelectedAction(null); startInvestigation(); }}
                         className="text-xs font-black text-duo-yellow-dark underline underline-offset-2 hover:text-duo-ink"
                       >
-                        ← voltar e investigar
+                        ← {investigateActions.length === 1 ? "ver a pista" : "voltar e investigar"}
                       </button>
                     </div>
                   </div>

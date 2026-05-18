@@ -52,7 +52,7 @@ export const GLOSSARY: GlossarySection[] = [
       {
         term: "AUC / ROC",
         short: "Mede a capacidade do modelo de distinguir entre classes.",
-        long: "AUC vai de 0 (sempre errado) a 1 (perfeito). 0,5 = chute aleatório. <b>Independente do threshold</b> de classificação — útil pra comparar modelos.",
+        long: "AUC vai de 0 (sempre errado) a 1 (perfeito). 0,5 = chute aleatório. <b>Independente do threshold</b> de classificação, útil pra comparar modelos.",
       },
     ],
   },
@@ -65,7 +65,7 @@ export const GLOSSARY: GlossarySection[] = [
       {
         term: "MAE (Mean Absolute Error)",
         short: "Média do |erro| em cada previsão.",
-        long: "Fácil de interpretar — está nas mesmas unidades do alvo. <b>Não penaliza outliers</b>: um erro de 100 conta igual a dois erros de 50.",
+        long: "Fácil de interpretar, está nas mesmas unidades do alvo. <b>Não penaliza outliers</b>: um erro de 100 conta igual a dois erros de 50.",
         missions: ["forecast-metrics-lie"],
       },
       {
@@ -119,7 +119,7 @@ export const GLOSSARY: GlossarySection[] = [
       {
         term: "Linear Regression",
         short: "Prevê um número real como combinação linear das features.",
-        long: "Saída pode ser qualquer número — <b>não serve pra classificação</b>. Bom pra entender relações simples entre variáveis.",
+        long: "Saída pode ser qualquer número, <b>não serve pra classificação</b>. Bom pra entender relações simples entre variáveis.",
         missions: ["wrong-algorithm"],
       },
       {
@@ -130,7 +130,7 @@ export const GLOSSARY: GlossarySection[] = [
       },
       {
         term: "XGBoost",
-        short: "Gradient Boosting de árvores — campeão em competições tabulares.",
+        short: "Gradient Boosting de árvores, campeão em competições tabulares.",
         long: "Geralmente o melhor algoritmo pra dados tabulares (planilhas). Lida bem com features mistas, valores faltantes. Built-in no SageMaker.",
         missions: ["fraud-99-percent"],
       },
@@ -166,7 +166,7 @@ export const GLOSSARY: GlossarySection[] = [
       },
       {
         term: "Asynchronous Inference",
-        short: "Fila — processa requisições uma de cada vez.",
+        short: "Fila, processa requisições uma de cada vez.",
         long: "<b>Faz scale-to-zero</b> quando ocioso (não cobra). Bom pra cargas pesadas que toleram latência de segundos/minutos. Suporta payloads grandes.",
         missions: ["endpoint-too-expensive"],
       },
@@ -223,7 +223,7 @@ export const GLOSSARY: GlossarySection[] = [
       {
         term: "Prompt Engineering",
         short: "A arte de escrever instruções pra obter o melhor do modelo.",
-        long: "Técnicas: ser específico, dar exemplos, definir formato, restringir comportamentos. <b>Não substitui Guardrails</b> — instruções podem ser ignoradas em casos extremos.",
+        long: "Técnicas: ser específico, dar exemplos, definir formato, restringir comportamentos. <b>Não substitui Guardrails</b>, instruções podem ser ignoradas em casos extremos.",
       },
       {
         term: "RAG (Retrieval-Augmented Generation)",
@@ -254,13 +254,13 @@ export const GLOSSARY: GlossarySection[] = [
       {
         term: "Bias (Viés)",
         short: "Modelo discrimina sistematicamente um grupo.",
-        long: "Causas: dataset enviesado, features que funcionam como proxy de atributos protegidos (ex: CEP → raça/renda). <b>Não é resolvido só removendo a feature</b> — pode estar implícita em outras.",
+        long: "Causas: dataset enviesado, features que funcionam como proxy de atributos protegidos (ex: CEP → raça/renda). <b>Não é resolvido só removendo a feature</b>, pode estar implícita em outras.",
         missions: ["bias"],
       },
       {
         term: "Proxy Bias",
         short: "Feature aparentemente neutra que codifica atributo protegido.",
-        long: "Clássico: CEP é proxy de raça/renda no Brasil. Sobrenome é proxy de origem étnica. <b>Tirar a feature</b> nem sempre resolve — pode estar correlacionada com outras.",
+        long: "Clássico: CEP é proxy de raça/renda no Brasil. Sobrenome é proxy de origem étnica. <b>Tirar a feature</b> nem sempre resolve, pode estar correlacionada com outras.",
         missions: ["bias"],
       },
       {
@@ -285,8 +285,8 @@ export const GLOSSARY: GlossarySection[] = [
     terms: [
       {
         term: "Amazon Comprehend",
-        short: "NLP gerenciado — sentimento, entidades, idioma, PII.",
-        long: "<b>Cuidado com o LanguageCode</b> — análise de sentimento é dependente do idioma. Em português, passe 'pt' explicitamente.",
+        short: "NLP gerenciado, sentimento, entidades, idioma, PII.",
+        long: "<b>Cuidado com o LanguageCode</b>, análise de sentimento é dependente do idioma. Em português, passe 'pt' explicitamente.",
         missions: ["sentiment-flip"],
       },
       {
@@ -309,13 +309,13 @@ export const GLOSSARY: GlossarySection[] = [
       },
       {
         term: "Amazon Lex",
-        short: "Plataforma de chatbots — mesma engine da Alexa.",
+        short: "Plataforma de chatbots, mesma engine da Alexa.",
         long: "Reconhece <b>intents</b> (intenções) a partir de <b>utterances</b> (frases-exemplo). Quanto mais utterances variadas por intent, melhor reconhece variações naturais do usuário.",
         missions: ["lex-fallback"],
       },
       {
         term: "Amazon Rekognition",
-        short: "Análise de imagem e vídeo — moderação, detecção, comparação facial.",
+        short: "Análise de imagem e vídeo, moderação, detecção, comparação facial.",
         long: "<b>MinConfidence</b>: threshold de confiança pra retornar uma label. Padrão é 50, em produção geralmente 80+. Valores baixos geram falsos positivos.",
         missions: ["rekognition-paranoid", "image-mod-fail"],
       },

@@ -1,7 +1,7 @@
 import type { Finding } from "./types";
 
 // Each finding renders inside a ConsoleFrame (CloudWatch, Bedrock, Macie, etc).
-// AUDIENCE: AWS AI Practitioner students — beginners, no programming background.
+// AUDIENCE: AWS AI Practitioner students, beginners, no programming background.
 // STYLE: console look with breadcrumb + service name, BUT content is plain PT-BR
 // with visual highlights (✅ ❌ ⚠️). No hex IDs, no IAM ARNs, no log levels jargon.
 
@@ -19,10 +19,10 @@ export const FINDINGS: Record<string, Finding> = {
 </ul>
 <p><b>Exemplos das reclamações de hoje:</b></p>
 <ul>
-<li>03:15 — "bot disse dosagem errada (80mg em vez de 8mg)"</li>
-<li>03:17 — "legal foi acionado, pediu print da conversa"</li>
-<li>03:22 — "bot citou meu CPF e endereço numa resposta"</li>
-<li>03:34 — "bot recomendou medicação sem ver receita"</li>
+<li>03:15, "bot disse dosagem errada (80mg em vez de 8mg)"</li>
+<li>03:17, "legal foi acionado, pediu print da conversa"</li>
+<li>03:22, "bot citou meu CPF e endereço numa resposta"</li>
+<li>03:34, "bot recomendou medicação sem ver receita"</li>
 </ul>
 <p>👉 Tudo começou logo após o deploy da v2.4.1 de madrugada.</p>`,
   },
@@ -43,7 +43,7 @@ export const FINDINGS: Record<string, Finding> = {
 <p>❌ <b>Removido</b>: "Nunca dê conselhos médicos. Sempre indique um profissional licenciado."</p>
 <p>❌ <b>Removido</b>: "Edite (esconda) os dados pessoais antes de responder."</p>
 <p>➕ <b>Adicionado</b>: "Seja prestativo e personalize. Use livremente os dados do cliente."</p>
-<p>👉 O deploy de hoje 03:02 mudou o comportamento do bot — e foi exatamente quando as reclamações começaram.</p>`,
+<p>👉 O deploy de hoje 03:02 mudou o comportamento do bot, e foi exatamente quando as reclamações começaram.</p>`,
   },
 
   // Bedrock Playground · Prompt
@@ -56,7 +56,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 </p>
 <p><b>Exemplos do que o bot tá respondendo:</b></p>
 <p style="background:#FFDFE0;padding:0.6em;border-radius:6px;border-left:3px solid #FF4B4B">
-"Oi Maria! Vi aqui que seu CPF 123.456.789-00 confere. Sobre sua diabetes, recomendo tomar 80mg de metformina antes do café — funciona muito bem pra perfis como o seu."
+"Oi Maria! Vi aqui que seu CPF 123.456.789-00 confere. Sobre sua diabetes, recomendo tomar 80mg de metformina antes do café, funciona muito bem pra perfis como o seu."
 </p>
 <p style="background:#FFDFE0;padding:0.6em;border-radius:6px;border-left:3px solid #FF4B4B">
 "João! Aqui temos seu cartão final 1234. Lembrei que você falou de dor lombar na consulta de março, então sugiro 600mg de ibuprofeno a cada 8h."
@@ -94,7 +94,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
     body: `<p><b>Você está vendo:</b> as <b>features</b> (variáveis) que o modelo de aprovação de crédito usa pra decidir.</p>
 <p><b>Importância de cada variável</b> (quanto pesa na decisão):</p>
 <ul>
-<li>🔴 <b>CEP do bairro</b> (ex: <code>04329-900</code>): 0,42 — <b>a mais importante!</b></li>
+<li>🔴 <b>CEP do bairro</b> (ex: <code>04329-900</code>): 0,42, <b>a mais importante!</b></li>
 <li>Nível de escolaridade: 0,18</li>
 <li>Anos de emprego: 0,14</li>
 <li>Idade da conta: 0,09</li>
@@ -122,16 +122,16 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
     body: `<p><b>Você está vendo:</b> a distribuição do dataset usado pra treinar o modelo de crédito.</p>
 <p><b>De onde vieram as aprovações</b> (regiões de São Paulo, agrupadas por CEP):</p>
 <ul>
-<li>🔴 <b>Centro / Zona Sul</b> — faixa <code>01000-000</code> a <code>05999-999</code> (CEPs nobres): <b>87,4%</b></li>
-<li>Zona Leste / Norte — faixa <code>03000-000</code> a <code>08000-000</code> (periferia): 4,1%</li>
+<li>🔴 <b>Centro / Zona Sul</b>, faixa <code>01000-000</code> a <code>05999-999</code> (CEPs nobres): <b>87,4%</b></li>
+<li>Zona Leste / Norte, faixa <code>03000-000</code> a <code>08000-000</code> (periferia): 4,1%</li>
 <li>Outras regiões metropolitanas: 8,5%</li>
 </ul>
 <p><b>Exemplos de CEPs no dataset:</b></p>
 <ul>
-<li>✅ <code>01310-100</code> (Av. Paulista) — 4.218 amostras · 94% aprovadas</li>
-<li>✅ <code>04543-000</code> (Itaim Bibi) — 3.872 amostras · 91% aprovadas</li>
-<li>⚠️ <code>03178-200</code> (Vila Carrão) — 1.207 amostras · 12% aprovadas</li>
-<li>⚠️ <code>08260-000</code> (Itaquera) — 982 amostras · 8% aprovadas</li>
+<li>✅ <code>01310-100</code> (Av. Paulista), 4.218 amostras · 94% aprovadas</li>
+<li>✅ <code>04543-000</code> (Itaim Bibi), 3.872 amostras · 91% aprovadas</li>
+<li>⚠️ <code>03178-200</code> (Vila Carrão), 1.207 amostras · 12% aprovadas</li>
+<li>⚠️ <code>08260-000</code> (Itaquera), 982 amostras · 8% aprovadas</li>
 </ul>
 <p><b>População real de São Paulo</b> (dados do IBGE):</p>
 <ul>
@@ -204,10 +204,10 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 </p>
 <p><b>Histórico do problema:</b></p>
 <ul>
-<li>02/08 — Última sincronização bem-sucedida (3 meses atrás)</li>
-<li>05/08 — Início das falhas, ninguém percebeu</li>
-<li>06/08 — Auditoria revogou permissões antigas (provável causa)</li>
-<li>Hoje — bot continua respondendo, base de conhecimento parada</li>
+<li>02/08, Última sincronização bem-sucedida (3 meses atrás)</li>
+<li>05/08, Início das falhas, ninguém percebeu</li>
+<li>06/08, Auditoria revogou permissões antigas (provável causa)</li>
+<li>Hoje, bot continua respondendo, base de conhecimento parada</li>
 </ul>
 <p>👉 A base de conhecimento do RAG está <b>parada há 94 dias</b>.</p>`,
   },
@@ -269,7 +269,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>💬 Review típica: <i>"tradução parece feita por alguém que nunca jogou um jogo"</i></li>
 <li>📊 Nota média no Steam: caiu de 8,7 pra 6,2</li>
 </ul>
-<p>👉 O Translate tá fazendo tradução genérica de dicionário comum — não entende jargão de gaming.</p>`,
+<p>👉 O Translate tá fazendo tradução genérica de dicionário comum, não entende jargão de gaming.</p>`,
   },
 
   // Rekognition · Moderation Threshold
@@ -314,7 +314,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>📊 Aprovadas pelo Rekognition (passaram pra moderação humana ou pro feed): 130.776</li>
 <li>📊 Bloqueadas direto pelo Rekognition: 12.107</li>
 </ul>
-<p>👉 O pipeline obedece o threshold que tá configurado em runtime — sem checar onde foi definido nem se faz sentido.</p>`,
+<p>👉 O pipeline obedece o threshold que tá configurado em runtime, sem checar onde foi definido nem se faz sentido.</p>`,
   },
 
   // ───── LIGHT-MISSION FINDINGS ─────
@@ -339,7 +339,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>🇺🇸 Inglês: 2,1%</li>
 <li>🇪🇸 Espanhol: 1,6%</li>
 </ul>
-<p>👉 As reviews estão em português, mas o Comprehend está sendo chamado com idioma "inglês". Sentimento é dependente do idioma — por isso tá invertido.</p>`,
+<p>👉 As reviews estão em português, mas o Comprehend está sendo chamado com idioma "inglês". Sentimento é dependente do idioma, por isso tá invertido.</p>`,
   },
 
   // Polly · Lexicons
@@ -384,11 +384,11 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <ul>
 <li>🔁 <b>87% dos usuários novos</b> recebem os MESMOS 3 itens</li>
 <li>📊 Esses 3 itens são os mais populares globalmente (top 10 da plataforma)</li>
-<li>📉 CTR (cliques na recomendação): 0,8% — bem abaixo do benchmark de 3-5%</li>
+<li>📉 CTR (cliques na recomendação): 0,8%, bem abaixo do benchmark de 3-5%</li>
 </ul>
 <p><b>Resposta típica do modelo pra um usuário novo:</b></p>
 <p style="background:#FFDFE0;padding:0.6em;border-radius:6px;border-left:3px solid #FF4B4B">[item_881, item_42, item_1207, item_881, item_42, item_1207, ...]</p>
-<p>👉 O algoritmo atual não tem mecanismo específico pra usuários sem histórico — todos eles recebem o mesmo "best-sellers global".</p>`,
+<p>👉 O algoritmo atual não tem mecanismo específico pra usuários sem histórico, todos eles recebem o mesmo "best-sellers global".</p>`,
   },
 
   // Lex · Bot stats
@@ -425,7 +425,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
     body: `<p><b>O que é:</b> serviço da AWS que analisa imagens e detecta conteúdo impróprio.</p>
 <p><b>Configuração atual:</b> <code>MinConfidence = 30</code> (parâmetro que define o limiar de detecção)</p>
 <p><b>O que esse parâmetro significa?</b></p>
-<p>Quanto MAIOR o threshold, MENOS imagens são bloqueadas (só as obviamente proibidas). Quanto MENOR, mais coisas são flagradas — incluindo falsos positivos.</p>
+<p>Quanto MAIOR o threshold, MENOS imagens são bloqueadas (só as obviamente proibidas). Quanto MENOR, mais coisas são flagradas, incluindo falsos positivos.</p>
 <p><b>Exemplos de imagens bloqueadas hoje:</b></p>
 <ul>
 <li>🌅 <code>pôr-do-sol-praia.jpg</code> → flagada como "Suggestive" (34% confiança)</li>
@@ -494,10 +494,10 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
     body: `<p><b>Você está vendo:</b> como o uso do endpoint de IA varia durante a semana.</p>
 <p><b>Padrão de tráfego (média de requests por minuto):</b></p>
 <ul>
-<li>🌙 <b>Madrugada (00h-07h)</b>: ~3 req/min — quase nada</li>
-<li>☀️ <b>Manhã (07h-12h)</b>: ~240 req/min — pico de 480 às 10h</li>
+<li>🌙 <b>Madrugada (00h-07h)</b>: ~3 req/min, quase nada</li>
+<li>☀️ <b>Manhã (07h-12h)</b>: ~240 req/min, pico de 480 às 10h</li>
 <li>🌇 Tarde (12h-18h): ~180 req/min</li>
-<li>🌙 <b>Noite (18h-24h)</b>: ~5 req/min — quase nada</li>
+<li>🌙 <b>Noite (18h-24h)</b>: ~5 req/min, quase nada</li>
 </ul>
 <p><b>Utilização das máquinas:</b></p>
 <ul>
@@ -528,7 +528,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>🖥️ Instância: <code>ml.g4dn.xlarge</code> (com GPU)</li>
 <li>📏 Tamanho do modelo: 487 MB</li>
 </ul>
-<p>👉 É um endpoint Real-time pagando 24 horas por dia — mesmo de madrugada e fim de semana, quando o tráfego é mínimo.</p>`,
+<p>👉 É um endpoint Real-time pagando 24 horas por dia, mesmo de madrugada e fim de semana, quando o tráfego é mínimo.</p>`,
   },
 
   // SageMaker Studio · regression eval
@@ -538,9 +538,9 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <p><b>Algoritmo usado:</b> Linear Learner (modo regressão)</p>
 <p><b>Métricas obtidas no teste:</b></p>
 <ul>
-<li>📏 <b>MAE</b> (erro médio absoluto): <b>12 unidades</b> — parece bom</li>
-<li>📏 <b>RMSE</b> (raiz do erro quadrático): <b>89 unidades</b> — 7× maior que MAE 🚨</li>
-<li>📊 <b>R²</b> (variância explicada): <b>0,42</b> — modelo só captura 42% do padrão 🚨</li>
+<li>📏 <b>MAE</b> (erro médio absoluto): <b>12 unidades</b>, parece bom</li>
+<li>📏 <b>RMSE</b> (raiz do erro quadrático): <b>89 unidades</b>, 7× maior que MAE 🚨</li>
+<li>📊 <b>R²</b> (variância explicada): <b>0,42</b>, modelo só captura 42% do padrão 🚨</li>
 </ul>
 <p><b>Como interpretar essas pistas?</b></p>
 <ul>
@@ -549,10 +549,10 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 </ul>
 <p><b>Análise dos outliers:</b></p>
 <ul>
-<li>⚠️ 4,1% das previsões com erro &gt; 100 unidades</li>
+<li>⚠️ 4,1% das previsões com erro &gt, 100 unidades</li>
 <li>📅 Concentrados em: <b>Black Friday, Natal, volta às aulas</b></li>
 </ul>
-<p>👉 Os erros se concentram em datas sazonais (eventos com pico de demanda). Os números — RMSE 7× MAE e R² 0,42 — confirmaram presença de outliers fortes e baixa capacidade preditiva do modelo atual.</p>`,
+<p>👉 Os erros se concentram em datas sazonais (eventos com pico de demanda). Os números, RMSE 7× MAE e R² 0,42, confirmaram presença de outliers fortes e baixa capacidade preditiva do modelo atual.</p>`,
   },
 
   // SageMaker Canvas · model output
@@ -582,7 +582,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 </table>
 <p>⚠️ <b>23% das previsões fora do intervalo [0, 1]</b></p>
 <p>💬 PM: <i>"como eu apresento −0,18 de chance de churn pro CEO?"</i></p>
-<p>👉 A Regressão Linear gera <b>qualquer número real</b> como saída — incluindo negativos e maiores que 1. O alvo aqui é binário (cancelou: 0 ou 1).</p>`,
+<p>👉 A Regressão Linear gera <b>qualquer número real</b> como saída, incluindo negativos e maiores que 1. O alvo aqui é binário (cancelou: 0 ou 1).</p>`,
   },
 
   // SageMaker Training Jobs · cost comparison

@@ -3,7 +3,7 @@
 import { SpeakButton } from "./SpeakButton";
 
 /**
- * Interactive Polly finding — symptoms only, zero solution spoilers.
+ * Interactive Polly finding, symptoms only, zero solution spoilers.
  * Player hears how the Brazilian voice mispronounces tech terms.
  */
 export function PollyFindingInteractive() {

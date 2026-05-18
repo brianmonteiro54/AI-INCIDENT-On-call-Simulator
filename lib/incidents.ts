@@ -4,7 +4,7 @@ import type { Incident } from "./types";
 // then conceptual stuff (metrics, inference, hardware), then advanced (Bedrock,
 // responsibility AI, boss).
 const MISSION_ORDER: string[] = [
-  // ── Tier 0 · Junior (minLevel 0) — single service, clear fix ──
+  // ── Tier 0 · Junior (minLevel 0), single service, clear fix ──
   "polly-mispronounce",   // 1. Polly · Pronunciation Lexicon
   "translation-domain",   // 2. Translate · Custom Terminology
   "lex-fallback",         // 3. Lex · sample utterances
@@ -12,20 +12,20 @@ const MISSION_ORDER: string[] = [
   "transcribe-medical",   // 5. Transcribe Medical (variant)
   "personalize-cold",     // 6. Personalize · cold-start recipe
 
-  // ── Tier 1 · Mid (minLevel 1) — config drift, inference types, algorithm choice ──
+  // ── Tier 1 · Mid (minLevel 1), config drift, inference types, algorithm choice ──
   "rekognition-paranoid", // 7. Rekognition · MinConfidence too low
   "image-mod-fail",       // 8. Rekognition · config drift opposite case
   "endpoint-too-expensive", // 9. Real-time vs Async vs Serverless
   "wrong-algorithm",      // 10. Classification vs Regression
   "training-eternal",     // 11. Trainium vs P4d
 
-  // ── Tier 2 · Senior (minLevel 2) — metrics, RAG, cost optimization ──
+  // ── Tier 2 · Senior (minLevel 2), metrics, RAG, cost optimization ──
   "forecast-metrics-lie", // 12. MAE/RMSE/R²
   "fraud-99-percent",     // 13. Class balance + recall/F1
   "rag-stale",            // 14. RAG + IAM + monitoring
   "cost-explosion",       // 15. Loop + Opus/Haiku trade-off
 
-  // ── Tier 3 · Staff (minLevel 3) — Bedrock, security, responsible AI ──
+  // ── Tier 3 · Staff (minLevel 3), Bedrock, security, responsible AI ──
   "hallucination",        // 16. Bedrock Guardrails
   "pii-leak",             // 17. PII + LGPD
   "bias",                 // 18. Proxy bias (responsible AI)
@@ -68,20 +68,20 @@ const ALL_INCIDENTS: Incident[] = [
     incId: "incident.helix-prod.bedrock-hallucination",
     customer: "Helix Labs (saúde digital)",
     slack: "#war-room-helix",
-    desc: "São 3h05 da madrugada. Teu celular vibra feito louco — o canal #war-room-helix tá pegando fogo. A Helix Labs (saúde digital) fez deploy do chatbot médico há 5 minutos. Os primeiros tickets chegaram dizendo que o bot mandou tomar 80mg de ibuprofeno (a dose certa é 8mg). O time legal de um cliente já encaminhou print da conversa pro email do CEO. Tá só você, o servidor e três horas até o time da Europa acordar.",
+    desc: "São 3h05 da madrugada. Teu celular vibra feito louco, o canal #war-room-helix tá pegando fogo. A Helix Labs (saúde digital) fez deploy do chatbot médico há 5 minutos. Os primeiros tickets chegaram dizendo que o bot mandou tomar 80mg de ibuprofeno (a dose certa é 8mg). O time legal de um cliente já encaminhou print da conversa pro email do CEO. Tá só você, o servidor e três horas até o time da Europa acordar.",
     short: "Bedrock alucinando · resposta médica perigosa",
     slackRecap: "Confirmado: o deploy de hoje (v2.4.1) removeu as <b>regras de segurança</b> do prompt E o <b>Bedrock Guardrails</b> tá desabilitado nesse endpoint. O bot tá respondendo qualquer coisa sem filtro.",
-    hint: "Tudo começou com um deploy de madrugada que removeu regras do prompt. Pensa em <b>recursos do próprio Bedrock pra impor restrições</b> além do prompt — algo que age como camada de proteção.",
+    hint: "Tudo começou com um deploy de madrugada que removeu regras do prompt. Pensa em <b>recursos do próprio Bedrock pra impor restrições</b> além do prompt, algo que age como camada de proteção.",
     quizQuestion: {
-      question: "Bedrock Guardrails tem várias categorias de filtro. Qual delas bloqueia conversas sobre TÓPICOS específicos (ex: 'não fale sobre investimentos')?",
+      question: "Você quer EVITAR que um chatbot Bedrock dê conselhos médicos, mesmo se o usuário pedir explicitamente ou tentar contornar com prompts criativos. Qual abordagem é MAIS ROBUSTA?",
       options: [
-        "Content Filters",
-        "Denied Topics",
-        "Sensitive Information Filters",
-        "Word Filters",
+        "Adicionar 'não fale de medicina' no prompt do sistema",
+        "Treinar o modelo com fine-tuning específico",
+        "Configurar Guardrails com Denied Topics",
+        "Bloquear o usuário via IAM",
       ],
-      correctIdx: 1,
-      explanation: "<b>Denied Topics</b> permite definir tópicos por linguagem natural pra bloquear (ex: 'aconselhamento médico'). Content Filters cobre violência/ódio/sexual. Sensitive Info é pra PII. Word Filters bloqueia palavras específicas.",
+      correctIdx: 2,
+      explanation: "<b>Guardrails</b> agem como camada EXTERNA ao prompt, não dá pra ser ignorada via jailbreak. Prompts no sistema podem ser sobrescritos por instruções criativas do usuário. Fine-tuning é caro e demorado. IAM controla quem ACESSA o modelo, não o CONTEÚDO que ele gera.",
     },
     ratePerMin: 412,
     initialCost: 5847,
@@ -116,11 +116,11 @@ const ALL_INCIDENTS: Incident[] = [
       { id: "escalate", name: "↗ Page o staff engineer", hint: "acordo o sênior às 3h", grade: "C", costDelta: 2800, xp: 80, verdict: "Funcional, mas escalou cedo demais.", sub: "OK em emergência real, ruim como hábito." },
     ],
     rootCause:
-      'O deploy v2.4.1 removeu o "safety preamble" do prompt do Bedrock e a flag de Guardrails estava desabilitada nesse endpoint específico (legado de migração). Sem barreira, o modelo passou a responder qualquer coisa — inclusive recomendações médicas que não tinha autorização pra dar.',
+      'O deploy v2.4.1 removeu o "safety preamble" do prompt do Bedrock e a flag de Guardrails estava desabilitada nesse endpoint específico (legado de migração). Sem barreira, o modelo passou a responder qualquer coisa, inclusive recomendações médicas que não tinha autorização pra dar.',
     services: [
-      { name: "Bedrock", role: "Foundation model", description: "O LLM que tava gerando as respostas. O modelo em si não tem culpa — ele responde o que o prompt pede. A culpa foi de quem tirou as instruções de segurança." },
+      { name: "Bedrock", role: "Foundation model", description: "O LLM que tava gerando as respostas. O modelo em si não tem culpa, ele responde o que o prompt pede. A culpa foi de quem tirou as instruções de segurança." },
       { name: "Bedrock Guardrails", role: "Solução", description: "Camada de segurança que bloqueia tópicos proibidos (medicina, finanças, política) antes da resposta sair. Definida 1x, aplica em todas as chamadas." },
-      { name: "Comprehend Medical", role: "Defesa extra", description: "Detecta se a resposta menciona medicamentos, dosagens, sintomas — e bloqueia se sim. Camada extra além do Guardrails." },
+      { name: "Comprehend Medical", role: "Defesa extra", description: "Detecta se a resposta menciona medicamentos, dosagens, sintomas, e bloqueia se sim. Camada extra além do Guardrails." },
     ],
     examNote: "Domínio 5 do exame · Responsible AI. Bedrock Guardrails é praticamente certo de cair. Memoriza: <code>Guardrails</code> bloqueia tópicos sensíveis, palavras-chave, PII, e prompts maliciosos. Funciona em qualquer modelo do Bedrock.",
   },
@@ -135,20 +135,20 @@ const ALL_INCIDENTS: Incident[] = [
     incId: "incident.support-bot.pii-exposed",
     customer: "Trustly Bank",
     slack: "#war-room-trustly",
-    desc: "Trustly Bank, 3h08 da manhã. O Slack #war-room-trustly começou a explodir quando a equipe de auditoria detectou um padrão estranho: depois do último deploy, o bot de atendimento começou a citar dados pessoais dos clientes nas respostas. CPF, número de cartão, RG — tudo em texto puro. O jurídico acordou na mesa, dizendo \"a LGPD vai ralar a gente\". O CEO ligou pro CTO. O CTO ligou pra ti.",
+    desc: "Trustly Bank, 3h08 da manhã. O Slack #war-room-trustly começou a explodir quando a equipe de auditoria detectou um padrão estranho: depois do último deploy, o bot de atendimento começou a citar dados pessoais dos clientes nas respostas. CPF, número de cartão, RG, tudo em texto puro. O jurídico acordou na mesa, dizendo \"a LGPD vai ralar a gente\". O CEO ligou pro CTO. O CTO ligou pra ti.",
     short: "PII vazando em respostas do bot · LGPD risk",
     slackRecap: "Confirmado: o novo prompt manda o bot <b>'personalizar usando dados do cliente'</b>, e <b>não tem filtro de PII</b> antes da resposta. Já vazou CPF de 47 clientes em 2h. LGPD ralando.",
     hint: "O prompt manda usar dados pessoais livremente. Vazamento de PII em chatbot AWS resolve-se com <b>uma feature específica do Bedrock</b> que detecta e bloqueia dados sensíveis nas respostas.",
     quizQuestion: {
-      question: "Qual serviço AWS detecta PII em arquivos S3 de forma automática e contínua?",
+      question: "Antes de enviar dados pra treinar um modelo de ML, você precisa REMOVER OU MASCARAR dados sensíveis (CPF, cartão, email) que aparecem nos textos. Qual feature do Amazon Comprehend ajuda nisso?",
       options: [
-        "Amazon Macie",
-        "Bedrock Guardrails",
-        "Comprehend DetectPiiEntities",
-        "GuardDuty",
+        "DetectSentiment",
+        "DetectEntities",
+        "DetectPiiEntities",
+        "DetectDominantLanguage",
       ],
-      correctIdx: 0,
-      explanation: "<b>Amazon Macie</b> escaneia buckets S3 automaticamente em busca de PII e dá alertas de severidade. Bedrock Guardrails atua em runtime (request/response). Comprehend é por chamada de API. GuardDuty é threat detection (não PII).",
+      correctIdx: 2,
+      explanation: "<b>DetectPiiEntities</b> identifica e localiza CPF, RG, cartão, email, telefone, etc em textos, devolvendo offsets pra você redact/mascarar. Útil em pipelines de ML pra anonimizar dados antes do treino. <b>DetectEntities</b> pega entidades nomeadas (pessoas, lugares, organizações) sem foco em PII.",
     },
     ratePerMin: 680,
     initialCost: 9120,
@@ -182,7 +182,7 @@ const ALL_INCIDENTS: Incident[] = [
       { id: "rollback-prompt", name: "↩ Rollback do prompt", hint: "~1min downtime", grade: "A-", costDelta: 1800, xp: 200, verdict: "Bom.", sub: "Volta o prompt antigo que não pede dados pessoais. Resolve mas não previne o próximo deploy ruim." },
       { id: "manual-review", name: "👁 Time humano revisa cada resposta", hint: "impossível em escala", grade: "F", costDelta: 18000, xp: 10, verdict: "Inviável.", sub: "8 mil chamadas/dia, ninguém revisa. SLA vai pro espaço." },
     ],
-    rootCause: "Deploy do prompt novo encorajou personalização: o bot passou a citar dados do cliente nas respostas (CPF, cartão). Não havia camada de PII redaction no pipeline — o modelo respondia, ia direto pro cliente.",
+    rootCause: "Deploy do prompt novo encorajou personalização: o bot passou a citar dados do cliente nas respostas (CPF, cartão). Não havia camada de PII redaction no pipeline, o modelo respondia, ia direto pro cliente.",
     services: [
       { name: "Comprehend", role: "Solução", description: 'Detecta PII (CPF, SSN, telefone, email, cartão) em texto. Pode redact automático: troca "123.456.789-00" por "[CPF]". 100ms, custa centavos.' },
       { name: "Bedrock Guardrails", role: "Alternativa", description: "Guardrails também tem filtro de PII configurável. Em casos onde já se usa Bedrock, pode resolver no mesmo lugar sem chamar Comprehend." },
@@ -201,20 +201,20 @@ const ALL_INCIDENTS: Incident[] = [
     incId: "incident.personalize.discrimination",
     customer: "Lar Doce Lar (imobiliária)",
     slack: "#ml-fairness",
-    desc: "Quinta-feira, 9h. Tu abre o LinkedIn e vê uma reportagem do Estadão circulando: 'Sistema de IA de imobiliária aprova 87% dos pedidos de bairros nobres e 4% das periferias'. Tua cliente. O time legal marcou call pras 10h. O modelo é o sistema de pontuação de crédito imobiliário que entrou em produção há 6 meses — alguém precisa entender o que aconteceu antes do call, e o histórico recente do treinamento aponta pra um problema no dataset.",
+    desc: "Quinta-feira, 9h. Tu abre o LinkedIn e vê uma reportagem do Estadão circulando: 'Sistema de IA de imobiliária aprova 87% dos pedidos de bairros nobres e 4% das periferias'. Tua cliente. O time legal marcou call pras 10h. O modelo é o sistema de pontuação de crédito imobiliário que entrou em produção há 6 meses, alguém precisa entender o que aconteceu antes do call, e o histórico recente do treinamento aponta pra um problema no dataset.",
     short: "Personalize discriminando por CEP · viés racial",
-    slackRecap: "Confirmado: o modelo usa <b>CEP</b> como feature principal (importância 0,42). O dataset tem 87% das aprovações vindas da zona sul nobre — periferia mal representada. <b>CEP virou proxy de raça</b>.",
+    slackRecap: "Confirmado: o modelo usa <b>CEP</b> como feature principal (importância 0,42). O dataset tem 87% das aprovações vindas da zona sul nobre, periferia mal representada. <b>CEP virou proxy de raça</b>.",
     hint: "CEP é a feature principal (importância 0,42) e correlaciona 0,78 com raça. Pensa: <b>tirar a feature</b>, <b>balancear o dataset</b>, ou usar uma <b>ferramenta AWS específica pra detectar viés</b>?",
     quizQuestion: {
-      question: "Além de detectar viés, com qual OUTRO aspecto de IA responsável o SageMaker Clarify ajuda?",
+      question: "Você quer entender QUAIS FEATURES mais influenciaram uma predição INDIVIDUAL do modelo (ex: por que o crédito desse cliente específico foi NEGADO). Qual técnica ajuda nisso?",
       options: [
-        "Criptografia do modelo",
-        "Explicabilidade (SHAP values)",
-        "Versionamento de modelos",
-        "Anonimização de dados",
+        "F1 Score",
+        "SHAP values",
+        "Cross-validation",
+        "Bias-Variance tradeoff",
       ],
       correctIdx: 1,
-      explanation: "Clarify usa <b>SHAP</b> (SHapley Additive exPlanations) pra explicar quais features mais influenciaram cada predição. Ajuda a debugar modelos e atender regulamentações que exigem explicabilidade (LGPD, GDPR).",
+      explanation: "<b>SHAP</b> (SHapley Additive exPlanations) quantifica a contribuição de cada feature pra cada predição específica. Diz coisas como 'esse cliente foi negado porque idade contribuiu +0.3 pra negação, renda contribuiu -0.5'. Faz parte do SageMaker Clarify. F1 é métrica geral. CV é validação. Bias-Variance é teoria sobre overfit/underfit.",
     },
     ratePerMin: 90,
     initialCost: 14200,
@@ -243,7 +243,7 @@ const ALL_INCIDENTS: Incident[] = [
     actions: [
       { id: "inv-features", type: "investigate", name: "Inspecionar features do modelo", hint: "+1min", reveals: "features", timeCost: 60 },
       { id: "inv-data", type: "investigate", name: "Auditar training data", hint: "+1min", reveals: "data", timeCost: 60 },
-      { id: "remove-cep", name: "✂ Remover feature CEP", hint: "rápido, mas paliativo", grade: "C", costDelta: 1200, xp: 80, verdict: "Trata sintoma, não doença.", sub: "CEP correlaciona com nome de rua, escola, transporte — o viés volta por outras features. Clarify mostraria isso." },
+      { id: "remove-cep", name: "✂ Remover feature CEP", hint: "rápido, mas paliativo", grade: "C", costDelta: 1200, xp: 80, verdict: "Trata sintoma, não doença.", sub: "CEP correlaciona com nome de rua, escola, transporte, o viés volta por outras features. Clarify mostraria isso." },
       { id: "clarify-retrain", name: "🔬 Clarify report + retrain balanceado", hint: "~2h offline", grade: "A+", costDelta: 2400, xp: 350, verdict: "Excelente.", sub: "SageMaker Clarify gera relatório de bias pre/post training. Tu rebalanceia dataset, retreina, valida." },
       { id: "shutdown-personalize", name: "⛔ Desligar Personalize", hint: "volta pra ordem manual", grade: "D", costDelta: 8200, xp: 40, verdict: "Excessivo.", sub: 'Resolve, mas perde 60% de eficiência. PR ruim ("tiraram o ML porque não souberam consertar").' },
       { id: "manual-rules", name: '📜 Adicionar regras manuais "anti-viés"', hint: "2 dias de trabalho", grade: "B-", costDelta: 3400, xp: 160, verdict: "Funciona, escala mal.", sub: "Hard-coding regras é frágil. Mês que vem outro viés surge." },
@@ -251,8 +251,8 @@ const ALL_INCIDENTS: Incident[] = [
     rootCause: "O modelo foi retreinado com dataset que sub-representava bairros de baixa renda. CEP é proxy de raça no Brasil. Sem auditoria de bias (Clarify) antes do deploy, o modelo aprendeu a discriminar.",
     services: [
       { name: "SageMaker Clarify", role: "Solução", description: "Detecta bias em datasets e modelos. Roda antes do training (data bias) e depois (model bias). Gera relatório com métricas: disparate impact, demographic parity, equal opportunity." },
-      { name: "SageMaker Model Monitor", role: "Prevenção", description: "Monitora drift no modelo em produção. Avisa quando distribuição de outputs muda — bias emergente entra aqui." },
-      { name: "Personalize", role: "O culpado", description: "O serviço não é ruim — ele faz o que tu treinou pra fazer. Garbage in, garbage out. Sem Clarify no pipeline, ninguém sabia que o input tava tóxico." },
+      { name: "SageMaker Model Monitor", role: "Prevenção", description: "Monitora drift no modelo em produção. Avisa quando distribuição de outputs muda, bias emergente entra aqui." },
+      { name: "Personalize", role: "O culpado", description: "O serviço não é ruim, ele faz o que tu treinou pra fazer. Garbage in, garbage out. Sem Clarify no pipeline, ninguém sabia que o input tava tóxico." },
     ],
     examNote: "<code>SageMaker Clarify</code> é a resposta padrão pra bias/fairness no exame. Memoriza: detecta <em>pre-training bias</em> (dataset) e <em>post-training bias</em> (modelo). Decora as métricas: disparate impact, DPL, KL divergence.",
   },
@@ -272,15 +272,15 @@ const ALL_INCIDENTS: Incident[] = [
     slackRecap: "Confirmado: o auto-resposta de email entrou em <b>loop infinito</b> (bot responde → email volta como bounce → bot responde de novo). 1.247 sessões em loop. Pior: tá usando <b>Claude Opus</b> em FAQ simples (60× mais caro que Haiku).",
     hint: "Dois fatores combinados: <b>volume artificial</b> (loop infinito) E <b>modelo caro pra a tarefa</b> (FAQ usando o mais caro da Bedrock). Ataca o que tá causando mais dano primeiro.",
     quizQuestion: {
-      question: "Pra reduzir custo no Bedrock com volume ALTO e PREVISÍVEL de uso, qual modelo de cobrança usar?",
+      question: "Você está rodando um LLM via API on-demand do Bedrock. Em qual UNIDADE de medida o Bedrock cobra você?",
       options: [
-        "On-demand (pay-per-use)",
-        "Provisioned Throughput",
-        "Savings Plan",
-        "Reserved Instances",
+        "Por requisição",
+        "Por minuto de uso",
+        "Por tokens de entrada e saída",
+        "Por GB de dados processados",
       ],
-      correctIdx: 1,
-      explanation: "<b>Provisioned Throughput</b> compra 'model units' mensais com desconto significativo. On-demand é flexível mas mais caro por token. Savings Plan e Reserved Instances são pra SageMaker/EC2, não Bedrock.",
+      correctIdx: 2,
+      explanation: "Bedrock cobra <b>por token</b>, separado pra input (prompt) e output (resposta). 1 token ≈ 4 caracteres em inglês, ~3 em português. Modelos mais caros (Opus) cobram mais por token. Output normalmente é mais caro que input. Por isso instruir 'responda em uma frase' reduz custo.",
     },
     ratePerMin: 140,
     initialCost: 18400,
@@ -314,7 +314,7 @@ const ALL_INCIDENTS: Incident[] = [
       { id: "rate-limit", name: "🛡 Adicionar rate limit + circuit breaker", hint: "~30min", grade: "A+", costDelta: 1200, xp: 340, verdict: "Excelente.", sub: "Loop infinito não acontece de novo. Circuit breaker é boa prática. CTO te elogia no all-hands." },
       { id: "provisioned", name: "📦 Comprar Provisioned Throughput", hint: "reduz custo unitário", grade: "D", costDelta: 24000, xp: 30, verdict: "Pior decisão.", sub: "PT tem custo fixo alto. Resolve preço por token, não o volume insano." },
     ],
-    rootCause: 'A feature "AI auto-reply" não tinha proteção contra loop: cliente recebia email do bot, respondia automático, bot respondia de novo. Pior: tava usando Claude Opus pra responder FAQs simples — 10x mais caro que Haiku resolveria.',
+    rootCause: 'A feature "AI auto-reply" não tinha proteção contra loop: cliente recebia email do bot, respondia automático, bot respondia de novo. Pior: tava usando Claude Opus pra responder FAQs simples, 10x mais caro que Haiku resolveria.',
     services: [
       { name: "Bedrock", role: "Onde queimou", description: "O serviço expõe vários modelos: Claude Opus (caro, smart), Sonnet (médio), Haiku (rápido, barato). Escolher o modelo certo é FinOps básico." },
       { name: "Provisioned Throughput", role: "Pra alto volume", description: "Compra throughput fixo. Caro como base, vale se tu tem volume previsível. Pra pico de incidente, NÃO é solução." },
@@ -338,15 +338,15 @@ const ALL_INCIDENTS: Incident[] = [
     slackRecap: "Confirmado: a tarefa de sincronizar a base RAG tá <b>falhando há 94 dias</b> por permissão de IAM revogada na auditoria. Nenhum alarme configurado. Bot continua respondendo com docs de 3 meses atrás.",
     hint: "A tarefa do RAG falha há 94 dias por permissão de IAM, e ninguém percebeu. São dois problemas: <b>corrigir o IAM</b> agora E <b>garantir que isso seja detectado</b> no futuro.",
     quizQuestion: {
-      question: "No fluxo RAG, qual etapa busca documentos relevantes ANTES de chamar o LLM?",
+      question: "Em RAG, antes de fazer a busca semântica, cada documento da base é convertido em uma REPRESENTAÇÃO NUMÉRICA densa que captura seu significado. Como isso se chama?",
       options: [
-        "Embeddings + Vector Search",
-        "Prompt Engineering",
-        "Fine-tuning",
-        "Model Distillation",
+        "Hash",
+        "Tokenização",
+        "Embedding",
+        "Compressão",
       ],
-      correctIdx: 0,
-      explanation: "RAG funciona assim: 1) converte a pergunta em <b>embedding</b> (vetor), 2) busca no <b>vector DB</b> documentos similares, 3) passa documentos + pergunta pro LLM. Fine-tuning treina o modelo; RAG só consulta dados externos sem retreinar.",
+      correctIdx: 2,
+      explanation: "<b>Embeddings</b> são vetores numéricos densos (centenas/milhares de dimensões) que representam significado semântico. Textos similares têm embeddings próximos no espaço vetorial. Modelos como Titan Embeddings (Bedrock) ou Cohere Embed geram esses vetores. Hash é determinístico mas não captura semântica. Tokenização é só dividir texto em pedaços.",
     },
     ratePerMin: 60,
     initialCost: 3400,
@@ -403,15 +403,15 @@ const ALL_INCIDENTS: Incident[] = [
     slackRecap: "Confirmado: o app tá usando <b>Transcribe Standard (genérico)</b>, sem vocabulário customizado. Erro de transcrição em 18,4% das palavras médicas. A AWS tem o <b>Transcribe Medical</b> que faz isso com ~3% de erro.",
     hint: "O AWS Transcribe tem <b>variantes</b> além do genérico. Pensa em domínios onde o vocabulário é muito específico (medicina, jurídico).",
     quizQuestion: {
-      question: "Qual feature do Amazon Transcribe identifica QUEM está falando em um áudio com várias pessoas?",
+      question: "Você está transcrevendo chamadas de call center. Cada chamada tem áudio em DOIS CANAIS separados (agente em um canal, cliente em outro). Qual feature do Transcribe é a indicada?",
       options: [
-        "Speaker Diarization (Speaker Labels)",
+        "Speaker Diarization",
         "Channel Identification",
         "Custom Vocabulary",
-        "Content Redaction",
+        "Real-time Streaming",
       ],
-      correctIdx: 0,
-      explanation: "<b>Speaker Diarization</b> detecta quando o falante muda e atribui labels (Speaker 0, Speaker 1...). Útil em entrevistas, reuniões e consultas médicas com vários participantes. Channel Identification é pra áudio multicanal (estéreo).",
+      correctIdx: 1,
+      explanation: "<b>Channel Identification</b> aproveita os canais JÁ separados fisicamente e transcreve cada um isoladamente, mais preciso. <b>Speaker Diarization</b> tenta SEPARAR speakers em áudio mono (mais difícil, menos confiável). Se você já tem os canais separados, use Channel Identification.",
     },
     ratePerMin: 300,
     initialCost: 7800,
@@ -440,11 +440,11 @@ const ALL_INCIDENTS: Incident[] = [
     actions: [
       { id: "inv-config", type: "investigate", name: "Ver config do Transcribe", hint: "+30s", reveals: "config", timeCost: 30 },
       { id: "add-vocab", name: "📚 Custom Vocabulary com termos clínicos", hint: "~2h trabalho", grade: "B-", costDelta: 3200, xp: 170, verdict: "Bom paliativo.", sub: "Reduz erro pra ~8%. Mas ainda fica abaixo do médico humano. Tem solução melhor." },
-      { id: "switch-medical", name: "🏥 Migrar pra Transcribe Medical", hint: "~1 dia migração", grade: "A+", costDelta: 1800, xp: 380, verdict: "Excelente.", sub: "Modelo treinado em termos médicos. WER cai pra ~3%. Existe variante específica do serviço — usa." },
+      { id: "switch-medical", name: "🏥 Migrar pra Transcribe Medical", hint: "~1 dia migração", grade: "A+", costDelta: 1800, xp: 380, verdict: "Excelente.", sub: "Modelo treinado em termos médicos. WER cai pra ~3%. Existe variante específica do serviço, usa." },
       { id: "human-review", name: "👁 Toda transcrição revisada por humano", hint: "não escala", grade: "D", costDelta: 9400, xp: 40, verdict: "Burra.", sub: "Vira gargalo, custa fortuna. Defeats the purpose." },
       { id: "shutdown-feature", name: "⛔ Desliga até resolver", hint: "sem AI por enquanto", grade: "C-", costDelta: 4800, xp: 60, verdict: "Conservador.", sub: "Reduz risco mas perde valor do produto. Médicos voltam pro papel." },
     ],
-    rootCause: "O time usou <code>Amazon Transcribe</code> padrão (treinado em fala genérica). Há uma variante especializada — <code>Transcribe Medical</code> — treinada em vocabulário clínico, conversas médico-paciente, ditados de prontuário. Custa o mesmo, performa muito melhor.",
+    rootCause: "O time usou <code>Amazon Transcribe</code> padrão (treinado em fala genérica). Há uma variante especializada, <code>Transcribe Medical</code>, treinada em vocabulário clínico, conversas médico-paciente, ditados de prontuário. Custa o mesmo, performa muito melhor.",
     services: [
       { name: "Transcribe Medical", role: "A solução", description: "Variante especializada de Transcribe. Treinada em dicionário médico, termos farmacêuticos, dosagens. HIPAA-eligible. WER ~3% em consultas vs ~15% do Transcribe padrão." },
       { name: "Custom Vocabulary", role: "Complemento", description: "Mesmo no Transcribe Medical, dá pra adicionar jargão específico da clínica (procedimentos internos, abreviações da equipe)." },
@@ -465,18 +465,18 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#intl-launch",
     desc: "Sexta-feira, 12h. A GameStudio acabou de lançar o novo MMORPG globalmente. 2 milhões de pré-downloads. Reviewers começaram a postar print da tradução pt-BR: 'headshot' virou 'tiro na cabeça', 'crit chance' virou 'chance crítica', 'DPS' virou 'departamento de polícia'. O subreddit do jogo tá rindo. O time de marketing tá gritando 'arruma isso AGORA'. Tu abriu o ticket: o Translate da AWS tá rodando, mas alguma coisa não tá certa.",
     short: "Translate sem custom terminology · gaming",
-    slackRecap: "Confirmado: o Translate tá rodando sem nenhum <b>glossário customizado</b>. Tem um arquivo CSV com 340 termos gaming preparado no S3 — só falta carregar como Custom Terminology no Translate.",
+    slackRecap: "Confirmado: o Translate tá rodando sem nenhum <b>glossário customizado</b>. Tem um arquivo CSV com 340 termos gaming preparado no S3, só falta carregar como Custom Terminology no Translate.",
     hint: "O Translate funciona com base em um <b>dicionário geral</b>. Quando o conteúdo tem <b>jargão de um domínio específico</b>, qual mecanismo do próprio Translate resolveria isso?",
     quizQuestion: {
-      question: "Pra traduzir um documento GRANDE (vários MB) com volume alto, qual modo do Amazon Translate é apropriado?",
+      question: "Você precisa traduzir entre um par de idiomas pouco comum (ex: Tailandês → Vietnamita). O que o Amazon Translate faz internamente?",
       options: [
-        "Real-time Translation (TranslateText)",
-        "Asynchronous Batch Translation",
-        "Streaming Translation",
-        "Edge Translation",
+        "Falha porque o par não é suportado",
+        "Traduz direto entre os dois idiomas com modelo dedicado",
+        "Usa inglês como idioma-ponte (pivot translation)",
+        "Faz fallback pra Bedrock",
       ],
-      correctIdx: 1,
-      explanation: "<b>Batch Translation</b> processa grandes volumes de S3 para S3 de forma assíncrona, sem limite de tamanho por chamada. TranslateText (real-time) é limitado a 10 KB por requisição.",
+      correctIdx: 2,
+      explanation: "Translate usa <b>pivot translation</b> via inglês pra pares menos comuns: traduz Tailandês → Inglês → Vietnamita internamente. Isso pode introduzir alguma perda de nuance. Só os pares mais populares têm modelo direto.",
     },
     ratePerMin: 25,
     initialCost: 850,
@@ -507,9 +507,9 @@ const ALL_INCIDENTS: Incident[] = [
       { id: "switch-bedrock", name: "🧠 Trocar pra Bedrock (LLM)", hint: "mais caro mas contexto", grade: "B", costDelta: 1800, xp: 150, verdict: "Funciona, é over.", sub: "LLM entende contexto melhor, mas custa 50x mais que Translate. Pra strings curtas é desperdício." },
       { id: "apologize", name: "📢 Pedir desculpa, manter ruim", hint: "gerência ri", grade: "F", costDelta: 8200, xp: 10, verdict: "Pior decisão de carreira.", sub: "Refunds explodem. CEO te procura." },
     ],
-    rootCause: 'Translate é otimizado pra texto genérico. Em domínios com jargão (gaming, jurídico, médico), traduções literais quebram. A solução é Custom Terminology — um dicionário de "esses termos NÃO traduz" ou "esses termos traduz assim".',
+    rootCause: 'Translate é otimizado pra texto genérico. Em domínios com jargão (gaming, jurídico, médico), traduções literais quebram. A solução é Custom Terminology, um dicionário de "esses termos NÃO traduz" ou "esses termos traduz assim".',
     services: [
-      { name: "Translate", role: "Onde tava errado", description: "Tradução neural rápida, barata (~$15/1M chars). Cobre 75 idiomas. Default é tradução literal — boa pra texto comum." },
+      { name: "Translate", role: "Onde tava errado", description: "Tradução neural rápida, barata (~$15/1M chars). Cobre 75 idiomas. Default é tradução literal, boa pra texto comum." },
       { name: "Translate Custom Terminology", role: "A solução", description: "Tu sobe um arquivo (TMX, CSV) com pares termo origem → termo destino pra cada idioma. Translate respeita." },
       { name: "Bedrock (LLM)", role: "Alternativa cara", description: "Pra casos onde Custom Terminology não basta (literatura, marketing copy com nuance), LLM entrega tradução criativa. Mas custa 50-100x mais." },
     ],
@@ -531,15 +531,15 @@ const ALL_INCIDENTS: Incident[] = [
     slackRecap: "Confirmado: alguém mudou o <b>threshold de moderação</b> de 80% pra 99% direto pelo console (sem PR, sem código). Resultado: 14.221 imagens duvidosas passaram sem revisão nas últimas 24h.",
     hint: "Alguém mudou o threshold ontem pelo console. Tem duas frentes: <b>corrigir o valor agora</b> e <b>impedir que isso aconteça de novo</b>.",
     quizQuestion: {
-      question: "Qual serviço AWS rastreia mudanças de configuração de recursos ao longo do tempo (config drift)?",
+      question: "Alguém alterou uma configuração crítica direto pelo Console AWS, e ninguém sabe quem ou quando. Qual serviço guarda esse HISTÓRICO de chamadas de API com identidade, ação e timestamp?",
       options: [
-        "CloudWatch",
-        "AWS Config",
+        "CloudWatch Logs",
         "CloudTrail",
-        "Trusted Advisor",
+        "AWS Config",
+        "X-Ray",
       ],
       correctIdx: 1,
-      explanation: "<b>AWS Config</b> grava o estado dos recursos e detecta drift de configuração. CloudTrail registra QUEM fez WHAT (audit log de chamadas de API). CloudWatch monitora métricas/logs. Trusted Advisor dá recomendações de best practices.",
+      explanation: "<b>CloudTrail</b> registra TODAS as chamadas de API com quem fez (IAM identity), o que fez (action), quando (timestamp) e de onde (IP). É o log de auditoria. AWS Config rastreia o ESTADO dos recursos. CloudWatch Logs é pra logs de aplicação. X-Ray é tracing distribuído.",
     },
     ratePerMin: 520,
     initialCost: 11800,
@@ -573,7 +573,7 @@ const ALL_INCIDENTS: Incident[] = [
       { id: "human-mod", name: "👥 Contratar 50 moderadores", hint: "mês de onboarding", grade: "D", costDelta: 14200, xp: 40, verdict: "Cara e lenta.", sub: "Não escala pra 2M users. Custo: $300k/ano. Rekognition custa $1/1k images." },
       { id: "hide-all", name: "🙈 Hide tudo até revisar", hint: "feed vazio", grade: "F", costDelta: 24000, xp: 10, verdict: "Mata o produto.", sub: "Users vão pra concorrência. Stock cai. Demitido na sexta." },
     ],
-    rootCause: "Rekognition retorna labels (Violence, Nudity, Drugs, etc) com confidence score. Threshold padrão é 80% — abaixo disso o flag é ignorado. Alguém subiu pra 99% (talvez pra reduzir falso-positivo) sem entender que isso deixa quase tudo passar. Sem IaC, sem alerta, ninguém viu.",
+    rootCause: "Rekognition retorna labels (Violence, Nudity, Drugs, etc) com confidence score. Threshold padrão é 80%, abaixo disso o flag é ignorado. Alguém subiu pra 99% (talvez pra reduzir falso-positivo) sem entender que isso deixa quase tudo passar. Sem IaC, sem alerta, ninguém viu.",
     services: [
       { name: "Rekognition", role: "O moderador", description: "Tem API <code>detect_moderation_labels</code> que retorna categorias (Violence, Hate, Drugs, Suggestive) com confidence. Funciona em image E video." },
       { name: "Confidence threshold", role: "A pegadinha", description: "Muito baixo = falso positivo. Muito alto = passa coisa. Ideal: 80-90% pra moderação geral, 95%+ se contexto exige." },
@@ -583,7 +583,7 @@ const ALL_INCIDENTS: Incident[] = [
   },
 
   // ============================================================
-  // SEV-0: BOSS — Multi-Phase Catastrophe
+  // SEV-0: BOSS, Multi-Phase Catastrophe
   // ============================================================
   {
     id: "the-cascade",
@@ -592,20 +592,20 @@ const ALL_INCIDENTS: Incident[] = [
     incId: "incident.global.everything-on-fire",
     customer: "Anthrofin Insurance (mission-critical)",
     slack: "#war-room-CEO-watching",
-    desc: "23h46. Black Friday. O e-commerce tá processando o maior volume da história — $4.000 em vendas por SEGUNDO. Aí o site começa a engasgar. Primeiro o chatbot entra em loop infinito. Depois a base de conhecimento estoura. O filtro de PII bate no limite. O CloudFront começa a retornar erro 503. Cascata clássica. O CEO mandou DM: 'qualquer coisa que precisarem, façam AGORA'. CFO no Slack: 'a cada minuto são $240k'. Tu é o on-call. Boa sorte.",
+    desc: "23h46. Black Friday. O e-commerce tá processando o maior volume da história, $4.000 em vendas por SEGUNDO. Aí o site começa a engasgar. Primeiro o chatbot entra em loop infinito. Depois a base de conhecimento estoura. O filtro de PII bate no limite. O CloudFront começa a retornar erro 503. Cascata clássica. O CEO mandou DM: 'qualquer coisa que precisarem, façam AGORA'. CFO no Slack: 'a cada minuto são $240k'. Tu é o on-call. Boa sorte.",
     short: "BOSS · 3 fases · cascading failure em todo o stack AI",
     slackRecap: "Black Friday tá derretendo tudo. <b>Bedrock em throttling</b>, base de conhecimento em timeout, Comprehend rate-limited, CloudFront 503. Lambda no limite de concurrency, 40 mil mensagens na DLQ. <b>Estancar o sangramento primeiro.</b>",
     hint: "Black Friday derretendo tudo: primeiro <b>estanca o sangramento</b> (limitar tráfego, fallbacks), depois <b>investiga a causa</b>, depois <b>previne</b>. Ordem importa.",
     quizQuestion: {
-      question: "Qual padrão arquitetural impede falhas em cascata, PARANDO chamadas a um serviço quando ele passa de um threshold de erros?",
+      question: "Em arquitetura resiliente, qual estratégia mantém o app funcionando MESMO quando uma dependência falha (ex: continuar mostrando produtos mesmo se o serviço de recomendações estiver fora)?",
       options: [
-        "Rate Limiter",
-        "Circuit Breaker",
-        "Retry with Backoff",
-        "Cache",
+        "Hard fail (mostrar erro 500 pra todo mundo)",
+        "Retry indefinitely (continuar tentando até funcionar)",
+        "Graceful degradation com fallback",
+        "Cold start",
       ],
-      correctIdx: 1,
-      explanation: "<b>Circuit Breaker</b> monitora taxa de erro e 'abre' o circuito (rejeita chamadas imediatamente) quando passa do threshold, dando tempo do serviço dependente se recuperar. Rate Limiter limita volume; Retry tenta de novo; Cache reduz carga.",
+      correctIdx: 2,
+      explanation: "<b>Graceful degradation</b>: quando uma feature secundária falha, o app continua funcionando sem ela. Em vez de derrubar a página inteira, mostra produtos sem recomendações personalizadas. Combina com circuit breaker (que decide QUANDO ativar o fallback) e timeouts agressivos.",
     },
     ratePerMin: 1850,
     initialCost: 42000,
@@ -637,7 +637,7 @@ const ALL_INCIDENTS: Incident[] = [
     ],
     actions: [], // boss uses phases instead
     phases: [
-      // PHASE 1 — Stop the bleeding
+      // PHASE 1, Stop the bleeding
       {
         name: "FASE 1 · Stop the bleeding",
         description: "Cascade tá expandindo. Tu precisa cortar circuit breakers em algum lugar.",
@@ -658,7 +658,7 @@ const ALL_INCIDENTS: Incident[] = [
           { id: "boss-p1-rollback", name: "↩ Rollback do deploy", hint: "demora 5min", grade: "C", costDelta: 6800, xp: 80, verdict: "🟡 Funciona mas lento", sub: "Para a cascata. Mas em Black Friday cada segundo são $4k." },
         ],
       },
-      // PHASE 2 — Drain the queue
+      // PHASE 2, Drain the queue
       {
         name: "FASE 2 · Drain the queue",
         description: "Sangramento parou. Agora tem 40k mensagens em DLQ pra reprocessar SEM derrubar tudo de novo.",
@@ -679,7 +679,7 @@ const ALL_INCIDENTS: Incident[] = [
           { id: "boss-p2-drop", name: "🗑 Dropar a fila inteira", hint: "perde requests", grade: "C-", costDelta: 8200, xp: 50, verdict: "🟡 Funciona com dano", sub: "41k clientes não vão receber resposta. Twitter PR ruim, mas serviço volta." },
         ],
       },
-      // PHASE 3 — Root cause + post-mortem
+      // PHASE 3, Root cause + post-mortem
       {
         name: "FASE 3 · Root cause permanente",
         description: "Serviço estabilizou. Agora a pergunta cara: por que aconteceu E como garantir que não acontece de novo na próxima Black Friday?",
@@ -704,7 +704,7 @@ const ALL_INCIDENTS: Incident[] = [
     rootCause: "Cascading failure clássico: Bedrock entrou em throttling natural na Black Friday → app tinha retry agressivo SEM exponential backoff → loop amplificou requests → derrubou Lambda concurrency → KB começou a timeout → Comprehend hit rate limit → CloudFront 503 → mais retry. Cada serviço sozinho funcionava. O sistema todo não.",
     services: [
       { name: "Step Functions", role: "Orquestração", description: "Workflows com retry + exponential backoff nativo. Se invokeBedrock falhar 3x, espera 2s, depois 4s, 8s. Loop infinito não existe." },
-      { name: "Bedrock Provisioned Throughput", role: "Pra picos previsíveis", description: "Black Friday é previsível. PT compra throughput garantido — sem throttling. Caro de manter, mas em peak vale ouro." },
+      { name: "Bedrock Provisioned Throughput", role: "Pra picos previsíveis", description: "Black Friday é previsível. PT compra throughput garantido, sem throttling. Caro de manter, mas em peak vale ouro." },
       { name: "SQS + DLQ", role: "Buffer + safety net", description: "Em vez de chamar Bedrock direto, joga numa SQS. Workers processam no ritmo. Falhas vão pra DLQ pra replay controlado." },
       { name: "CloudWatch + Anomaly Detection", role: "Observabilidade", description: "Cascading só se detecta quando tu tem dashboards de toda a stack. Anomaly Detection pega o spike antes de virar incêndio." },
       { name: "AWS Fault Injection Service", role: "Prevenção", description: "Chaos engineering oficial da AWS. Faz gameday todo mês injetando falhas controladas. Se o sistema cai, tu sabe antes do CEO." },
@@ -724,20 +724,20 @@ const ALL_INCIDENTS: Incident[] = [
     incId: "incident.reviewhub.sentiment-flipped",
     customer: "ReviewHub",
     slack: "#war-room-reviewhub",
-    desc: "Quarta-feira, 14h. O all-hands semanal acabou de terminar e a Maria, PM do ReviewHub, ainda tá processando o que viu: o dashboard de NPS que ela mostrou pro CEO indica que 90% das reviews da última semana são NEGATIVAS. Aí ela abre o app pra conferir: 'amei o produto', 'chegou rapidinho', 'recomendo demais, comprei pra minha mãe' — todas com 5 estrelas. Algo tá MUITO errado entre o que o cliente escreve e o que o dashboard mostra. O Slack #war-room-reviewhub vibrou: 'precisamos entender isso antes da reunião do board na sexta'.",
+    desc: "Quarta-feira, 14h. O all-hands semanal acabou de terminar e a Maria, PM do ReviewHub, ainda tá processando o que viu: o dashboard de NPS que ela mostrou pro CEO indica que 90% das reviews da última semana são NEGATIVAS. Aí ela abre o app pra conferir: 'amei o produto', 'chegou rapidinho', 'recomendo demais, comprei pra minha mãe', todas com 5 estrelas. Algo tá MUITO errado entre o que o cliente escreve e o que o dashboard mostra. O Slack #war-room-reviewhub vibrou: 'precisamos entender isso antes da reunião do board na sexta'.",
     short: "Comprehend retornando NEGATIVE pra reviews 5 estrelas",
-    slackRecap: "Confirmado: o Comprehend tá sendo chamado com <code>LanguageCode='en'</code>, mas 96% das reviews estão em <b>português</b>. Sentimento é dependente do idioma — por isso 'amei o produto' vira NEGATIVE.",
+    slackRecap: "Confirmado: o Comprehend tá sendo chamado com <code>LanguageCode='en'</code>, mas 96% das reviews estão em <b>português</b>. Sentimento é dependente do idioma, por isso 'amei o produto' vira NEGATIVE.",
     hint: "A inconsistência tá entre <b>o idioma das reviews</b> e <b>o que o Comprehend foi instruído a esperar</b>. Olha o parâmetro de idioma.",
     quizQuestion: {
-      question: "Qual API do Amazon Comprehend identifica automaticamente o IDIOMA de um texto desconhecido?",
+      question: "Você precisa classificar tickets de suporte em categorias específicas do seu negócio (billing, técnico, abuse, churn). As categorias built-in do Comprehend não servem. Qual feature resolve isso?",
       options: [
-        "DetectSentiment com auto",
-        "DetectDominantLanguage",
-        "DetectLanguageCode",
-        "DetectEntities",
+        "Comprehend Topic Modeling",
+        "Comprehend Custom Classification",
+        "DetectEntities com filtro",
+        "DetectSentiment com targets",
       ],
       correctIdx: 1,
-      explanation: "<b>DetectDominantLanguage</b> retorna o idioma mais provável + score de confiança. Útil quando você não sabe o idioma de antemão e quer rotear pra processadores específicos.",
+      explanation: "<b>Custom Classification</b> permite treinar um classificador com SEUS rótulos e SEUS exemplos. Topic Modeling é não-supervisionado (agrupa, mas você não controla as categorias). DetectEntities extrai nomes/lugares/orgs. DetectSentiment é polaridade fixa (positive/negative/neutral).",
     },
     ratePerMin: 90,
     initialCost: 480,
@@ -768,13 +768,13 @@ const ALL_INCIDENTS: Incident[] = [
       { id: "set-lang-pt", name: "🇧🇷 Setar LanguageCode='pt' nas chamadas", hint: "1 linha de código · resolve", grade: "A+", costDelta: 120, xp: 280, verdict: "Excelente.", sub: "Comprehend suporta sentimento em pt-BR. Era só passar o LanguageCode certo. Bug clássico." },
       { id: "detect-lang-first", name: "🔍 Chamar DetectDominantLanguage antes", hint: "+1 API call por review", grade: "A", costDelta: 380, xp: 220, verdict: "Bom, robusto.", sub: "Funciona mesmo com reviews em vários idiomas. Custa 2x calls mas é mais à prova de falhas." },
       { id: "translate-first", name: "🌐 Traduzir tudo pra inglês antes", hint: "Translate + Comprehend", grade: "C", costDelta: 1200, xp: 80, verdict: "Funciona, mas overengineering.", sub: "Comprehend já tem pt-BR nativo. Tradução adiciona custo, latência e perde nuance." },
-      { id: "retrain", name: "🔧 Retreinar Comprehend Custom", hint: "semanas de trabalho", grade: "F", costDelta: 5400, xp: 30, verdict: "Errou alvo total.", sub: "O modelo padrão funciona pra pt-BR — basta passar o LanguageCode. Custom Comprehend é pra domínios específicos, não pra fix de bug." },
+      { id: "retrain", name: "🔧 Retreinar Comprehend Custom", hint: "semanas de trabalho", grade: "F", costDelta: 5400, xp: 30, verdict: "Errou alvo total.", sub: "O modelo padrão funciona pra pt-BR, basta passar o LanguageCode. Custom Comprehend é pra domínios específicos, não pra fix de bug." },
     ],
-    rootCause: "O Lambda <code>review-classifier</code> tava chamando <code>DetectSentiment</code> com <code>LanguageCode='en'</code> hardcoded, mas as reviews tão em pt-BR. Quando Comprehend recebe texto que não bate com o idioma declarado, ele tenta inferir sentimento das pistas léxicas em inglês — e erra feio. Sentimento é dependente do idioma.",
+    rootCause: "O Lambda <code>review-classifier</code> tava chamando <code>DetectSentiment</code> com <code>LanguageCode='en'</code> hardcoded, mas as reviews tão em pt-BR. Quando Comprehend recebe texto que não bate com o idioma declarado, ele tenta inferir sentimento das pistas léxicas em inglês, e erra feio. Sentimento é dependente do idioma.",
     services: [
       { name: "Amazon Comprehend", role: "O serviço", description: "NLP gerenciado da AWS. <code>DetectSentiment</code> retorna POSITIVE/NEGATIVE/NEUTRAL/MIXED com confidence score. Suporta 12 idiomas incluindo pt-BR nativo." },
       { name: "DetectDominantLanguage", role: "Defesa", description: "Outra API do Comprehend. Recebe texto e devolve probabilidade de cada idioma. Combinar com DetectSentiment dá pipeline robusto pra conteúdo multilíngue." },
-      { name: "Comprehend Custom", role: "Pra outro caso", description: "Quando precisa de classificação específica do domínio (categorias customizadas, sentimentos sutis). NÃO é a solução aqui — o modelo padrão funciona pra pt-BR." },
+      { name: "Comprehend Custom", role: "Pra outro caso", description: "Quando precisa de classificação específica do domínio (categorias customizadas, sentimentos sutis). NÃO é a solução aqui, o modelo padrão funciona pra pt-BR." },
     ],
     examNote: "<code>Comprehend</code> é praticamente certo de cair na prova. Memoriza: <code>DetectSentiment</code> (POSITIVE/NEGATIVE/NEUTRAL/MIXED), <code>DetectDominantLanguage</code>, <code>DetectEntities</code>, <code>DetectPiiEntities</code>. <b>Sempre passa o <code>LanguageCode</code></b> ou faça detect-language primeiro.",
   },
@@ -787,20 +787,20 @@ const ALL_INCIDENTS: Incident[] = [
     incId: "incident.audioready.polly-pronunciation",
     customer: "AudioReady (audiobooks)",
     slack: "#war-room-audioready",
-    desc: "Segunda-feira, 8h21. Tu abre o Slack e o canal #war-room-audioready tem 12 mensagens novas. A AudioReady (startup de audiobooks) lançou uma coleção sobre carreira em tech. Os primeiros reviewers começaram a dar 1 estrela: 'narrador não sabe ler nada de tecnologia'. Print: a voz da Polly tá lendo 'Kubernetes' como 'cubernetes', 'PyTorch' como 'pee-torch', 'Docker' como 'doquér'. O editor disse que desistiu de revisar manualmente — tem 47 audiobooks na fila. CEO quer fix antes do final do dia.",
+    desc: "Segunda-feira, 8h21. Tu abre o Slack e o canal #war-room-audioready tem 12 mensagens novas. A AudioReady (startup de audiobooks) lançou uma coleção sobre carreira em tech. Os primeiros reviewers começaram a dar 1 estrela: 'narrador não sabe ler nada de tecnologia'. Print: a voz da Polly tá lendo 'Kubernetes' como 'cubernetes', 'PyTorch' como 'pee-torch', 'Docker' como 'doquér'. O editor disse que desistiu de revisar manualmente, tem 47 audiobooks na fila. CEO quer fix antes do final do dia.",
     short: "Polly pronunciando termos técnicos errado",
-    slackRecap: "Confirmado: o Polly tá rodando sem <b>Pronunciation Lexicon</b>. Tem um lexicon com 47 termos tech (Kubernetes, Docker, PyTorch) já criado na conta — mas <b>nunca foi anexado</b> nas chamadas.",
+    slackRecap: "Confirmado: o Polly tá rodando sem <b>Pronunciation Lexicon</b>. Tem um lexicon com 47 termos tech (Kubernetes, Docker, PyTorch) já criado na conta, mas <b>nunca foi anexado</b> nas chamadas.",
     hint: "Pensa: o problema é a <b>voz escolhida</b>, o <b>texto enviado</b>, ou alguma <b>instrução de pronúncia</b> que o serviço aceita mas não recebeu?",
     quizQuestion: {
-      question: "Além de Lexicon, qual tag SSML do Polly permite controlar a pronúncia de uma palavra usando fonemas IPA?",
+      question: "Quando faz MAIS SENTIDO criar um Pronunciation Lexicon em vez de usar tags SSML inline em cada texto que o Polly vai ler?",
       options: [
-        "&lt;prosody&gt;",
-        "&lt;phoneme&gt;",
-        "&lt;emphasis&gt;",
-        "&lt;break&gt;",
+        "Quando o texto é muito longo",
+        "Quando o mesmo termo se repete em vários documentos",
+        "Quando você precisa de pausas no áudio",
+        "Quando o idioma é português",
       ],
       correctIdx: 1,
-      explanation: "<b>&lt;phoneme&gt;</b> permite especificar pronúncia exata usando IPA (alfabeto fonético internacional). SSML também tem <b>&lt;prosody&gt;</b> (velocidade/pitch), <b>&lt;emphasis&gt;</b> (ênfase) e <b>&lt;break&gt;</b> (pausas).",
+      explanation: "<b>Lexicon</b> é reutilizável, você define o termo uma vez (ex: 'Kubernetes' → IPA) e ele aplica em TODOS os documentos que usam aquele lexicon. SSML inline funciona caso a caso, e duplicar a correção em cada texto é frágil. Pausas seriam com <b>&lt,break&gt,</b>, e idioma não tem relação com a escolha.",
     },
     ratePerMin: 40,
     initialCost: 260,
@@ -829,7 +829,7 @@ const ALL_INCIDENTS: Incident[] = [
       { id: "inv-polly", type: "investigate", name: "Investigar setup do Polly", hint: "+30s · grátis", reveals: "polly", timeCost: 30 },
       { id: "lexicon", name: "📖 Aplicar Pronunciation Lexicon", hint: "1x criação · reusa pra sempre", grade: "A+", costDelta: 80, xp: 280, verdict: "Excelente.", sub: "Lexicon é gerenciado pelo Polly. Define a pronúncia uma vez, vale pra todas as chamadas. Solução oficial." },
       { id: "ssml", name: "🏷 SSML <phoneme> em cada texto", hint: "editor tem que marcar", grade: "B", costDelta: 320, xp: 160, verdict: "Resolve, mas não escala.", sub: "Funciona caso a caso, mas pra cada termo novo o editor precisa lembrar. Lexicon é melhor pra biblioteca recorrente." },
-      { id: "swap-voice", name: "🗣 Trocar voz pra Joanna (en-US)", hint: "muda público alvo", grade: "F", costDelta: 480, xp: 30, verdict: "Não.", sub: "Os clientes querem audiobook em pt-BR. Trocar voz não resolve termos técnicos — só muda o sotaque do erro." },
+      { id: "swap-voice", name: "🗣 Trocar voz pra Joanna (en-US)", hint: "muda público alvo", grade: "F", costDelta: 480, xp: 30, verdict: "Não.", sub: "Os clientes querem audiobook em pt-BR. Trocar voz não resolve termos técnicos, só muda o sotaque do erro." },
       { id: "custom-voice", name: "🎤 Treinar Brand Voice custom", hint: "$$$$$ + meses", grade: "D", costDelta: 4200, xp: 60, verdict: "Cara demais pro problema.", sub: "Brand Voice é pra criar uma voz única da marca, não pra corrigir pronúncia de 50 palavras. Overkill." },
     ],
     rootCause: "Polly tem suporte oficial pra ensinar pronúncia: <code>Pronunciation Lexicons</code>. Aceita um arquivo PLS (Pronunciation Lexicon Specification) com pares <code>termo → pronúncia em IPA ou alfabeto fonético</code>. Uma vez criado, basta passar <code>LexiconNames=['nome-do-lexicon']</code> em cada chamada. O time não sabia que isso existia e tava tentando contornar com SSML inline em cada áudio.",
@@ -849,20 +849,20 @@ const ALL_INCIDENTS: Incident[] = [
     incId: "incident.shopmaster.same-recs",
     customer: "ShopMaster",
     slack: "#war-room-recsys",
-    desc: "Sexta-feira, 11h42. ShopMaster (marketplace de moda) acabou de fechar uma campanha de aquisição que dobrou os usuários novos em 2 semanas. Time de growth comemorando — até olhar as métricas de engajamento. Click-through caiu de 4,8% pra 1,2%. Cesta média desabou. O CMO acordou o time de dados: 'algo tá errado'. Você abre o app: pra cada usuário novo, o sistema de recomendação mostra exatamente os mesmos 3 produtos. Problema clássico de recomendação.",
+    desc: "Sexta-feira, 11h42. ShopMaster (marketplace de moda) acabou de fechar uma campanha de aquisição que dobrou os usuários novos em 2 semanas. Time de growth comemorando, até olhar as métricas de engajamento. Click-through caiu de 4,8% pra 1,2%. Cesta média desabou. O CMO acordou o time de dados: 'algo tá errado'. Você abre o app: pra cada usuário novo, o sistema de recomendação mostra exatamente os mesmos 3 produtos. Problema clássico de recomendação.",
     short: "Personalize recomendando os 3 mesmos pra todos",
-    slackRecap: "Confirmado: a solução do Personalize tá usando o algoritmo <b>HRNN</b> (antigo, não trata cold-start). 61% dos usuários novos têm menos de 3 interações — por isso todo mundo recebe os 3 itens top globais.",
+    slackRecap: "Confirmado: a solução do Personalize tá usando o algoritmo <b>HRNN</b> (antigo, não trata cold-start). 61% dos usuários novos têm menos de 3 interações, por isso todo mundo recebe os 3 itens top globais.",
     hint: "O Personalize tem várias <b>recipes</b> (algoritmos). Algumas lidam melhor com usuários novos que não têm histórico ainda.",
     quizQuestion: {
-      question: "Qual recipe do Amazon Personalize é apropriada pra 'quem viu este item também viu' (similaridade entre itens)?",
+      question: "Você acabou de lançar um e-commerce e tem POUCOS dados de interação por usuário. O User-Personalization vai recomendar bem mesmo assim. Como isso funciona internamente?",
       options: [
-        "User-Personalization",
-        "Similar-Items",
-        "Trending-Now",
-        "Popularity-Count",
+        "Ele para de recomendar até ter dados suficientes",
+        "Faz fallback pra itens populares globalmente e ajusta conforme o usuário interage",
+        "Pede ao usuário que preencha preferências",
+        "Recomenda sempre os itens mais recentes",
       ],
       correctIdx: 1,
-      explanation: "<b>Similar-Items</b> recomenda itens parecidos com o que o usuário tá olhando AGORA — não baseado no histórico. User-Personalization é personalização por histórico; Trending-Now é o que tá em alta; Popularity-Count é o mais visto globalmente.",
+      explanation: "Quando o algoritmo não tem dados suficientes do usuário (<b>cold-start</b>), o User-Personalization faz fallback automático pra <b>itens populares globalmente</b>. Conforme o usuário interage mais, as recomendações se ajustam pra ele.",
     },
     ratePerMin: 80,
     initialCost: 580,
@@ -895,7 +895,7 @@ const ALL_INCIDENTS: Incident[] = [
       { id: "popular", name: "📈 Servir Top-N popular pra novo", hint: "fallback manual", grade: "B-", costDelta: 320, xp: 140, verdict: "Funcional, mas regressão.", sub: "É voltar pro mundo pré-Personalize. Resolve o sintoma mas perde o valor do serviço. Sem aprendizado." },
       { id: "retrain", name: "🔧 Retreinar a HRNN existente", hint: "horas de training", grade: "D", costDelta: 1800, xp: 60, verdict: "Errou.", sub: "HRNN não tem cold-start na arquitetura. Retreinar não cria capacidade que o algoritmo não tem." },
     ],
-    rootCause: "Personalize tem várias <b>recipes</b> (algoritmos prontos). A solução tava usando <code>aws-hrnn</code> (Hierarchical Recurrent Neural Network), que precisa de histórico de interações pra recomendar — não lida bem com usuários novos. Quando o marketing disparou campanha de aquisição, 61% dos requests viraram cold-start, e o HRNN só conseguia degenerar pros itens com mais sinal global. A AWS desaconselha HRNN justamente por isso — recipe sucessora (User-Personalization) resolve esse problema nativamente.",
+    rootCause: "Personalize tem várias <b>recipes</b> (algoritmos prontos). A solução tava usando <code>aws-hrnn</code> (Hierarchical Recurrent Neural Network), que precisa de histórico de interações pra recomendar, não lida bem com usuários novos. Quando o marketing disparou campanha de aquisição, 61% dos requests viraram cold-start, e o HRNN só conseguia degenerar pros itens com mais sinal global. A AWS desaconselha HRNN justamente por isso, recipe sucessora (User-Personalization) resolve esse problema nativamente.",
     services: [
       { name: "Amazon Personalize", role: "Recsys", description: "Serviço gerenciado de recomendação. Treina modelos em interações usuário-item. Cobra por treinamento + invocações." },
       { name: "User-Personalization recipe", role: "A solução", description: "Recipe atual recomendada pela AWS. Suporta cold-start, exploration, contextual signals. Substitui HRNN/HRNN-metadata." },
@@ -917,15 +917,15 @@ const ALL_INCIDENTS: Incident[] = [
     slackRecap: "Confirmado: cada intent do Lex tem só <b>2 frases-exemplo</b>. A AWS recomenda <b>15-25 utterances</b> por intent. Qualquer variação do cliente ('tô com problema', 'meu sinal sumiu') cai no fallback.",
     hint: "O bot só entende o que ele <b>foi treinado pra entender</b>. Com poucos exemplos por intent, qualquer variação cai no fallback. Onde se ajusta isso?",
     quizQuestion: {
-      question: "No Amazon Lex, qual conceito captura VALORES nomeados dentro de uma frase (ex: número do pedido em 'rastreia o pedido 12345')?",
+      question: "No Amazon Lex, qual é a diferença prática entre um <b>Intent</b> e um <b>Slot</b>?",
       options: [
-        "Intent",
-        "Utterance",
-        "Slot",
-        "FallbackIntent",
+        "Intent é o que o bot diz, Slot é o que o usuário diz",
+        "Intent é o objetivo do usuário, Slot são os detalhes que faltam pra completar esse objetivo",
+        "Intent é pra texto, Slot é pra voz",
+        "Intent é pago, Slot é grátis",
       ],
-      correctIdx: 2,
-      explanation: "<b>Slots</b> capturam valores nomeados (números, datas, tipos customizados) dentro de utterances. Intents são o 'que' o usuário quer; slots são os 'detalhes' daquela ação.",
+      correctIdx: 1,
+      explanation: "<b>Intent</b> representa O QUE o usuário quer (ex: BookHotel). <b>Slots</b> são os dados necessários pra cumprir essa intenção (data, cidade, hóspedes). O bot vai PROMPTAR pelos slots que ainda faltam pra preencher antes de executar a action.",
     },
     ratePerMin: 110,
     initialCost: 720,
@@ -956,15 +956,15 @@ const ALL_INCIDENTS: Incident[] = [
       { id: "add-utterances", name: "➕ Adicionar 15+ utterances por intent", hint: "trabalho de UX writer", grade: "A+", costDelta: 280, xp: 300, verdict: "Excelente.", sub: "Lex aprende dos exemplos. 15-25 utterances variados por intent é o sweet spot recomendado pela AWS. Cobre sinônimos, gírias, frases incompletas." },
       { id: "lower-threshold", name: "📉 Baixar confidence threshold pra 0.20", hint: "rapidinho", grade: "F", costDelta: 1400, xp: 30, verdict: "Pior remédio.", sub: "Vai matchar intent errado o tempo todo. Cliente que pediu mudança de plano vai virar ticket de cobrança. Threshold baixo = falsos positivos." },
       { id: "bedrock-llm", name: "🤖 Migrar bot inteiro pra Bedrock + LLM", hint: "semanas de trabalho", grade: "B", costDelta: 2400, xp: 180, verdict: "Funciona, mas exagero.", sub: "LLM resolve, mas custa 30x mais por conversa e perde o controle determinístico que Lex oferece. Bom pra alguns fluxos, não como solução geral." },
-      { id: "more-slots", name: "🧩 Adicionar mais slots aos intents", hint: "não é o problema", grade: "D", costDelta: 800, xp: 50, verdict: "Errou alvo.", sub: "Slots são pra extrair valores (número, data). O problema aqui é o Lex NEM identificar o intent — slots não ajudam nisso." },
+      { id: "more-slots", name: "🧩 Adicionar mais slots aos intents", hint: "não é o problema", grade: "D", costDelta: 800, xp: 50, verdict: "Errou alvo.", sub: "Slots são pra extrair valores (número, data). O problema aqui é o Lex NEM identificar o intent, slots não ajudam nisso." },
     ],
-    rootCause: "Lex usa <b>sample utterances</b> pra aprender padrões de intent. Com 2 utterances por intent, ele só matcha o que é quase idêntico ao exemplo — qualquer variação (gíria, ordem diferente, frase incompleta) cai no FallbackIntent. AWS recomenda 15-25 utterances variados por intent, cobrindo: frases curtas e longas, com slots e sem, vocabulário formal e coloquial.",
+    rootCause: "Lex usa <b>sample utterances</b> pra aprender padrões de intent. Com 2 utterances por intent, ele só matcha o que é quase idêntico ao exemplo, qualquer variação (gíria, ordem diferente, frase incompleta) cai no FallbackIntent. AWS recomenda 15-25 utterances variados por intent, cobrindo: frases curtas e longas, com slots e sem, vocabulário formal e coloquial.",
     services: [
       { name: "Amazon Lex", role: "Conversational AI", description: "Constrói chatbots e voicebots gerenciados. Mesma engine do Alexa. Cobra por API call e por minuto de stream de voz." },
       { name: "Intents & Utterances", role: "O core", description: "Intent = ação que o usuário quer (OpenTicket, CheckBalance). Utterance = exemplo de frase que invoca o intent. Quanto mais variado, melhor a generalização." },
       { name: "Bedrock + Agents", role: "Próximo nível", description: "Pra fluxos abertos onde Lex falha, Bedrock com Agents executa ações via tool-use. Maior flexibilidade, maior custo, menor previsibilidade." },
     ],
-    examNote: "<code>Amazon Lex</code> aparece em perguntas sobre chatbots. Saber: intent = o que o user quer, slots = parâmetros, utterances = frases-exemplo, fallback = quando confidence &lt; threshold. <b>Pra melhorar accuracy: mais utterances, não menor threshold.</b>",
+    examNote: "<code>Amazon Lex</code> aparece em perguntas sobre chatbots. Saber: intent = o que o user quer, slots = parâmetros, utterances = frases-exemplo, fallback = quando confidence &lt, threshold. <b>Pra melhorar accuracy: mais utterances, não menor threshold.</b>",
   },
 
   // SEV-1: Rekognition trigger-happy
@@ -975,20 +975,20 @@ const ALL_INCIDENTS: Incident[] = [
     incId: "incident.photoshare.over-moderation",
     customer: "PhotoShare",
     slack: "#war-room-content-mod",
-    desc: "Quinta-feira, 9h15. PhotoShare (rede social de fotos) acordou em estado de pânico. Um update foi pra produção ontem às 17h. Desde então, 80% das fotos enviadas tão sendo bloqueadas como 'inadequadas'. Pôr-do-sol: bloqueado. Foto de bebê: bloqueada. Churrasco em família: bloqueado. Suporte recebeu 1.200 tickets de manhã. App rating no Google Play caiu de 4,6 pra 2,1 em uma noite. Você é a primeira pessoa do time tech a chegar — precisa entender e resolver antes do CEO acordar.",
+    desc: "Quinta-feira, 9h15. PhotoShare (rede social de fotos) acordou em estado de pânico. Um update foi pra produção ontem às 17h. Desde então, 80% das fotos enviadas tão sendo bloqueadas como 'inadequadas'. Pôr-do-sol: bloqueado. Foto de bebê: bloqueada. Churrasco em família: bloqueado. Suporte recebeu 1.200 tickets de manhã. App rating no Google Play caiu de 4,6 pra 2,1 em uma noite. Você é a primeira pessoa do time tech a chegar, precisa entender e resolver antes do CEO acordar.",
     short: "Rekognition bloqueando fotos normais como NSFW",
     slackRecap: "Confirmado: o <b>MinConfidence</b> do Rekognition foi alterado de 80 pra 30 ontem via console. Threshold tão baixo flagra paisagens como 'Suggestive' (34%) e bebês como 'Suggestive' (33%). 80% das fotos legítimas bloqueadas.",
     hint: "Bloqueando paisagem com 34% de confiança e bebê com 33%. O número-chave aqui é o <b>MinConfidence</b>. Pra onde ele deveria voltar?",
     quizQuestion: {
-      question: "Qual API do Rekognition compara DUAS faces e retorna se são da mesma pessoa?",
+      question: "Você precisa identificar UMA pessoa específica em centenas de imagens (ex: bater foto contra uma base de funcionários). Qual approach do Rekognition ESCALA pra isso?",
       options: [
-        "DetectFaces",
-        "CompareFaces",
-        "RecognizeCelebrities",
-        "IndexFaces",
+        "Chamar CompareFaces pra cada par de imagens",
+        "Indexar a face em um Collection com IndexFaces e usar SearchFacesByImage",
+        "Usar DetectFaces em cada imagem manualmente",
+        "Treinar um modelo custom com SageMaker",
       ],
       correctIdx: 1,
-      explanation: "<b>CompareFaces</b> compara duas imagens com faces e retorna similarity score. DetectFaces apenas detecta faces em UMA imagem. IndexFaces armazena faces em um collection pra busca posterior (1-pra-N).",
+      explanation: "Pra busca <b>1-pra-N</b>, use <b>Face Collections</b>: cadastre faces de referência com IndexFaces, depois busque cada nova imagem com SearchFacesByImage. <b>CompareFaces</b> é 1-pra-1 (lento se for repetir N vezes). DetectFaces só detecta, não compara identidade.",
     },
     ratePerMin: 280,
     initialCost: 1840,
@@ -1024,11 +1024,11 @@ const ALL_INCIDENTS: Incident[] = [
       { id: "disable", name: "⛔ Desligar moderação por enquanto", hint: "remove o sintoma", grade: "F", costDelta: 4200, xp: 30, verdict: "Pior cenário.", sub: "Vai entrar conteúdo realmente NSFW na plataforma. Risco regulatório, App Store ban, AppStore retira o app. Pior que o problema atual." },
       { id: "a2i-all", name: "👁 Mandar tudo pra revisão humana via A2I", hint: "vai colapsar", grade: "C-", costDelta: 3600, xp: 70, verdict: "Não escala.", sub: "A2I é pra <b>amostra</b> dos casos borderline, não pra 100% do tráfego. Custo + latência ficariam absurdos." },
     ],
-    rootCause: "Um dev mudou o parâmetro <code>MinConfidence</code> do <code>DetectModerationLabels</code> de 80 pra 30 via console (sem PR, sem IaC). Com threshold tão baixo, qualquer ruído fraco de detecção vira label confiável — o Rekognition retorna labels com 30% de confiança que normalmente seriam ignoradas. Resultado: paisagem com pôr-do-sol vira 'Suggestive' por causa das cores quentes; foto de bebê vira 'Suggestive' por causa de pele exposta. O modelo não tá errado — o threshold é que tá calibrado errado.",
+    rootCause: "Um dev mudou o parâmetro <code>MinConfidence</code> do <code>DetectModerationLabels</code> de 80 pra 30 via console (sem PR, sem IaC). Com threshold tão baixo, qualquer ruído fraco de detecção vira label confiável, o Rekognition retorna labels com 30% de confiança que normalmente seriam ignoradas. Resultado: paisagem com pôr-do-sol vira 'Suggestive' por causa das cores quentes, foto de bebê vira 'Suggestive' por causa de pele exposta. O modelo não tá errado, o threshold é que tá calibrado errado.",
     services: [
       { name: "Amazon Rekognition", role: "Visão computacional", description: "Análise de imagens e vídeos. <code>DetectModerationLabels</code> classifica conteúdo em hierarquia (Explicit Nudity > Nudity, Suggestive > Female Swimwear, etc)." },
       { name: "MinConfidence parameter", role: "O parâmetro crítico", description: "Filtra labels abaixo do threshold de confiança. Default 50%, recomendado 80%+ pra moderação. Abaixo de 50%: false positives explodem." },
-      { name: "Rekognition Custom Labels", role: "Quando padrão não basta", description: "Treina modelo customizado pra labels específicas do produto (ex: logo da marca, contexto cultural). Pra moderação adaptada, é o caminho — mas leva tempo." },
+      { name: "Rekognition Custom Labels", role: "Quando padrão não basta", description: "Treina modelo customizado pra labels específicas do produto (ex: logo da marca, contexto cultural). Pra moderação adaptada, é o caminho, mas leva tempo." },
       { name: "Amazon A2I", role: "Humano no loop", description: "Augmented AI. Envia casos borderline pra revisão humana. Usa pra <b>amostragem</b> de incertezas, não pra 100% do tráfego." },
     ],
     examNote: "<code>Rekognition</code> aparece em moderação de conteúdo e visão computacional. Lembrar: <code>MinConfidence</code> default 50%, recomendado <b>80%+</b> em produção. <code>A2I</code> é pra human-in-the-loop em casos borderline, não pra escalar revisão humana.",
@@ -1038,7 +1038,7 @@ const ALL_INCIDENTS: Incident[] = [
   // CONCEPT MISSIONS · turn boring theory into real-world drama
   // ============================================================
 
-  // SEV-1: Classification metrics — accuracy vs precision/recall/F1
+  // SEV-1: Classification metrics, accuracy vs precision/recall/F1
   {
     id: "fraud-99-percent",
     sev: 1,
@@ -1048,18 +1048,18 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#war-room-fraud",
     desc: "Sexta-feira, 13h. O CEO do BancoQuanta agendou uma call pras 14h com um único item de pauta: 'explicar o prejuízo de $2,1M com fraudes no mês'. Na sala ao lado, o Data Scientist da equipe tá indignado: 'mas o modelo tem 99,4% de acurácia, eu medi! Funcionou no treinamento!'. O Risk Officer responde com cansaço: 'então me explica como passaram 950 fraudes este mês'. Tem 1 hora pra entender o que tá acontecendo. Você abre as métricas do modelo.",
     short: "Modelo com 99% acurácia · empresa perdendo $2M/mês em fraude",
-    slackRecap: "Confirmado: o dataset é <b>99% legítimo / 1% fraude</b>. O modelo foi otimizado pra <b>accuracy</b> e aprendeu a quase nunca dizer 'fraude' — capturou só 50 de 1000 fraudes reais (Recall = 5%). <b>Accuracy 99,4% é matemática enganosa, não detecção</b>.",
+    slackRecap: "Confirmado: o dataset é <b>99% legítimo / 1% fraude</b>. O modelo foi otimizado pra <b>accuracy</b> e aprendeu a quase nunca dizer 'fraude', capturou só 50 de 1000 fraudes reais (Recall = 5%). <b>Accuracy 99,4% é matemática enganosa, não detecção</b>.",
     hint: "Accuracy de 99% num dataset onde 99% é legítimo é matemática enganosa. Qual métrica realmente importa em <b>detecção de fraude</b> (achar os positivos verdadeiros)?",
     quizQuestion: {
-      question: "Qual técnica gera amostras SINTÉTICAS da classe minoritária pra balancear um dataset desbalanceado?",
+      question: "Pra detectar fraude, o modelo deve ter Recall alto (pegar todos os fraudadores). Mas Recall alto SOZINHO pode causar problema. Qual?",
       options: [
-        "Random oversampling",
-        "Random undersampling",
-        "SMOTE",
-        "Train-test split",
+        "O modelo fica lento",
+        "Muitos falsos positivos, clientes legítimos sendo bloqueados",
+        "O modelo overfit nos dados de treino",
+        "O custo de treinamento aumenta",
       ],
-      correctIdx: 2,
-      explanation: "<b>SMOTE</b> (Synthetic Minority Over-sampling Technique) cria amostras sintéticas baseadas em vizinhos da classe minoritária. Random oversampling apenas duplica amostras existentes (gera overfitting). Outras opções: class weights, anomaly detection, focal loss.",
+      correctIdx: 1,
+      explanation: "<b>Trade-off Precision × Recall</b>: maximizar Recall faz o modelo 'puxar pro positivo' pra não perder fraude, mas Precision cai (muitos falsos positivos). Cada FP é um cliente legítimo bloqueado, abalando UX. Por isso F1 (média harmônica) ou métricas de negócio (custo do FP × custo do FN) são úteis pra equilibrar.",
     },
     ratePerMin: 280,
     initialCost: 2840,
@@ -1092,19 +1092,19 @@ const ALL_INCIDENTS: Incident[] = [
       { id: "retrain-f1", name: "🎯 Retreinar otimizando F1/Recall + ajuste de peso de classe", hint: "métrica que importa pra fraude", grade: "A+", costDelta: 480, xp: 340, verdict: "Excelente.", sub: "Em classes desbalanceadas, accuracy mente. Recall (capturar as fraudes) é o que evita prejuízo. F1 balanceia precision e recall. Ajustar o peso da classe minoritária no algoritmo (parâmetro de class weighting) compensa o ratio 99:1 sem precisar mexer nos dados." },
       { id: "smote", name: "⚖ Oversampling com SMOTE + reavaliar", hint: "balancear dataset", grade: "A-", costDelta: 720, xp: 240, verdict: "Bom.", sub: "SMOTE cria amostras sintéticas da classe minoritária. Funciona, mas tem risco de overfitting. Combinar com mudança de métrica seria ideal." },
       { id: "lower-threshold", name: "📉 Baixar threshold de decisão (0.5 → 0.2)", hint: "ajuste fino", grade: "B", costDelta: 1200, xp: 160, verdict: "Funciona em parte.", sub: "Vai pegar mais fraudes mas aumenta falsos positivos (cliente legítimo bloqueado). Sem otimizar o threshold formalmente via PR/ROC, é chute." },
-      { id: "more-features", name: "➕ Adicionar 30 novas features", hint: "DS está convencido", grade: "F", costDelta: 3200, xp: 30, verdict: "Errou alvo.", sub: "O problema não é capacidade do modelo — é a métrica de otimização e o desbalanceamento. Mais features não resolvem isso." },
+      { id: "more-features", name: "➕ Adicionar 30 novas features", hint: "DS está convencido", grade: "F", costDelta: 3200, xp: 30, verdict: "Errou alvo.", sub: "O problema não é capacidade do modelo, é a métrica de otimização e o desbalanceamento. Mais features não resolvem isso." },
     ],
-    rootCause: "Em dataset com 99% de classe majoritária, <b>um modelo que sempre prediz a classe majoritária já tem 99% de accuracy</b>. O DS otimizou pra accuracy e ficou feliz com 99.4%, mas o modelo aprendeu a quase nunca dizer 'fraude' — capturou apenas 50 de 1000 fraudes (recall = 5%). Pra problema de fraude (onde False Negative custa caríssimo), a métrica certa é <b>Recall</b> ou <b>F1</b>, não accuracy.",
+    rootCause: "Em dataset com 99% de classe majoritária, <b>um modelo que sempre prediz a classe majoritária já tem 99% de accuracy</b>. O DS otimizou pra accuracy e ficou feliz com 99.4%, mas o modelo aprendeu a quase nunca dizer 'fraude', capturou apenas 50 de 1000 fraudes (recall = 5%). Pra problema de fraude (onde False Negative custa caríssimo), a métrica certa é <b>Recall</b> ou <b>F1</b>, não accuracy.",
     services: [
-      { name: "Accuracy", role: "Métrica que enganou", description: "<code>(TP+TN)/total</code>. Funciona quando classes estão balanceadas. Em datasets desbalanceados, é a pior métrica possível — modelo trivial 'sempre legit' já tem 99%." },
-      { name: "Precision · Recall · F1", role: "Métricas certas pra fraude", description: "<b>Precision</b> = TP/(TP+FP) — quão certos estamos quando dizemos 'fraude'. <b>Recall</b> = TP/(TP+FN) — quanta fraude pegamos. <b>F1</b> = média harmônica dos dois." },
+      { name: "Accuracy", role: "Métrica que enganou", description: "<code>(TP+TN)/total</code>. Funciona quando classes estão balanceadas. Em datasets desbalanceados, é a pior métrica possível, modelo trivial 'sempre legit' já tem 99%." },
+      { name: "Precision · Recall · F1", role: "Métricas certas pra fraude", description: "<b>Precision</b> = TP/(TP+FP), quão certos estamos quando dizemos 'fraude'. <b>Recall</b> = TP/(TP+FN), quanta fraude pegamos. <b>F1</b> = média harmônica dos dois." },
       { name: "Confusion Matrix", role: "Diagnóstico", description: "Tabela 2×2 (TP, FP, FN, TN). Sempre olhar antes de declarar vitória num classificador. Revela exatamente onde o modelo erra." },
-      { name: "SageMaker Model Monitor", role: "Observabilidade", description: "Avalia métricas do modelo em produção continuamente. Detecta drift e queda de qualidade — se tivesse alarme em Recall, isso teria sido pego em dia 1." },
+      { name: "SageMaker Model Monitor", role: "Observabilidade", description: "Avalia métricas do modelo em produção continuamente. Detecta drift e queda de qualidade, se tivesse alarme em Recall, isso teria sido pego em dia 1." },
     ],
     examNote: "<b>Tema certo de cair na prova.</b> Quando dataset desbalanceado: <b>nunca use accuracy</b>. Use Precision pra minimizar falsos positivos (ex: filtro de spam), Recall pra minimizar falsos negativos (ex: fraude, câncer), F1 pra balancear, AUC pra ranqueamento.",
   },
 
-  // SEV-2: Inference types — real-time vs async vs serverless vs batch
+  // SEV-2: Inference types, real-time vs async vs serverless vs batch
   {
     id: "endpoint-too-expensive",
     sev: 2,
@@ -1112,20 +1112,20 @@ const ALL_INCIDENTS: Incident[] = [
     incId: "incident.scanx.over-provisioned-endpoint",
     customer: "ScanX (radiologia digital)",
     slack: "#war-room-cfo",
-    desc: "Segunda-feira, 1h14 da manhã. CFO da ScanX (startup de radiologia digital) deixou print no Slack do time de tech: a fatura de SageMaker do mês foi de $14.000 — em UM endpoint só. 'Pessoal, ou cortamos 60% disso até sexta, ou desligamos o produto'. Quem leu primeiro foi você, o tech lead. O contexto: o modelo analisa raio-X pra dar diagnóstico assistido, médicos aceitam esperar até 5 minutos pelo resultado, mas o endpoint fica ligado 24/7 — 61% do tempo ocioso. Você precisa entender as opções de inferência da AWS rapidamente.",
+    desc: "Segunda-feira, 1h14 da manhã. CFO da ScanX (startup de radiologia digital) deixou print no Slack do time de tech: a fatura de SageMaker do mês foi de $14.000, em UM endpoint só. 'Pessoal, ou cortamos 60% disso até sexta, ou desligamos o produto'. Quem leu primeiro foi você, o tech lead. O contexto: o modelo analisa raio-X pra dar diagnóstico assistido, médicos aceitam esperar até 5 minutos pelo resultado, mas o endpoint fica ligado 24/7, 61% do tempo ocioso. Você precisa entender as opções de inferência da AWS rapidamente.",
     short: "Endpoint Real-time queimando $14k/mês · ocioso 61% do tempo",
     slackRecap: "Confirmado: o endpoint tá em modo <b>Real-time</b> (cobra 24/7 mesmo ocioso). GPU fica 14% utilizado em média, 61% do tempo o endpoint não recebe quase nada. O SLA dos médicos permite até <b>5 minutos</b> de latência.",
-    hint: "O endpoint fica ocioso 61% do tempo, e o SLA permite latência de até 5 minutos. Pensa nos <b>tipos de inferência</b> do SageMaker — quem cobra só pelo uso real?",
+    hint: "O endpoint fica ocioso 61% do tempo, e o SLA permite latência de até 5 minutos. Pensa nos <b>tipos de inferência</b> do SageMaker, quem cobra só pelo uso real?",
     quizQuestion: {
-      question: "Pra servir VÁRIOS modelos diferentes em um único endpoint SageMaker (compartilhando infra), qual feature usa-se?",
+      question: "Seu modelo em produção precisa lidar com PICOS de tráfego (10× à noite). Qual feature do SageMaker ajusta automaticamente a quantidade de instâncias do endpoint?",
       options: [
+        "Auto Scaling do endpoint",
         "Multi-Model Endpoint",
-        "Multi-Container Endpoint",
         "Inference Pipeline",
-        "Endpoint Variants",
+        "SageMaker Studio",
       ],
       correctIdx: 0,
-      explanation: "<b>Multi-Model Endpoint</b> hosta milhares de modelos em uma única instância, com loading dinâmico do S3. Endpoint Variants é A/B testing (mesma instância, modelos diferentes). Pipelines são chains de modelos pré-processamento.",
+      explanation: "<b>SageMaker Auto Scaling</b> escala horizontalmente baseado em métricas (CPU, RAM, InvocationsPerInstance). Adiciona/remove instâncias conforme demanda. Multi-Model serve VÁRIOS modelos numa instância. Inference Pipeline encadeia pré-processamento + modelo. Studio é o IDE.",
     },
     ratePerMin: 30,
     initialCost: 14200,
@@ -1159,17 +1159,17 @@ const ALL_INCIDENTS: Incident[] = [
       { id: "batch-transform", name: "📦 Batch Transform 1x por dia", hint: "processo overnight", grade: "C", costDelta: 1400, xp: 80, verdict: "Atende custo, quebra SLA.", sub: "Batch Transform só roda quando tu inicia o job e exige input em S3. Médicos não vão esperar até o overnight pra ver raio-X." },
       { id: "scale-up", name: "📈 Scale up pra GPU maior", hint: "DS pediu", grade: "F", costDelta: 8400, xp: 30, verdict: "Errou todos os alvos.", sub: "Endpoint já tá ocioso 61% do tempo. Scale up só faz a fatura crescer." },
     ],
-    rootCause: "Real-time endpoint cobra <b>24/7 pelo tempo que existe</b>, mesmo ocioso. O modelo da ScanX tem padrão de tráfego com picos no horário comercial e quase nada à noite — 61% do tempo ocioso. Pra SLA de 5 minutos (que é o que os médicos aceitam), <b>Async Inference</b> é ideal: enfileira requests, escala pra zero, e custa só pelo tempo de processamento real. Economia esperada: ~70%.",
+    rootCause: "Real-time endpoint cobra <b>24/7 pelo tempo que existe</b>, mesmo ocioso. O modelo da ScanX tem padrão de tráfego com picos no horário comercial e quase nada à noite, 61% do tempo ocioso. Pra SLA de 5 minutos (que é o que os médicos aceitam), <b>Async Inference</b> é ideal: enfileira requests, escala pra zero, e custa só pelo tempo de processamento real. Economia esperada: ~70%.",
     services: [
       { name: "Real-time Inference", role: "O que tá em uso (errado)", description: "Endpoint sempre ligado, latência baixa (ms). Bom pra chatbot, recomendação ao vivo. Cobra 24/7." },
       { name: "Async Inference", role: "A solução", description: "Fila interna (até 1GB de payload). SLA de minutos a 1h. Scale to zero. Ideal pra inferência de mídia (imagem, áudio) com SLA relaxado." },
-      { name: "Serverless Inference", role: "Alternativa", description: "Pay-per-ms de compute. Cold-start ~5s. Bom pra cargas intermitentes e modelos &lt; 10GB. Sem gerenciar instância." },
+      { name: "Serverless Inference", role: "Alternativa", description: "Pay-per-ms de compute. Cold-start ~5s. Bom pra cargas intermitentes e modelos &lt, 10GB. Sem gerenciar instância." },
       { name: "Batch Transform", role: "Pra outro caso", description: "Processa dataset inteiro de S3 em job único. Sem endpoint persistente. Bom pra reprocessamento periódico, não pra requests dinâmicos." },
     ],
     examNote: "Tipos de inferência são CERTEZA na prova. Lembrar: <b>Real-time</b> (ms · sempre ligado · chatbot), <b>Async</b> (min-hora · scale to zero · mídia), <b>Serverless</b> (ms compute · intermitente · &lt;10GB), <b>Batch</b> (overnight · S3 in/out · sem endpoint).",
   },
 
-  // SEV-3: Regression metrics — MAE vs MSE vs RMSE vs R²
+  // SEV-3: Regression metrics, MAE vs MSE vs RMSE vs R²
   {
     id: "forecast-metrics-lie",
     sev: 3,
@@ -1179,18 +1179,18 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#war-room-supply",
     desc: "Segunda-feira pós-Black Friday, 9h. Time da PrintShop entra na call de post-mortem com a expressão de quem já passou por isso: é o TERCEIRO ano consecutivo que acontece. Os cartuchos de tinta acabaram às 8h da manhã da Black Friday. $400 mil em vendas perdidas só nesse SKU. O modelo de previsão de demanda foi 'validado' como bom (MAE=12, parece OK), mas RMSE=89 e R²=0,42 contam outra história. Time de supply, dev e dados sentaram juntos: 'precisamos entender por que o modelo erra SEMPRE em data sazonal'.",
     short: "Previsão de demanda falha em outliers · MAE engana sem RMSE/R²",
-    slackRecap: "Confirmado: MAE=12 enganou o time, mas <b>RMSE=89</b> (7× maior!) indica outliers grandes, e <b>R²=0,42</b> indica que o modelo não captura o padrão. Erros concentrados em Black Friday, Natal, volta às aulas — <b>sazonalidade</b> que o modelo linear não pega.",
+    slackRecap: "Confirmado: MAE=12 enganou o time, mas <b>RMSE=89</b> (7× maior!) indica outliers grandes, e <b>R²=0,42</b> indica que o modelo não captura o padrão. Erros concentrados em Black Friday, Natal, volta às aulas, <b>sazonalidade</b> que o modelo linear não pega.",
     hint: "RMSE 7× MAE indica <b>outliers fortes</b>. R² de 0,42 indica que o modelo <b>não captura o padrão</b>. Pensa: o modelo linear consegue lidar com sazonalidade (datas-pico)?",
     quizQuestion: {
-      question: "Qual serviço AWS escolhe AUTOMATICAMENTE o melhor algoritmo de ML pro seu dataset (AutoML)?",
+      question: "Um analista de negócios SEM CONHECIMENTO DE CÓDIGO quer criar previsões com ML. Qual feature do SageMaker dá uma interface visual no-code pra construir modelos arrastando colunas?",
       options: [
         "SageMaker Studio",
+        "SageMaker Canvas",
         "SageMaker Autopilot",
-        "SageMaker JumpStart",
         "SageMaker Pipelines",
       ],
       correctIdx: 1,
-      explanation: "<b>SageMaker Autopilot</b> é AutoML — analisa o dataset, escolhe algoritmos candidatos, faz tuning automático e gera modelos prontos. JumpStart é catálogo de modelos pré-treinados. Pipelines é orquestração de ML workflows.",
+      explanation: "<b>SageMaker Canvas</b> é a interface no-code pra analistas: arrasta dataset, escolhe coluna-alvo, clica train. Internamente usa Autopilot. <b>Studio</b> é o IDE pra cientistas (precisa código). <b>Autopilot</b> é AutoML acessado via SDK/Studio. <b>Pipelines</b> é orquestração de ML workflows.",
     },
     ratePerMin: 50,
     initialCost: 4200,
@@ -1220,20 +1220,20 @@ const ALL_INCIDENTS: Incident[] = [
       { id: "inv-regression", type: "investigate", name: "Detalhes das métricas de regressão", hint: "+30s · grátis", reveals: "regression_eval", timeCost: 30 },
       { id: "switch-algorithm", name: "🔄 Trocar pra DeepAR (time series com sazonalidade)", hint: "SageMaker tem algoritmo dedicado", grade: "A+", costDelta: 800, xp: 340, verdict: "Excelente.", sub: "R²=0.42 indica que modelo linear não captura o padrão. DeepAR é projetado pra time series com sazonalidade (Black Friday, Natal, back-to-school) e supera regressão linear nesse domínio." },
       { id: "use-mae-loss", name: "📊 Treinar otimizando MAE em vez de MSE", hint: "menos sensível a outliers", grade: "B", costDelta: 1200, xp: 160, verdict: "Resolve parcialmente.", sub: "MAE é robusto a outliers mas continua usando modelo linear inadequado. Vai melhorar um pouco, mas R²=0.42 indica problema mais profundo: o algoritmo." },
-      { id: "feature-engineering", name: "🔧 Adicionar features de sazonalidade ao modelo linear", hint: "manual de calendário", grade: "B-", costDelta: 1600, xp: 140, verdict: "Trabalhoso e frágil.", sub: "Adicionar dummies pra cada feriado manualmente funciona um pouco, mas é frágil — qualquer novo padrão sazonal não previsto vai quebrar. DeepAR aprende isso sozinho." },
+      { id: "feature-engineering", name: "🔧 Adicionar features de sazonalidade ao modelo linear", hint: "manual de calendário", grade: "B-", costDelta: 1600, xp: 140, verdict: "Trabalhoso e frágil.", sub: "Adicionar dummies pra cada feriado manualmente funciona um pouco, mas é frágil, qualquer novo padrão sazonal não previsto vai quebrar. DeepAR aprende isso sozinho." },
       { id: "more-data", name: "📚 Adicionar 5 anos de histórico", hint: "DS está convencido", grade: "F", costDelta: 3600, xp: 30, verdict: "Não muda o problema fundamental.", sub: "O algoritmo linear não captura sazonalidade não importa quanto histórico tu der. R² baixo é diagnóstico de problema estrutural, não de pouco dado." },
     ],
-    rootCause: "MAE (Mean Absolute Error) parecia bom (12 unidades), mas <b>RMSE (89) era 7× maior que MAE</b> — sinal claro de que existem outliers com erros enormes (datas sazonais). E <b>R²=0.42 indica que o modelo só explica 42% da variância dos dados</b> — não captura o padrão real. O modelo linear foi otimizado pra dias 'normais' e ignora completamente os spikes de Black Friday. A solução é trocar pra um algoritmo que entende sazonalidade nativamente (DeepAR ou Forecast).",
+    rootCause: "MAE (Mean Absolute Error) parecia bom (12 unidades), mas <b>RMSE (89) era 7× maior que MAE</b>, sinal claro de que existem outliers com erros enormes (datas sazonais). E <b>R²=0.42 indica que o modelo só explica 42% da variância dos dados</b>, não captura o padrão real. O modelo linear foi otimizado pra dias 'normais' e ignora completamente os spikes de Black Friday. A solução é trocar pra um algoritmo que entende sazonalidade nativamente (DeepAR ou Forecast).",
     services: [
-      { name: "MAE (Mean Absolute Error)", role: "Métrica robusta", description: "Média do |erro|. Mesma unidade do target. Robusto a outliers — não penaliza muito errões. Bom pra reportar pra negócio." },
-      { name: "MSE / RMSE", role: "Métrica que pesa outliers", description: "RMSE = √MSE. Penaliza erros grandes muito mais. Quando RMSE &gt;&gt; MAE, tem outliers ruins. Bom durante treino pra forçar modelo a não ignorar casos extremos." },
+      { name: "MAE (Mean Absolute Error)", role: "Métrica robusta", description: "Média do |erro|. Mesma unidade do target. Robusto a outliers, não penaliza muito errões. Bom pra reportar pra negócio." },
+      { name: "MSE / RMSE", role: "Métrica que pesa outliers", description: "RMSE = √MSE. Penaliza erros grandes muito mais. Quando RMSE &gt;&gt, MAE, tem outliers ruins. Bom durante treino pra forçar modelo a não ignorar casos extremos." },
       { name: "R² (Coeficiente de Determinação)", role: "Diagnóstico", description: "Quanto da variância dos dados o modelo explica. R²=1 perfeito, R²=0 = modelo trivial (média). Em produção: alvo &gt;0.7. R²&lt;0.5 = algoritmo inadequado." },
       { name: "SageMaker DeepAR", role: "Algoritmo certo aqui", description: "Time series com sazonalidade nativa. Aprende padrões semanais, mensais, anuais. Supera regressão linear/random forest em séries sazonais." },
     ],
-    examNote: "Métricas de regressão na prova: <b>MAE</b> (robusto, unidade do target), <b>MSE/RMSE</b> (penaliza outliers), <b>R²</b> (variance explained, 0-1). Quando RMSE &gt;&gt; MAE: outliers no dataset. R² &lt; 0.5: modelo inadequado.",
+    examNote: "Métricas de regressão na prova: <b>MAE</b> (robusto, unidade do target), <b>MSE/RMSE</b> (penaliza outliers), <b>R²</b> (variance explained, 0-1). Quando RMSE &gt;&gt, MAE: outliers no dataset. R² &lt, 0.5: modelo inadequado.",
   },
 
-  // SEV-2: Algorithm choice — regression vs classification
+  // SEV-2: Algorithm choice, regression vs classification
   {
     id: "wrong-algorithm",
     sev: 2,
@@ -1241,20 +1241,20 @@ const ALL_INCIDENTS: Incident[] = [
     incId: "incident.churntech.regression-on-binary",
     customer: "ChurnTech",
     slack: "#war-room-ml",
-    desc: "Terça-feira, 11h42. A Karen, PM da ChurnTech (SaaS B2B), abriu o Slack do time de ML com uma pergunta inocente: 'gente, recebi os resultados do novo modelo de churn, mas tem uns valores estranhos — tipo, o cliente u-12500 tem −18% de chance de cancelar, e o u-12502 tem 141%. Como eu apresento isso pro CEO?'. Silêncio no canal. Um DS sênior responde só com 😬. O modelo foi treinado por um DS júnior que entrou esse mês, e ele escolheu o algoritmo errado pro tipo de problema. Você foi chamado pra fazer review e corrigir.",
+    desc: "Terça-feira, 11h42. A Karen, PM da ChurnTech (SaaS B2B), abriu o Slack do time de ML com uma pergunta inocente: 'gente, recebi os resultados do novo modelo de churn, mas tem uns valores estranhos, tipo, o cliente u-12500 tem −18% de chance de cancelar, e o u-12502 tem 141%. Como eu apresento isso pro CEO?'. Silêncio no canal. Um DS sênior responde só com 😬. O modelo foi treinado por um DS júnior que entrou esse mês, e ele escolheu o algoritmo errado pro tipo de problema. Você foi chamado pra fazer review e corrigir.",
     short: "Linear regression em target binário · outputs fora de [0,1]",
-    slackRecap: "Confirmado: o DS júnior escolheu <b>Regressão Linear</b> pra um problema binário (churn 0/1). Regressão gera qualquer número real — <b>23% das predições</b> saíram fora do intervalo [0,1]. Algoritmo errado pro tipo de problema.",
+    slackRecap: "Confirmado: o DS júnior escolheu <b>Regressão Linear</b> pra um problema binário (churn 0/1). Regressão gera qualquer número real, <b>23% das predições</b> saíram fora do intervalo [0,1]. Algoritmo errado pro tipo de problema.",
     hint: "O alvo só tem dois valores (0 ou 1). Isso é <b>problema de classificação</b>, não de regressão. Qual algoritmo é apropriado pra prever uma classe binária?",
     quizQuestion: {
-      question: "Pra classificar em 3+ categorias (ex: gato/cachorro/pássaro), qual algoritmo lida com isso nativamente?",
+      question: "Você tem dataset tabular com 1M de linhas, 50 features, target binário. Logistic Regression deu um baseline decente, mas você quer melhorar. Qual algoritmo costuma performar MELHOR em dados tabulares estruturados?",
       options: [
+        "K-Means Clustering",
         "Linear Regression",
-        "Logistic Regression binária",
         "XGBoost (gradient boosting)",
-        "K-Means",
+        "Naive Bayes",
       ],
       correctIdx: 2,
-      explanation: "<b>XGBoost</b> e outros algoritmos de árvore (Random Forest, Decision Tree) lidam nativamente com multi-classe. Logistic Regression simples é binária (precisa de Multinomial pra multi-classe). K-Means é clustering (não-supervisionado).",
+      explanation: "Em dados tabulares, <b>gradient boosting</b> (XGBoost, LightGBM, CatBoost) é praticamente sempre state-of-the-art. Captura interações não-lineares entre features. K-Means é clustering (não-supervisionado). Linear Regression é pra valores contínuos. Naive Bayes assume independência entre features (forte limitação).",
     },
     ratePerMin: 60,
     initialCost: 1200,
@@ -1283,9 +1283,9 @@ const ALL_INCIDENTS: Incident[] = [
     actions: [
       { id: "inv-notebook", type: "investigate", name: "Ver detalhes do modelo no SageMaker Canvas", hint: "+30s · grátis", reveals: "model_output", timeCost: 30 },
       { id: "xgb-classifier", name: "🌳 Trocar para XGBoost em modo classificação", hint: "padrão-ouro pra tabular", grade: "A+", costDelta: 240, xp: 320, verdict: "Excelente.", sub: "XGBoost em modo classificação é o padrão pra problemas tabulares: robusto, lida com missing values, indica importância das features. Saída nativa entre 0 e 1 como probabilidade. Disponível como algoritmo built-in do SageMaker." },
-      { id: "logistic-regression", name: "📈 Trocar para Logistic Regression", hint: "interpretável", grade: "A", costDelta: 320, xp: 280, verdict: "Boa.", sub: "Apesar do nome 'regression', Logistic Regression é um algoritmo de CLASSIFICAÇÃO. Aplica função sigmoid na saída — output sempre em [0,1] interpretável como probabilidade. Bom baseline interpretável." },
+      { id: "logistic-regression", name: "📈 Trocar para Logistic Regression", hint: "interpretável", grade: "A", costDelta: 320, xp: 280, verdict: "Boa.", sub: "Apesar do nome 'regression', Logistic Regression é um algoritmo de CLASSIFICAÇÃO. Aplica função sigmoid na saída, output sempre em [0,1] interpretável como probabilidade. Bom baseline interpretável." },
       { id: "clamp", name: "🪝 Manter Linear Regression e truncar resultado em [0,1]", hint: "patch rápido", grade: "F", costDelta: 1200, xp: 30, verdict: "Errado conceitualmente.", sub: "Truncar é band-aid. Linear Regression é otimizada pra minimizar erro de valores contínuos, não pra modelar probabilidades. Vai dar predictions ruins disfarçadas de bonitas." },
-      { id: "regularize", name: "⚙ Adicionar regularização ao modelo de regressão", hint: "DS júnior sugeriu", grade: "D", costDelta: 800, xp: 50, verdict: "Não muda o problema.", sub: "Regularização (Ridge/Lasso) ainda é regressão linear — output continua fora de [0,1] em alguns casos. Não é o tipo certo de modelo pro problema." },
+      { id: "regularize", name: "⚙ Adicionar regularização ao modelo de regressão", hint: "DS júnior sugeriu", grade: "D", costDelta: 800, xp: 50, verdict: "Não muda o problema.", sub: "Regularização (Ridge/Lasso) ainda é regressão linear, output continua fora de [0,1] em alguns casos. Não é o tipo certo de modelo pro problema." },
     ],
     rootCause: "Regressão Linear (Linear Regression) é um algoritmo de regressão: produz qualquer número real como saída. Pra problema de <b>classificação</b> (variável-alvo binária 0/1), o output deve ser uma <b>probabilidade entre 0 e 1</b>. Os algoritmos certos são: <b>Logistic Regression</b> (aplica sigmoid na saída), <b>XGBoost em modo classificação</b>, <b>Random Forest classifier</b>, ou redes neurais com função de ativação sigmoid/softmax na última camada. Usar Linear Regression em alvo binário é erro conceitual clássico de iniciante.",
     services: [
@@ -1297,7 +1297,7 @@ const ALL_INCIDENTS: Incident[] = [
     examNote: "<b>Diferença que cai na prova:</b> Regressão (target contínuo, ex: preço) vs Classificação (target categórico, ex: churn 0/1) vs Clustering (sem target, agrupa). Cada um tem algoritmos próprios. Linear Regression é só pra regressão!",
   },
 
-  // SEV-2: Trainium vs P4d — specialized chips
+  // SEV-2: Trainium vs P4d, specialized chips
   {
     id: "training-eternal",
     sev: 2,
@@ -1310,15 +1310,15 @@ const ALL_INCIDENTS: Incident[] = [
     slackRecap: "Confirmado: o time tá usando <b>P4d (8× GPU A100)</b> a $32/hora. A AWS tem o chip <b>Trainium</b> ($21,50/hora, <b>35% mais barato</b>) com performance equivalente em transformers e suporte nativo pra PyTorch. Sem reescrever modelo.",
     hint: "O treino tá em GPUs A100 padrão. A AWS tem <b>chips próprios feitos especificamente pra treinar IA</b> que costumam ser mais baratos. Qual seria?",
     quizQuestion: {
-      question: "Trainium é pra TREINAR. Qual chip da AWS é otimizado pra INFERÊNCIA em produção?",
+      question: "A AWS oferece dois chips de IA: <b>Trainium</b> e <b>Inferentia</b>. Qual a diferença prática entre eles em termos de FASE do ciclo de vida do modelo?",
       options: [
-        "Inferentia",
-        "Graviton",
-        "Neuron",
-        "Nitro",
+        "Trainium é mais novo, Inferentia é legado",
+        "Trainium é pra dados, Inferentia é pra modelos",
+        "Trainium é pra fase de treino, Inferentia é pra fase de serving em produção",
+        "São o mesmo chip com nomes diferentes",
       ],
-      correctIdx: 0,
-      explanation: "<b>Inferentia</b> é o chip pra inferência (Inf = Inference). Graviton é CPU ARM (não específico pra IA). <b>Neuron</b> é o SDK que roda nos dois chips. Nitro é a camada de virtualização do EC2.",
+      correctIdx: 2,
+      explanation: "<b>Trainium</b> é otimizado pra cargas de treinamento (forward + backward pass, otimizadores como Adam). <b>Inferentia</b> é otimizado pra forward pass only (serving em produção: alta throughput, baixo custo por inferência). Memoriza pelos prefixos: <b>Trn</b>1 = <b>Tr</b>aining, <b>Inf</b>1 = <b>Inf</b>erence.",
     },
     ratePerMin: 130,
     initialCost: 9470,
