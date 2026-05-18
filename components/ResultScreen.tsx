@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -136,7 +137,7 @@ export function ResultScreen({ result, incident, onClose }: Props) {
           className="grid grid-cols-3 gap-2.5"
         >
           <StatCard icon={<div className="text-display font-black text-3xl">{result.grade}</div>} label="nota" color={accent} />
-          <StatCard icon={<Zap className="w-7 h-7 fill-duo-yellow-dark text-duo-yellow-dark" strokeWidth={2.5} />} label={result.xp > 0 ? `+${result.xp} XP` : "0 XP"} color="yellow" mainLabel />
+          <XpStatCard xp={result.xp} />
           <StatCard icon={<Clock className="w-7 h-7 text-duo-blue-dark" strokeWidth={2.5} />} label={formatTime(result.elapsed)} color="blue" mainLabel />
         </motion.div>
 
@@ -332,6 +333,62 @@ function StatCard({
       ) : (
         <div className={`text-[10px] font-bold uppercase tracking-wider ${cfg.text}`}>{label}</div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Animated XP stat card — counts up from 0 to xp value over ~1.2s,
+ * with sparkles that float up briefly to make the gain feel rewarding.
+ */
+function XpStatCard({ xp }: { xp: number }) {
+  const [displayed, setDisplayed] = React.useState(0);
+
+  React.useEffect(() => {
+    if (xp <= 0) {
+      setDisplayed(0);
+      return;
+    }
+    const duration = 1200; // ms
+    const start = performance.now();
+    let raf = 0;
+    const tick = (t: number) => {
+      const elapsed = t - start;
+      const progress = Math.min(1, elapsed / duration);
+      // ease-out cubic for a satisfying decel
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayed(Math.round(xp * eased));
+      if (progress < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [xp]);
+
+  return (
+    <div className="rounded-2xl p-3 sm:p-4 bg-duo-yellow-light border-2 border-duo-yellow text-center relative overflow-hidden" style={{ borderBottomWidth: 4 }}>
+      {/* Floating sparkles — only animate when xp > 0 */}
+      {xp > 0 && (
+        <>
+          {[0, 1, 2].map((i) => (
+            <motion.span
+              key={i}
+              initial={{ opacity: 0, y: 8, x: 0 }}
+              animate={{ opacity: [0, 1, 0], y: -28, x: (i - 1) * 14 }}
+              transition={{ duration: 1.4, delay: 0.6 + i * 0.18, ease: "easeOut" }}
+              className="absolute left-1/2 -translate-x-1/2 top-2 text-duo-yellow-dark text-xs"
+              aria-hidden
+            >
+              ✦
+            </motion.span>
+          ))}
+        </>
+      )}
+      <div className="flex items-center justify-center mb-1.5 h-9">
+        <Zap className="w-7 h-7 fill-duo-yellow-dark text-duo-yellow-dark" strokeWidth={2.5} />
+      </div>
+      <div className="font-black text-base sm:text-lg text-duo-yellow-dark tabular leading-none">
+        {xp > 0 ? `+${displayed} XP` : "0 XP"}
+      </div>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useGame } from "@/lib/store";
 import { ACHIEVEMENTS } from "@/lib/achievements";
 import { playSound } from "@/lib/sound";
+import { haptic } from "@/lib/haptic";
 
 export function AchievementToasts() {
   const newAchievements = useGame((s) => s.newAchievements);
@@ -13,6 +14,7 @@ export function AchievementToasts() {
   useEffect(() => {
     if (newAchievements.length > 0) {
       playSound("achievement");
+      haptic("celebrate");
       const t = setTimeout(() => clear(), 5500);
       return () => clearTimeout(t);
     }

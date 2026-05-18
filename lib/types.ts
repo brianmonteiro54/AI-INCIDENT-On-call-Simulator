@@ -74,6 +74,15 @@ export interface Incident {
   short: string;
   /** Optional summary from an engineering peer in Slack — helps player recall the problem at decide step */
   slackRecap?: string;
+  /** Optional hint shown after 2 wrong attempts in the decide step. Should nudge, not give the answer. */
+  hint?: string;
+  /** Optional theory quiz shown right after the player solves the mission — reinforces a key concept. */
+  quizQuestion?: {
+    question: string;
+    options: string[];
+    correctIdx: number;
+    explanation: string;
+  };
   ratePerMin: number;
   initialCost: number;
   initialElapsed: number;

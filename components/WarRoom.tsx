@@ -10,6 +10,8 @@ import { gradeRank } from "@/lib/achievements";
 import { FINDINGS } from "@/lib/findings";
 import { useGame } from "@/lib/store";
 import { playSound, stopAlarmLoop } from "@/lib/sound";
+import { haptic } from "@/lib/haptic";
+import { saveMissionProgress, loadMissionProgress, clearMissionProgress } from "@/lib/mission-progress";
 import { Mascot, type MascotExpression } from "./Mascot";
 import { ResultScreen } from "./ResultScreen";
 import { ConsoleFrame } from "./ConsoleFrame";
@@ -21,7 +23,7 @@ interface Props {
   isDaily: boolean;
 }
 
-type Step = "briefing" | "investigation" | "finding" | "decide" | "checking" | "feedback";
+type Step = "briefing" | "investigation" | "finding" | "decide" | "checking" | "feedback" | "quiz";
 
 export function WarRoom({ incident, isDaily }: Props) {
   const player = useGame((s) => s.player);
@@ -46,9 +48,52 @@ export function WarRoom({ incident, isDaily }: Props) {
   const [wrongFeedback, setWrongFeedback] = useState<{ name: string; sub: string } | null>(null);
   const [result, setResult] = useState<IncidentResult | null>(null);
   const [showExitModal, setShowExitModal] = useState(false);
+  const [quizCompleted, setQuizCompleted] = useState(false);
+  const [quizSelectedIdx, setQuizSelectedIdx] = useState<number | null>(null);
+  const [quizRevealed, setQuizRevealed] = useState(false);
 
   // Real player time (since this WarRoom mounted) — used for display & speed bonus
   const playerStartedAtRef = useRef<number>(Date.now());
+
+  // ── RESTORE PROGRESS on mount (if user refreshed mid-mission) ──
+  // Only run once per mount. Sets initial state from localStorage if present.
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    const saved = loadMissionProgress(incident.id);
+    if (!saved) return;
+    // Only restore valid steps
+    const allowed: Step[] = ["investigation", "decide", "finding"];
+    if (!allowed.includes(saved.step as Step)) return;
+    // Restore step state
+    setStep(saved.step === "finding" ? "investigation" : (saved.step as Step));
+    setRevealed(saved.revealed);
+    setAttempts(saved.attempts);
+    setWrongActions(saved.wrongActions);
+    if (isBoss) {
+      setPhaseIdx(saved.phaseIdx);
+      setBossGrades(saved.bossGrades as Grade[]);
+    }
+    playerStartedAtRef.current = saved.playerStartedAt;
+  }, [incident.id, isBoss]);
+
+  // ── SAVE PROGRESS on key state changes ──
+  useEffect(() => {
+    // Don't save the briefing (entry point) — keeps clean UX on first load
+    // Don't save once feedback/result reached — at that point the mission is over
+    if (step === "briefing" || step === "feedback" || step === "checking") return;
+    saveMissionProgress({
+      incidentId: incident.id,
+      step,
+      revealed,
+      attempts,
+      wrongActions,
+      phaseIdx,
+      bossGrades,
+      playerStartedAt: playerStartedAtRef.current,
+    });
+  }, [step, revealed, attempts, wrongActions, phaseIdx, bossGrades, incident.id]);
 
   const currentMetrics: Metric[] = isBoss ? incident.phases![phaseIdx].metrics : incident.metrics;
   const currentLogs: LogLine[] = isBoss
@@ -221,12 +266,14 @@ export function WarRoom({ incident, isDaily }: Props) {
         });
         setSpeedBonus(Math.round((speedMultiplier - 1) * 100)); // for display: -50 to +50 (%)
         playSound("success");
+        haptic("success");
         setStep("feedback");
       } else {
         // WRONG — marca opção, volta pro decide (sem game over, tenta até acertar)
         setWrongActions((w) => [...w, a.id]);
         setWrongFeedback({ name: a.name, sub: a.sub });
         playSound("fail");
+        haptic("fail");
 
         setSelectedAction(null);
         setStep("decide");
@@ -253,11 +300,28 @@ export function WarRoom({ incident, isDaily }: Props) {
       return;
     }
 
+    // If this incident has a theory quiz, show it before finalizing.
+    // Skip the quiz on replays (already-solved missions) — the quiz is for reinforcement on first solve.
+    const alreadySolved = result !== null; // shouldn't happen here but guard anyway
+    if (incident.quizQuestion && !quizCompleted && !alreadySolved) {
+      setStep("quiz");
+      return;
+    }
+
     finalizeResult(feedback.grade, feedback.actionId, feedback.verdict, feedback.sub, feedback.costDelta, feedback.xp, feedback.perfect);
+  }
+
+  function handleQuizComplete(quizCorrect: boolean) {
+    if (!feedback) return;
+    setQuizCompleted(true);
+    // Quiz bonus: +25 XP for correct answer, 0 for wrong (but mission XP unchanged)
+    const xpWithQuiz = quizCorrect ? feedback.xp + 25 : feedback.xp;
+    finalizeResult(feedback.grade, feedback.actionId, feedback.verdict, feedback.sub, feedback.costDelta, xpWithQuiz, feedback.perfect);
   }
 
   function finalizeResult(grade: Grade, actionId: string, verdict: string, sub: string, costDelta: number, xp: number, perfect = false) {
     stopAlarmLoop();
+    clearMissionProgress(incident.id);
     const finalCost = cost + costDelta;
     const wouldveContinued = (1000 - elapsed) * (incident.ratePerMin / 60);
     const saved = Math.max(0, wouldveContinued - costDelta);
@@ -303,8 +367,9 @@ export function WarRoom({ incident, isDaily }: Props) {
     step === "finding" ? 45 :
     step === "decide" ? 70 :
     step === "checking" ? 85 :
-    step === "feedback" && feedback?.correct ? 100 :
+    step === "feedback" && feedback?.correct ? 95 :
     step === "feedback" ? 70 :
+    step === "quiz" ? 98 :
     0;
 
   return (
@@ -349,6 +414,7 @@ export function WarRoom({ incident, isDaily }: Props) {
           <button
             onClick={() => { playSound("click"); setSoundOn(!player.soundOn); }}
             className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition shrink-0"
+            aria-label={player.soundOn ? "desativar som" : "ativar som"}
           >
             {player.soundOn ? <Volume2 className="w-5 h-5 stroke-[2.5]" /> : <VolumeX className="w-5 h-5 stroke-[2.5]" />}
           </button>
@@ -632,6 +698,30 @@ export function WarRoom({ incident, isDaily }: Props) {
                   )}
                 </AnimatePresence>
 
+                {/* Hint card — appears after 2+ wrong attempts */}
+                {wrongActions.length >= 2 && incident.hint && (
+                  <motion.div
+                    key="hint-card"
+                    initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ type: "spring", stiffness: 220, damping: 20 }}
+                    className="duo-card p-4 mb-4 bg-duo-blue-light border-duo-blue flex items-start gap-3"
+                  >
+                    <div className="shrink-0 w-10 h-10 rounded-2xl bg-duo-blue text-white flex items-center justify-center text-lg">
+                      💡
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-black uppercase tracking-widest text-duo-blue-dark mb-1">
+                        dica · pra te ajudar a pensar
+                      </div>
+                      <div
+                        className="text-duo-ink text-sm font-medium leading-snug [&_b]:font-black [&_b]:text-duo-blue-dark"
+                        dangerouslySetInnerHTML={{ __html: incident.hint }}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+
                 {/* Case briefing — Slack-style war room thread */}
                 <div className="mb-4">
                   <SlackThread incident={incident} playerName={player.name} />
@@ -831,8 +921,168 @@ export function WarRoom({ incident, isDaily }: Props) {
               <div className="sticky bottom-0 left-0 right-0 bg-duo-cream/95 backdrop-blur-sm border-t-2 border-duo-line p-4">
                 <div className="max-w-2xl mx-auto">
                   <button onClick={handleContinue} className="duo-btn w-full duo-green">
-                    {isBoss && phaseIdx < incident.phases!.length - 1 ? "próxima fase →" : "continuar"}
+                    {isBoss && phaseIdx < incident.phases!.length - 1 ? "próxima fase →" : feedback?.correct && incident.quizQuestion ? "responder quiz →" : "continuar"}
                   </button>
+                </div>
+              </div>
+            </motion.section>
+          )}
+
+          {/* ─── STEP 7: THEORY QUIZ ─── */}
+          {step === "quiz" && incident.quizQuestion && (
+            <motion.section
+              key="quiz"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="flex-1 flex flex-col px-4 sm:px-6 py-6"
+            >
+              <div className="max-w-2xl w-full mx-auto flex-1 flex flex-col">
+                <div className="flex items-center gap-3 mb-5">
+                  <Mascot expression="thinking" size={90} />
+                  <div className="flex-1">
+                    <div className="text-xs font-black uppercase tracking-widest text-duo-yellow-dark mb-1">
+                      📚 quiz de fixação · +25 XP se acertar
+                    </div>
+                    <h2 className="text-display text-xl sm:text-2xl font-black text-duo-ink leading-tight">
+                      Antes de fechar, uma pergunta da prova:
+                    </h2>
+                  </div>
+                </div>
+
+                {/* Question card */}
+                <div className="duo-card p-5 mb-5 bg-duo-yellow-light border-duo-yellow">
+                  <p
+                    className="text-duo-ink font-black text-base sm:text-lg leading-snug [&_code]:bg-white [&_code]:text-duo-ink [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-mono [&_code]:font-bold [&_code]:text-xs"
+                    dangerouslySetInnerHTML={{ __html: incident.quizQuestion.question }}
+                  />
+                </div>
+
+                {/* Options */}
+                <div className="space-y-2.5 flex-1 mb-5">
+                  {incident.quizQuestion.options.map((opt, i) => {
+                    const letter = String.fromCharCode(65 + i);
+                    const isSelected = quizSelectedIdx === i;
+                    const isCorrect = i === incident.quizQuestion!.correctIdx;
+                    const showResult = quizRevealed;
+
+                    let cardClasses = "duo-card";
+                    if (showResult) {
+                      if (isCorrect) cardClasses = "duo-card duo-card-correct";
+                      else if (isSelected) cardClasses = "duo-card duo-card-wrong";
+                      else cardClasses = "duo-card opacity-50";
+                    } else if (isSelected) {
+                      cardClasses = "duo-card duo-card-selected";
+                    }
+
+                    return (
+                      <motion.button
+                        key={i}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.05 }}
+                        onClick={() => {
+                          if (showResult) return;
+                          playSound("tick");
+                          haptic("tap");
+                          setQuizSelectedIdx(i);
+                        }}
+                        onMouseEnter={() => !showResult && playSound("hover")}
+                        disabled={showResult}
+                        className={`${cardClasses} w-full text-left p-4 flex items-center gap-3 card-press transition`}
+                      >
+                        <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-black text-lg ${
+                          showResult && isCorrect ? "bg-duo-green text-white" :
+                          showResult && isSelected ? "bg-duo-red text-white" :
+                          isSelected ? "bg-duo-blue text-white" :
+                          "bg-duo-line-soft text-duo-ink-soft"
+                        }`}>
+                          {showResult && isCorrect ? "✓" : showResult && isSelected ? "✗" : letter}
+                        </div>
+                        <div
+                          className={`flex-1 font-bold text-sm sm:text-base leading-snug ${
+                            showResult && isCorrect ? "text-duo-green-dark" :
+                            showResult && isSelected ? "text-duo-red-dark" :
+                            "text-duo-ink"
+                          } [&_code]:bg-duo-yellow-light [&_code]:text-duo-ink [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-mono [&_code]:font-bold [&_code]:text-xs`}
+                          dangerouslySetInnerHTML={{ __html: opt }}
+                        />
+                      </motion.button>
+                    );
+                  })}
+                </div>
+
+                {/* Explanation (after reveal) */}
+                <AnimatePresence>
+                  {quizRevealed && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className={`duo-card p-4 mb-5 ${
+                        quizSelectedIdx === incident.quizQuestion.correctIdx
+                          ? "duo-card-correct"
+                          : "bg-duo-blue-light border-duo-blue"
+                      } flex items-start gap-3`}
+                    >
+                      <div className={`shrink-0 w-10 h-10 rounded-2xl flex items-center justify-center text-lg ${
+                        quizSelectedIdx === incident.quizQuestion.correctIdx
+                          ? "bg-duo-green text-white"
+                          : "bg-duo-blue text-white"
+                      }`}>
+                        {quizSelectedIdx === incident.quizQuestion.correctIdx ? "🎉" : "📖"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className={`font-black text-sm sm:text-base mb-1 ${
+                          quizSelectedIdx === incident.quizQuestion.correctIdx
+                            ? "text-duo-green-dark"
+                            : "text-duo-blue-dark"
+                        }`}>
+                          {quizSelectedIdx === incident.quizQuestion.correctIdx
+                            ? "Boa! +25 XP de bônus 🎯"
+                            : "Não foi essa — mas olha o porquê:"}
+                        </div>
+                        <div
+                          className="text-duo-ink text-sm font-medium leading-relaxed [&_b]:font-black [&_b]:text-duo-ink [&_code]:bg-duo-yellow-light [&_code]:text-duo-ink [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-mono [&_code]:font-bold [&_code]:text-xs"
+                          dangerouslySetInnerHTML={{ __html: incident.quizQuestion.explanation }}
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* CTA */}
+              <div className="sticky bottom-0 left-0 right-0 bg-duo-cream/95 backdrop-blur-sm border-t-2 border-duo-line p-4">
+                <div className="max-w-2xl mx-auto">
+                  {!quizRevealed ? (
+                    <button
+                      onClick={() => {
+                        if (quizSelectedIdx === null) return;
+                        playSound("click");
+                        const correct = quizSelectedIdx === incident.quizQuestion!.correctIdx;
+                        if (correct) { haptic("success"); playSound("success"); }
+                        else { haptic("fail"); }
+                        setQuizRevealed(true);
+                      }}
+                      disabled={quizSelectedIdx === null}
+                      className={`duo-btn w-full ${quizSelectedIdx !== null ? "duo-green" : "duo-white"}`}
+                    >
+                      verificar
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        playSound("page");
+                        const correct = quizSelectedIdx === incident.quizQuestion!.correctIdx;
+                        handleQuizComplete(correct);
+                      }}
+                      className="duo-btn w-full duo-green"
+                    >
+                      continuar pro resultado →
+                    </button>
+                  )}
                 </div>
               </div>
             </motion.section>
@@ -877,6 +1127,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                   onClick={() => {
                     playSound("page");
                     stopAlarmLoop();
+                    clearMissionProgress(incident.id);
                     window.location.href = "/";
                   }}
                   className="duo-btn duo-red w-full"

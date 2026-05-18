@@ -27,6 +27,7 @@ export default function LeaderboardPage() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [myRank, setMyRank] = useState<number | null>(null);
 
   const myStats = useMemo(() => {
@@ -74,8 +75,12 @@ export default function LeaderboardPage() {
         streak: player.streak,
       }),
     })
-      .then(() => fetchBoard())
-      .catch(() => {/* swallow */});
+      .then((res) => {
+        if (!res.ok) throw new Error(`http ${res.status}`);
+        setSyncError(null);
+        return fetchBoard();
+      })
+      .catch(() => setSyncError("não foi possível publicar tua pontuação — tenta atualizar"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, entries.length]);
 
@@ -93,12 +98,12 @@ export default function LeaderboardPage() {
     <div className="min-h-screen bg-duo-cream">
       <header className="sticky top-0 z-30 bg-duo-cream/95 backdrop-blur-sm border-b-2 border-duo-line">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
-          <Link href="/" onClick={() => playSound("page")} className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition">
+          <Link href="/" onClick={() => playSound("page")} aria-label="voltar pra home" className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition">
             <ArrowLeft className="w-6 h-6 stroke-[2.5]" />
           </Link>
           <h1 className="text-display text-xl font-black text-duo-ink">Ranking Global</h1>
           <div className="flex-1" />
-          <button onClick={() => { playSound("click"); fetchBoard(); }} className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition">
+          <button onClick={() => { playSound("click"); fetchBoard(); }} aria-label="atualizar ranking" className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition">
             <RefreshCw className={`w-5 h-5 stroke-[2.5] ${loading ? "animate-spin" : ""}`} />
           </button>
         </div>
@@ -157,9 +162,16 @@ export default function LeaderboardPage() {
               </div>
             </div>
 
-            <div className="mt-3 pt-3 border-t-2 border-duo-line-soft text-duo-ink-soft text-xs font-medium leading-snug">
-              💡 tua pontuação é enviada pro ranking automaticamente cada vez que tu resolve uma missão nova.
-            </div>
+            {syncError ? (
+              <div className="mt-3 pt-3 border-t-2 border-duo-line-soft text-duo-red-dark text-xs font-bold leading-snug flex items-start gap-2">
+                <span>⚠️</span>
+                <span>{syncError}</span>
+              </div>
+            ) : (
+              <div className="mt-3 pt-3 border-t-2 border-duo-line-soft text-duo-ink-soft text-xs font-medium leading-snug">
+                💡 tua pontuação é enviada pro ranking automaticamente cada vez que tu resolve uma missão nova.
+              </div>
+            )}
           </motion.div>
         </section>
       )}
@@ -172,9 +184,24 @@ export default function LeaderboardPage() {
         </div>
 
         {loading && entries.length === 0 ? (
-          <div className="text-center py-16">
-            <Mascot expression="thinking" size={120} />
-            <div className="text-duo-ink-soft font-bold mt-3">carregando…</div>
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div
+                key={i}
+                className="duo-card p-4 flex items-center gap-3 sm:gap-4 animate-pulse"
+                style={{ animationDelay: `${i * 0.08}s` }}
+              >
+                <div className="shrink-0 w-12 h-12 rounded-2xl bg-duo-line-soft" />
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="h-4 bg-duo-line-soft rounded w-1/2" />
+                  <div className="h-3 bg-duo-line-soft rounded w-2/3" />
+                </div>
+                <div className="text-right shrink-0 space-y-2">
+                  <div className="h-5 bg-duo-line-soft rounded w-14" />
+                  <div className="h-3 bg-duo-line-soft rounded w-8 ml-auto" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : error ? (
           <div className="duo-card duo-card-wrong p-5 text-center">

@@ -11,7 +11,7 @@ import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { AchievementToasts } from "@/components/AchievementToasts";
 import { Mascot } from "@/components/Mascot";
 import { playSound } from "@/lib/sound";
-import { Sparkles, Flame, Crown, Lock, Check, Star, Heart, Volume2, VolumeX, Trophy, Settings, ChevronRight, Zap } from "lucide-react";
+import { Sparkles, Flame, Crown, Lock, Check, Star, Volume2, VolumeX, Trophy, Settings, ChevronRight, Zap, BookOpen } from "lucide-react";
 
 export default function HomePage() {
   const player = useGame((s) => s.player);
@@ -131,6 +131,7 @@ export default function HomePage() {
             <button
               onClick={() => { playSound("click"); setSoundOn(!player.soundOn); }}
               className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition shrink-0"
+              aria-label={player.soundOn ? "desativar som" : "ativar som"}
             >
               {player.soundOn ? <Volume2 className="w-5 h-5 stroke-[2.5]" /> : <VolumeX className="w-5 h-5 stroke-[2.5]" />}
             </button>
@@ -278,15 +279,25 @@ export default function HomePage() {
         )}
 
         {/* ════════ FOOTER ════════ */}
-        <footer className="max-w-3xl mx-auto px-4 sm:px-6 mt-12 flex items-center justify-between gap-4">
-          <Link
-            href="/leaderboard"
-            onClick={() => playSound("page")}
-            className="text-sm font-bold text-duo-blue-dark hover:underline flex items-center gap-1.5"
-          >
-            <Trophy className="w-4 h-4" />
-            ranking
-          </Link>
+        <footer className="max-w-3xl mx-auto px-4 sm:px-6 mt-12 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-4 flex-wrap">
+            <Link
+              href="/leaderboard"
+              onClick={() => playSound("page")}
+              className="text-sm font-bold text-duo-blue-dark hover:underline flex items-center gap-1.5"
+            >
+              <Trophy className="w-4 h-4" />
+              ranking
+            </Link>
+            <Link
+              href="/glossario"
+              onClick={() => playSound("page")}
+              className="text-sm font-bold text-duo-blue-dark hover:underline flex items-center gap-1.5"
+            >
+              <BookOpen className="w-4 h-4" />
+              glossário
+            </Link>
+          </div>
           <button
             onClick={() => { if (confirm("Apagar TODO o progresso?")) reset(); }}
             className="text-sm font-medium text-duo-ink-faded hover:text-duo-red-dark transition"
