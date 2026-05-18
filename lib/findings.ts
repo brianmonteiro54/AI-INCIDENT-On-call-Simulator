@@ -84,38 +84,52 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
     body: `<p><b>Você está vendo:</b> as <b>features</b> (variáveis) que o modelo de aprovação de crédito usa pra decidir.</p>
 <p><b>Importância de cada variável</b> (quanto pesa na decisão):</p>
 <ul>
-<li>🔴 <b>CEP do bairro</b>: 0.42 (a mais importante!)</li>
-<li>Nível de escolaridade: 0.18</li>
-<li>Anos de emprego: 0.14</li>
-<li>Idade da conta: 0.09</li>
-<li>Renda declarada: 0.07</li>
+<li>🔴 <b>CEP do bairro</b> (ex: <code>04329-900</code>): 0,42 — <b>a mais importante!</b></li>
+<li>Nível de escolaridade: 0,18</li>
+<li>Anos de emprego: 0,14</li>
+<li>Idade da conta: 0,09</li>
+<li>Renda declarada: 0,07</li>
+</ul>
+<p><b>Casos reais aprovados/negados nas últimas semanas:</b></p>
+<ul>
+<li>✅ Cliente do CEP <code>04543-000</code> (Itaim Bibi · zona sul SP): <b>APROVADO</b></li>
+<li>✅ Cliente do CEP <code>01310-100</code> (Av. Paulista · centro SP): <b>APROVADO</b></li>
+<li>❌ Cliente do CEP <code>03178-200</code> (Vila Carrão · zona leste SP): <b>NEGADO</b></li>
+<li>❌ Cliente do CEP <code>08260-000</code> (Itaquera · zona leste SP): <b>NEGADO</b></li>
 </ul>
 <p><b>Correlações preocupantes</b>:</p>
 <ul>
-<li>🔴 CEP × Raça: <b>0.78</b> (correlação altíssima)</li>
-<li>CEP × Renda declarada: 0.31</li>
-<li>CEP × Aprovação: 0.61</li>
+<li>🔴 CEP × Raça: <b>0,78</b> (correlação altíssima)</li>
+<li>CEP × Renda declarada: 0,31</li>
+<li>CEP × Aprovação: 0,61</li>
 </ul>
-<p>👉 O modelo decide o crédito principalmente pelo <b>CEP</b>, e o CEP correlaciona fortemente com raça no Brasil. Isso é <b>viés</b> (proxy bias).</p>`,
+<p>👉 O modelo decide o crédito principalmente pelo <b>CEP</b>, e o CEP correlaciona fortemente com raça no Brasil. Isso é <b>viés</b> (proxy bias) — a feature parece neutra mas funciona como atalho pra raça.</p>`,
   },
 
   // SageMaker Data Wrangler
   data: {
     title: "Dataset de Treinamento · Data Wrangler",
     body: `<p><b>Você está vendo:</b> a distribuição do dataset usado pra treinar o modelo de crédito.</p>
-<p><b>De onde vieram as aprovações</b> (regiões de São Paulo):</p>
+<p><b>De onde vieram as aprovações</b> (regiões de São Paulo, agrupadas por CEP):</p>
 <ul>
-<li>🔴 <b>Centro / Zona Sul</b> (CEPs nobres): <b>87,4%</b></li>
-<li>Zona Leste / Norte (periferia): 4,1%</li>
-<li>Outras regiões: 8,5%</li>
+<li>🔴 <b>Centro / Zona Sul</b> — faixa <code>01000-000</code> a <code>05999-999</code> (CEPs nobres): <b>87,4%</b></li>
+<li>Zona Leste / Norte — faixa <code>03000-000</code> a <code>08000-000</code> (periferia): 4,1%</li>
+<li>Outras regiões metropolitanas: 8,5%</li>
+</ul>
+<p><b>Exemplos de CEPs no dataset:</b></p>
+<ul>
+<li>✅ <code>01310-100</code> (Av. Paulista) — 4.218 amostras · 94% aprovadas</li>
+<li>✅ <code>04543-000</code> (Itaim Bibi) — 3.872 amostras · 91% aprovadas</li>
+<li>⚠️ <code>03178-200</code> (Vila Carrão) — 1.207 amostras · 12% aprovadas</li>
+<li>⚠️ <code>08260-000</code> (Itaquera) — 982 amostras · 8% aprovadas</li>
 </ul>
 <p><b>População real de São Paulo</b> (dados do IBGE):</p>
 <ul>
-<li>Centro / Zona Sul: ~40%</li>
+<li>Centro / Zona Sul: ~40% da população</li>
 <li>Zona Leste / Norte: ~45%</li>
 <li>Outras: ~15%</li>
 </ul>
-<p>👉 O dataset tem <b>87% de aprovações</b> vindas de uma região que representa <b>só 40% da população</b>. O modelo aprende: "se é dessa região, aprova". <b>Viés no dado de treino</b>.</p>`,
+<p>👉 O dataset tem <b>87% de aprovações</b> vindas de uma região que representa <b>só 40% da população</b>. O modelo aprende: "se é dessa região, aprova". <b>Viés direto no dado de treino</b>.</p>`,
   },
 
   // Lambda · Recursive invocation
