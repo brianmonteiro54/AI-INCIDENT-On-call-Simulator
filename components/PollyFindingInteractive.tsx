@@ -3,10 +3,8 @@
 import { SpeakButton } from "./SpeakButton";
 
 /**
- * Interactive Polly finding — lets the player hear how the Brazilian voice
- * mispronounces tech terms. No solution spoilers: just shows the symptom.
- *
- * Uses the browser's built-in Web Speech API (free, works in modern browsers).
+ * Interactive Polly finding — symptoms only, zero solution spoilers.
+ * Player hears how the Brazilian voice mispronounces tech terms.
  */
 export function PollyFindingInteractive() {
   return (
@@ -38,55 +36,33 @@ export function PollyFindingInteractive() {
       </div>
 
       <p>
-        <b>🔴 Como o Polly está lendo cada termo</b>{" "}
-        <span className="text-duo-ink-soft text-sm">(clica pra ouvir a pronúncia atual):</span>
+        <b>🔴 Termos sendo lidos:</b>{" "}
+        <span className="text-duo-ink-soft text-sm">(clica pra ouvir):</span>
       </p>
 
       <div className="space-y-2 my-3">
-        <PronCard
-          term="Kubernetes"
-          lang="pt-BR"
-          desc="lendo letra-por-letra em português"
-        />
-        <PronCard
-          term="Docker"
-          lang="pt-BR"
-          desc='vira "doquer"'
-        />
-        <PronCard
-          term="PyTorch"
-          lang="pt-BR"
-          desc='vira "pee-torch"'
-        />
-        <PronCard
-          term="GraphQL"
-          lang="pt-BR"
-          desc='vira "graff-quê-éle"'
-        />
+        <PronCard term="Kubernetes" lang="pt-BR" />
+        <PronCard term="Docker" lang="pt-BR" />
+        <PronCard term="PyTorch" lang="pt-BR" />
+        <PronCard term="GraphQL" lang="pt-BR" />
       </div>
 
       <p>
-        <b>Configuração atual da chamada do Polly:</b>
+        <b>Volume e reclamações:</b>
       </p>
       <ul className="list-disc pl-5 space-y-1">
-        <li>
-          📖 <b>Pronunciation Lexicon</b>:{" "}
-          <span className="text-duo-red-dark font-bold">nenhum</span> ⚠️
-        </li>
-        <li>
-          🏷️ <b>SSML</b> no texto (<code className="bg-duo-yellow-light text-duo-ink px-1.5 py-0.5 rounded text-mono font-bold text-xs">&lt;phoneme&gt;</code>,{" "}
-          <code className="bg-duo-yellow-light text-duo-ink px-1.5 py-0.5 rounded text-mono font-bold text-xs">&lt;say-as&gt;</code>): nenhum
-        </li>
+        <li>🎧 Audiobooks gerados: ~247/dia</li>
+        <li>📉 Reclamações na review: +840% nas últimas 2 semanas</li>
+        <li>💬 Reclamação típica: <i>"impossível ouvir, parece que o narrador nunca viu essas palavras na vida"</i></li>
       </ul>
 
       <p className="pt-2">
-        👉 O Polly recebeu o texto cru, em português, sem nenhuma instrução de pronúncia.
+        👉 O Polly tá pronunciando palavras inglesas como se fossem português.
       </p>
 
       <div className="mt-3 p-3 bg-duo-blue-light rounded-xl border-2 border-duo-blue/30 text-xs text-duo-blue-dark font-medium">
         💡 <b>Dica:</b> O áudio acima usa a síntese de voz nativa do seu navegador (Chrome,
-        Safari, Edge) — o resultado é parecido com o que o Polly faz quando recebe texto sem
-        instrução de pronúncia. A pronúncia exata pode variar por sistema.
+        Safari, Edge). A pronúncia exata pode variar por sistema.
       </div>
     </div>
   );
@@ -95,20 +71,13 @@ export function PollyFindingInteractive() {
 function PronCard({
   term,
   lang,
-  desc,
 }: {
   term: string;
   lang: "pt-BR" | "en-US";
-  desc: string;
 }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-center bg-white border-2 border-duo-line rounded-xl p-3" style={{ borderBottomWidth: 3 }}>
-      <div className="min-w-0">
-        <div className="font-black text-duo-ink text-base leading-tight">{term}</div>
-        <div className="text-xs text-duo-ink-soft font-medium leading-tight mt-0.5">
-          {desc}
-        </div>
-      </div>
+    <div className="flex items-center justify-between gap-2 bg-white border-2 border-duo-line rounded-xl p-3" style={{ borderBottomWidth: 3 }}>
+      <div className="font-black text-duo-ink text-base">{term}</div>
       <SpeakButton text={term} lang={lang} label="ouvir" variant="wrong" />
     </div>
   );

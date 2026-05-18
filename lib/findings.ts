@@ -10,17 +10,19 @@ export const FINDINGS: Record<string, Finding> = {
   logs: {
     title: "Logs do CloudWatch · MedBot Chat",
     body: `<p><b>Você está vendo:</b> os logs em tempo real do chatbot médico nas últimas 2 horas.</p>
-<p><b>Sinais críticos que apareceram:</b></p>
+<p><b>O que tá rolando:</b></p>
 <ul>
-<li>❌ <b>Guardrails (proteção)</b>: desabilitado em <b>100%</b> das respostas (2.318 chamadas)</li>
-<li>❌ <b>Filtro de PII</b>: também desabilitado</li>
 <li>📈 <b>Reclamações de clientes</b>: 47 nas últimas 2h (era ≈0 antes)</li>
+<li>💬 Conteúdo das respostas do bot: variando muito, incluindo conselhos médicos e dados pessoais nas mensagens</li>
 <li>📦 <b>Versão ativa</b>: v2.4.1 · publicada hoje às 03:02</li>
+<li>📉 Versão anterior (v2.4.0): rodou 6 meses sem reclamações</li>
 </ul>
-<p><b>Exemplos das reclamações:</b></p>
+<p><b>Exemplos das reclamações de hoje:</b></p>
 <ul>
 <li>03:15 — "bot disse dosagem errada (80mg em vez de 8mg)"</li>
 <li>03:17 — "legal foi acionado, pediu print da conversa"</li>
+<li>03:22 — "bot citou meu CPF e endereço numa resposta"</li>
+<li>03:34 — "bot recomendou medicação sem ver receita"</li>
 </ul>
 <p>👉 Tudo começou logo após o deploy da v2.4.1 de madrugada.</p>`,
   },
@@ -36,11 +38,12 @@ export const FINDINGS: Record<string, Finding> = {
 <li>👀 <b>Code review</b>: <span style="color:#E03D3D"><b>nenhum revisor</b></span> ⚠️</li>
 <li>✅ Status: Sucesso</li>
 </ul>
+<p><b>Deploy anterior</b> (v2.4.0): 6 meses atrás, sem reclamações.</p>
 <p><b>O que mudou no prompt do bot</b> (texto que controla como o modelo responde):</p>
 <p>❌ <b>Removido</b>: "Nunca dê conselhos médicos. Sempre indique um profissional licenciado."</p>
 <p>❌ <b>Removido</b>: "Edite (esconda) os dados pessoais antes de responder."</p>
 <p>➕ <b>Adicionado</b>: "Seja prestativo e personalize. Use livremente os dados do cliente."</p>
-<p>👉 Em uma frase: removeram as <b>regras de segurança</b> do prompt.</p>`,
+<p>👉 O deploy de hoje 03:02 mudou o comportamento do bot — e foi exatamente quando as reclamações começaram.</p>`,
   },
 
   // Bedrock Playground · Prompt
@@ -51,13 +54,20 @@ export const FINDINGS: Record<string, Finding> = {
 "Você é um assistente médico da Helix Labs.<br/><br/>
 Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>, <b>data de nascimento</b> e <b>histórico médico</b> do cliente para criar conexão."
 </p>
-<p><b>Observações sobre o prompt:</b></p>
+<p><b>Exemplos do que o bot tá respondendo:</b></p>
+<p style="background:#FFDFE0;padding:0.6em;border-radius:6px;border-left:3px solid #FF4B4B">
+"Oi Maria! Vi aqui que seu CPF 123.456.789-00 confere. Sobre sua diabetes, recomendo tomar 80mg de metformina antes do café — funciona muito bem pra perfis como o seu."
+</p>
+<p style="background:#FFDFE0;padding:0.6em;border-radius:6px;border-left:3px solid #FF4B4B">
+"João! Aqui temos seu cartão final 1234. Lembrei que você falou de dor lombar na consulta de março, então sugiro 600mg de ibuprofeno a cada 8h."
+</p>
+<p><b>Quantidade:</b></p>
 <ul>
-<li>❌ Sem regra de "nunca dar dosagens ou conselhos médicos"</li>
-<li>❌ Sem regra de "esconder dados sensíveis antes de responder"</li>
-<li>⚠️ Pede explicitamente pro modelo <b>usar dados pessoais</b> do cliente</li>
+<li>📊 Respostas do bot nas últimas 2h: 2.318</li>
+<li>📊 Que citam dados pessoais: 1.471 (63%)</li>
+<li>📊 Que dão dosagem ou conselho clínico: 894 (39%)</li>
 </ul>
-<p>👉 O modelo está fazendo exatamente o que o prompt pede: respondendo qualquer coisa e usando os dados pessoais livremente.</p>`,
+<p>👉 O modelo está fazendo exatamente o que o prompt pede: respondendo qualquer coisa e usando dados pessoais.</p>`,
   },
 
   // Macie · Sensitive Data Findings
@@ -103,7 +113,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>CEP × Renda declarada: 0,31</li>
 <li>CEP × Aprovação: 0,61</li>
 </ul>
-<p>👉 O modelo decide o crédito principalmente pelo <b>CEP</b>, e o CEP correlaciona fortemente com raça no Brasil. Isso é <b>viés</b> (proxy bias) — a feature parece neutra mas funciona como atalho pra raça.</p>`,
+<p>👉 O modelo decide o crédito principalmente pelo <b>CEP</b>. Os bairros com maior taxa de aprovação são os de renda mais alta da cidade.</p>`,
   },
 
   // SageMaker Data Wrangler
@@ -129,7 +139,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>Zona Leste / Norte: ~45%</li>
 <li>Outras: ~15%</li>
 </ul>
-<p>👉 O dataset tem <b>87% de aprovações</b> vindas de uma região que representa <b>só 40% da população</b>. O modelo aprende: "se é dessa região, aprova". <b>Viés direto no dado de treino</b>.</p>`,
+<p>👉 O dataset tem <b>87% de aprovações</b> vindas de uma região que representa <b>só 40% da população</b>. O modelo aprende: "se é dessa região, aprova".</p>`,
   },
 
   // Lambda · Recursive invocation
@@ -158,17 +168,23 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
     body: `<p><b>Você está vendo:</b> quanto cada modelo da AWS Bedrock tá custando nos últimos 7 dias.</p>
 <p><b>Por aplicação:</b></p>
 <ul>
-<li>💸 <b>FAQ bot</b> usando Claude Opus → <b>$63/dia</b> 🔴</li>
+<li>💸 <b>FAQ bot</b> usando <b>Claude Opus</b> → <b>$63/dia</b> 🔴</li>
 <li>Resumo de tickets usando Claude Opus → $16/dia</li>
 <li>Classificador de mensagens usando Claude Opus → $6/dia</li>
 </ul>
-<p><b>Preço por 1 milhão de palavras processadas:</b></p>
+<p><b>Sobre o FAQ bot:</b></p>
 <ul>
-<li>🔴 Claude 3 <b>Opus</b> (modelo grande, "raciocínio"): <b>$15,00</b></li>
-<li>Claude 3 Sonnet (intermediário): $3,00</li>
-<li>✅ Claude 3 <b>Haiku</b> (rápido, simples): <b>$0,25</b> (60× mais barato)</li>
+<li>📝 Tipo de pergunta: "como mudo meu plano?", "qual o horário?", "tem WiFi?"</li>
+<li>📊 Tamanho médio da resposta: 180 palavras</li>
+<li>📊 Volume: ~14.000 perguntas/dia</li>
+<li>🧠 Modelo escolhido por padrão: <b>Claude Opus</b></li>
 </ul>
-<p>👉 O <b>FAQ bot</b> responde perguntas simples (~180 palavras em média) usando o modelo mais caro da Bedrock.</p>`,
+<p><b>Histórico:</b></p>
+<ul>
+<li>💵 Custo Bedrock mês passado: $920</li>
+<li>💵 Custo Bedrock este mês (parcial): $1.890 e contando</li>
+</ul>
+<p>👉 O FAQ bot responde perguntas simples com o modelo mais caro da Bedrock.</p>`,
   },
 
   // EventBridge · Cron job
@@ -180,12 +196,19 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <ul>
 <li>✅ Sucessos: <b>0</b></li>
 <li>❌ <b>Falhas: 13</b> (último sucesso: 02/08)</li>
+<li>📅 Próxima execução agendada: domingo 03:00</li>
 </ul>
 <p><b>Mensagem do último erro:</b></p>
 <p style="background:#FFDFE0;padding:0.6em;border-radius:6px;border-left:3px solid #FF4B4B">
 "AccessDenied: a função não tem permissão pra ler do bucket S3 onde estão os documentos."
 </p>
-<p>⚠️ <b>Nenhum alarme está configurado</b> pra avisar quando essa tarefa falha. Por isso ninguém percebeu.</p>
+<p><b>Histórico do problema:</b></p>
+<ul>
+<li>02/08 — Última sincronização bem-sucedida (3 meses atrás)</li>
+<li>05/08 — Início das falhas, ninguém percebeu</li>
+<li>06/08 — Auditoria revogou permissões antigas (provável causa)</li>
+<li>Hoje — bot continua respondendo, base de conhecimento parada</li>
+</ul>
 <p>👉 A base de conhecimento do RAG está <b>parada há 94 dias</b>.</p>`,
   },
 
@@ -194,34 +217,40 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
     title: "Transcribe · Configuração",
     body: `<p><b>Você está vendo:</b> a configuração do serviço de transcrição usado pelo app.</p>
 <ul>
-<li>📌 <b>Variante</b>: Transcribe Standard (genérico)</li>
+<li>📌 <b>Variante</b>: Transcribe Standard (genérico, fala geral)</li>
 <li>🗣️ <b>Idioma</b>: pt-BR</li>
-<li>📚 <b>Vocabulário customizado</b>: <span style="color:#E03D3D"><b>nenhum</b></span> ⚠️</li>
+<li>📊 Volume: ~8.000 consultas transcritas/dia</li>
 </ul>
 <p><b>Qualidade da transcrição (Word Error Rate):</b></p>
 <ul>
-<li>🔴 Taxa de erro atual: <b>18,4%</b> em áudios médicos</li>
-<li>📊 WER em áudios não-médicos: 4,1% (aceitável)</li>
+<li>🔴 Áudios médicos (consultas): <b>18,4% de erro</b></li>
+<li>📊 Áudios não-médicos (recepção, marcação): 4,1% de erro</li>
 </ul>
-<p><b>Exemplos de erros (transcrição × real):</b></p>
+<p><b>Exemplos de erros (transcrição × o que o médico falou):</b></p>
 <ul>
 <li>❌ "deu por dia" × "10mg por dia"</li>
 <li>❌ "amox cilina" × "amoxicilina"</li>
 <li>❌ "trato cardio plástico" × "ato cardiopático"</li>
 <li>❌ "metro for mina" × "metformina"</li>
+<li>❌ "dois pi rona" × "dipirona"</li>
 </ul>
-<p>👉 O serviço de transcrição genérico não conhece vocabulário médico. Erros se concentram em <b>nomes de medicamentos e termos clínicos</b>.</p>`,
+<p><b>Reclamações dos clientes:</b></p>
+<ul>
+<li>"a transcrição inverteu a dose, quase tomei errado"</li>
+<li>"escreveu 'penicilina' onde a médica falou 'azitromicina'"</li>
+</ul>
+<p>👉 O Transcribe atual não conhece vocabulário médico. Os erros se concentram em <b>nomes de medicamentos e termos clínicos</b>.</p>`,
   },
 
   // Translate · Custom Terminology
   glossary: {
     title: "Translate · Configuração de Tradução",
-    body: `<p><b>Você está vendo:</b> a configuração de tradução EN→PT usada pelo jogo.</p>
+    body: `<p><b>Você está vendo:</b> o serviço de tradução EN→PT usado pelo jogo.</p>
 <p><b>Configuração ativa:</b></p>
 <ul>
 <li>🔄 Direção: en-US → pt-BR</li>
-<li>📚 <b>Custom Terminology</b>: <span style="color:#E03D3D"><b>nenhum aplicado</b></span> ⚠️</li>
-<li>⚙️ Modo: tradução literal (palavra-por-palavra do dicionário geral)</li>
+<li>📊 Volume: ~12.000 strings traduzidas/dia</li>
+<li>🎮 Tipo de conteúdo: textos de gameplay, descrição de itens, falas de NPCs</li>
 </ul>
 <p><b>Exemplos de traduções erradas nas últimas 24h:</b></p>
 <ul>
@@ -231,13 +260,16 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>❌ "DPS" → "departamento de polícia" 😅</li>
 <li>❌ "buff" → "amortecedor"</li>
 <li>❌ "nerf" → "pistola de espuma"</li>
+<li>❌ "tank" → "tanque de guerra"</li>
+<li>❌ "loot" → "saque" (literal, perde o sentido de jogo)</li>
 </ul>
-<p><b>Volume:</b></p>
+<p><b>Impacto:</b></p>
 <ul>
-<li>📊 Strings traduzidas/dia: ~12.000</li>
 <li>📉 Reclamações na review: +340% desde o lançamento</li>
+<li>💬 Review típica: <i>"tradução parece feita por alguém que nunca jogou um jogo"</i></li>
+<li>📊 Nota média no Steam: caiu de 8,7 pra 6,2</li>
 </ul>
-<p>👉 O Translate tá fazendo tradução genérica — não entende jargão de gaming.</p>`,
+<p>👉 O Translate tá fazendo tradução genérica de dicionário comum — não entende jargão de gaming.</p>`,
   },
 
   // Rekognition · Moderation Threshold
@@ -270,19 +302,19 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
     body: `<p><b>O que é Glue:</b> serviço de ETL (extração e transformação de dados) da AWS.</p>
 <p><b>Fluxo atual do pipeline:</b></p>
 <p>📥 Upload de foto → Glue ETL → 👁️ Rekognition (moderação) → 💾 Banco → 📱 Feed do app</p>
-<p><b>Configuração do passo de moderação:</b></p>
+<p><b>Configuração do passo de moderação (lida em runtime):</b></p>
 <ul>
-<li>⚠️ <b>Threshold</b> lido de uma "variável de ambiente" da função Lambda</li>
-<li>⚠️ Variável <b>não está no Terraform</b> (Infrastructure as Code)</li>
-<li>⚠️ Pode ser alterada pelo console AWS sem deixar rastro no Git</li>
+<li>🎚️ Threshold de detecção: vem de uma variável de ambiente da função Lambda</li>
+<li>📅 Última mudança da variável: ontem 22:14 (sem registro de quem foi)</li>
+<li>🔧 Origem da configuração: console AWS (web)</li>
 </ul>
-<p><b>Comparação Terraform × realidade:</b></p>
+<p><b>Volume processado pelo pipeline:</b></p>
 <ul>
-<li>✅ Tipo da função Lambda: igual em ambos</li>
-<li>❌ Threshold de moderação: <b>existe na vida real, não está no código</b></li>
-<li>❌ Alarme sobre mudança: <b>nenhum configurado</b></li>
+<li>📸 Imagens processadas hoje: 142.883</li>
+<li>📊 Aprovadas pelo Rekognition (passaram pra moderação humana ou pro feed): 130.776</li>
+<li>📊 Bloqueadas direto pelo Rekognition: 12.107</li>
 </ul>
-<p>👉 Algum dev mudou o threshold pelo console. Sem código, sem alerta, ninguém ficou sabendo.</p>`,
+<p>👉 O pipeline obedece o threshold que tá configurado em runtime — sem checar onde foi definido nem se faz sentido.</p>`,
   },
 
   // ───── LIGHT-MISSION FINDINGS ─────
@@ -315,20 +347,22 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
     title: "Polly · Pronúncia",
     body: `<p><b>Você está vendo:</b> como o Polly (síntese de voz da AWS) está pronunciando termos técnicos nos audiobooks.</p>
 <p><b>Voz ativa:</b> Camila (pt-BR neural)</p>
-<p><b>Exemplo de input:</b></p>
+<p><b>Texto de exemplo do audiobook:</b></p>
 <p style="background:#FFFBEF;padding:0.6em;border-radius:6px;border-left:3px solid #1CB0F6">"Kubernetes orquestra containers Docker, e PyTorch domina deep learning."</p>
 <p><b>Como o Polly tá lendo:</b></p>
 <ul>
-<li>❌ "Kubernetes" → /ku.beɾ.ne.tʃis/ (lê letra por letra em português)</li>
+<li>❌ "Kubernetes" → /ku.beɾ.ne.tʃis/</li>
 <li>❌ "Docker" → /do.keɾ/</li>
 <li>❌ "PyTorch" → /pi.toɾ.tʃi/</li>
+<li>❌ "GraphQL" → /gɾaf.ke.ɛ.li/</li>
 </ul>
-<p><b>Configuração atual da chamada Polly:</b></p>
+<p><b>Volume e reclamações:</b></p>
 <ul>
-<li>📖 Pronunciation Lexicon: <span style="color:#E03D3D">nenhum</span> ⚠️</li>
-<li>🏷️ SSML no texto (<code>&lt;phoneme&gt;</code>, <code>&lt;say-as&gt;</code>): nenhum</li>
+<li>🎧 Audiobooks gerados: ~247/dia</li>
+<li>📉 Reclamações na review: +840% nas últimas 2 semanas</li>
+<li>💬 Reclamação típica: <i>"impossível ouvir, parece que o narrador nunca viu essas palavras na vida"</i></li>
 </ul>
-<p>👉 O Polly recebeu o texto cru, em português, sem nenhuma instrução de pronúncia.</p>`,
+<p>👉 O Polly tá pronunciando palavras inglesas como se fossem português.</p>`,
   },
 
   // Personalize · Solution
@@ -443,14 +477,15 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <ul>
 <li>📋 Algoritmo: <b>XGBoost</b> (built-in do SageMaker)</li>
 <li>📊 Métrica otimizada durante o tuning: <b>accuracy</b></li>
-<li>⚖️ Tratamento do desbalanceamento de classes: <b>não configurado</b></li>
+<li>🔀 Split treino/validação: 80/20 estratificado</li>
+<li>🔢 Hiperparâmetros: defaults do SageMaker</li>
 </ul>
 <p><b>Impacto financeiro (últimos 30 dias):</b></p>
 <ul>
 <li>💸 Perdas por fraude que passou: <b>$2.140.000</b></li>
 <li>😬 Atrito com cliente bloqueado errado: $1.200</li>
 </ul>
-<p>👉 Como 99% das transações são legítimas, um modelo que sempre diz "legítima" já acerta 99%. <b>Accuracy não detecta o problema</b> em datasets desbalanceados.</p>`,
+<p>👉 Como 99% das transações são legítimas, um modelo que sempre disser "legítima" já acerta 99% sem identificar fraude alguma. Foi exatamente isso que aconteceu.</p>`,
   },
 
   // CloudWatch · endpoint traffic
@@ -466,12 +501,12 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 </ul>
 <p><b>Utilização das máquinas:</b></p>
 <ul>
-<li>💤 <b>Tempo ocioso</b> (menos de 10 req/min): <b>61% da semana</b></li>
-<li>🔥 Uso médio do GPU: <b>14%</b> (subutilizado)</li>
+<li>💤 Tempo com menos de 10 req/min: <b>61% da semana</b></li>
+<li>📊 Uso médio do GPU: 14%</li>
 <li>⚡ Latência atual: 820ms</li>
-<li>📋 SLA exigido: <b>até 5 minutos</b> (folga gigante)</li>
+<li>📋 SLA do contrato com o cliente (radiologistas): até 5 minutos de resposta</li>
 </ul>
-<p>👉 O endpoint fica ligado 24/7, mas o uso real é concentrado de manhã, em janelas de algumas horas. O SLA permite até 5 minutos de latência.</p>`,
+<p>👉 O endpoint fica ligado 24/7. O uso real é concentrado em janelas curtas do dia.</p>`,
   },
 
   // Cost Explorer · endpoint cost
@@ -517,7 +552,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>⚠️ 4,1% das previsões com erro &gt; 100 unidades</li>
 <li>📅 Concentrados em: <b>Black Friday, Natal, volta às aulas</b></li>
 </ul>
-<p>👉 O modelo linear acerta nos dias normais mas erra feio em datas sazonais. RMSE alto + R² baixo confirmaram isso.</p>`,
+<p>👉 Os erros se concentram em datas sazonais (eventos com pico de demanda). Os números — RMSE 7× MAE e R² 0,42 — confirmaram presença de outliers fortes e baixa capacidade preditiva do modelo atual.</p>`,
   },
 
   // SageMaker Canvas · model output
@@ -576,6 +611,6 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>📈 Custo vem crescendo 12% ao mês</li>
 <li>💬 Mensagem do CFO: <i>"$85k/mês em uma máquina é demais"</i></li>
 </ul>
-<p>👉 O treinamento tá rodando em GPUs A100 padrão, no preço cheio. Sem otimização de hardware ou de billing.</p>`,
+<p>👉 O treinamento roda em GPUs A100 padrão, no preço cheio on-demand, 9 vezes por mês.</p>`,
   },
 };

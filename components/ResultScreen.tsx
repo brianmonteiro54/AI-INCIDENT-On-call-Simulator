@@ -3,10 +3,10 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Home, Clock, DollarSign, Zap } from "lucide-react";
+import { ArrowRight, BookOpen, Home, Clock, Zap } from "lucide-react";
 import type { IncidentResult, Incident, Grade } from "@/lib/types";
 import { INCIDENTS } from "@/lib/incidents";
-import { formatTime, formatMoney, getLevelIdx } from "@/lib/levels";
+import { formatTime, getLevelIdx } from "@/lib/levels";
 import { useGame } from "@/lib/store";
 import { Mascot } from "./Mascot";
 import { playSound } from "@/lib/sound";
@@ -133,13 +133,34 @@ export function ResultScreen({ result, incident, onClose }: Props) {
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.55 }}
-          className="grid grid-cols-2 sm:grid-cols-4 gap-2.5"
+          className="grid grid-cols-3 gap-2.5"
         >
           <StatCard icon={<div className="text-display font-black text-3xl">{result.grade}</div>} label="nota" color={accent} />
-          <StatCard icon={<Zap className="w-7 h-7 fill-duo-yellow-dark text-duo-yellow-dark" strokeWidth={2.5} />} label={`+${result.xp} XP`} color="yellow" mainLabel />
+          <StatCard icon={<Zap className="w-7 h-7 fill-duo-yellow-dark text-duo-yellow-dark" strokeWidth={2.5} />} label={result.xp > 0 ? `+${result.xp} XP` : "0 XP"} color="yellow" mainLabel />
           <StatCard icon={<Clock className="w-7 h-7 text-duo-blue-dark" strokeWidth={2.5} />} label={formatTime(result.elapsed)} color="blue" mainLabel />
-          <StatCard icon={<DollarSign className="w-7 h-7 text-duo-green-dark" strokeWidth={2.5} />} label={formatMoney(result.saved)} sublabel="poupado" color="green" mainLabel />
         </motion.div>
+
+        {/* Replay banner — shows when this mission was already solved before */}
+        {result.xp === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.75 }}
+            className="duo-card mt-3 p-3 bg-duo-blue-light border-duo-blue flex items-center gap-3"
+          >
+            <div className="shrink-0 w-9 h-9 rounded-full bg-duo-blue text-white flex items-center justify-center text-base">
+              🔁
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-black text-duo-blue-dark text-sm leading-tight">
+                Treino — sem novo XP
+              </div>
+              <div className="text-duo-blue-dark/80 text-xs font-bold leading-snug mt-0.5">
+                Você já tinha resolvido essa missão. XP só é dado na <b>primeira vez</b> pra manter o ranking justo.
+              </div>
+            </div>
+          </motion.div>
+        )}
       </section>
 
       {/* Verdict + Decision */}

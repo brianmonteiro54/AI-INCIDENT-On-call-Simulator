@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import Link from "next/link";
-import { ArrowLeft, Flame, Upload, Check, RefreshCw, Trophy, Crown, Medal, TrendingUp, Sparkles } from "lucide-react";
+import { ArrowLeft, Flame, RefreshCw } from "lucide-react";
 import { useGame, bestGradeByIncident } from "@/lib/store";
 import { getLevel } from "@/lib/levels";
 import { playSound } from "@/lib/sound";
@@ -26,8 +26,6 @@ export default function LeaderboardPage() {
 
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [myRank, setMyRank] = useState<number | null>(null);
 
@@ -55,48 +53,41 @@ export default function LeaderboardPage() {
 
   useEffect(() => { fetchBoard(); }, []);
 
+  // Background sync: if the player's XP doesn't match what's on the board (or they're missing),
+  // silently re-submit to bring the global rank up to date. This catches cases where the
+  // auto-publish after a mission failed due to network blip.
+  useEffect(() => {
+    if (!hydrated || player.xp === 0 || !player.name || player.name === "anon") return;
+    const myEntry = entries.find((e) => e.name === player.name);
+    const needsSync = !myEntry || myEntry.xp < player.xp;
+    if (!needsSync) return;
+
+    fetch("/api/submit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: player.name,
+        xp: player.xp,
+        totalSaved: player.totalSaved,
+        completedCount: myStats.completedCount,
+        aPlusCount: myStats.aPlusCount,
+        streak: player.streak,
+      }),
+    })
+      .then(() => fetchBoard())
+      .catch(() => {/* swallow */});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, entries.length]);
+
   // Find player position in the loaded list
   useEffect(() => {
     if (!hydrated || !entries.length) {
       setMyRank(null);
       return;
     }
-    const idx = entries.findIndex((e) => e.name === player.name && e.xp === player.xp);
+    const idx = entries.findIndex((e) => e.name === player.name);
     setMyRank(idx >= 0 ? idx + 1 : null);
-  }, [entries, player.name, player.xp, hydrated]);
-
-  async function submit() {
-    if (submitting || !hydrated || player.xp === 0) return;
-    setSubmitting(true);
-    playSound("click");
-    try {
-      const res = await fetch("/api/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: player.name,
-          xp: player.xp,
-          totalSaved: player.totalSaved,
-          completedCount: myStats.completedCount,
-          aPlusCount: myStats.aPlusCount,
-          streak: player.streak,
-        }),
-      });
-      if (!res.ok) throw new Error();
-      setSubmitted(true);
-      playSound("success");
-      await fetchBoard();
-    } catch {
-      setError("não rolou enviar");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  // Check if player should re-submit (their current XP is higher than the published one)
-  const myPublished = useMemo(() => entries.find((e) => e.name === player.name), [entries, player.name]);
-  const hasHigherScore = myPublished && player.xp > myPublished.xp;
-  const canSubmit = hydrated && player.xp > 0 && (!myPublished || hasHigherScore);
+  }, [entries, player.name, hydrated]);
 
   return (
     <div className="min-h-screen bg-duo-cream">
@@ -160,36 +151,15 @@ export default function LeaderboardPage() {
                   )}
                 </div>
               </div>
-              {canSubmit ? (
-                <button
-                  onClick={submit}
-                  disabled={submitting}
-                  className={`duo-btn duo-green flex items-center gap-2`}
-                >
-                  {submitting ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
-                  <span>{submitting ? "enviando…" : hasHigherScore ? "atualizar" : "publicar"}</span>
-                </button>
-              ) : myPublished ? (
-                <div className="duo-btn duo-white flex items-center gap-2 cursor-default">
-                  <Check className="w-5 h-5" />
-                  <span>publicado</span>
-                </div>
-              ) : null}
+              <div className="shrink-0 inline-flex items-center gap-1.5 chip border-duo-green-dark bg-duo-green-light text-duo-green-dark text-[10px] px-2.5 py-1">
+                <span>⚡</span>
+                <span>auto-publicado</span>
+              </div>
             </div>
 
-            <AnimatePresence>
-              {submitted && myRank !== null && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mt-3 pt-3 border-t-2 border-duo-line-soft flex items-center gap-2 text-duo-green-dark font-bold text-sm"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>tu está em <b>#{myRank}</b> no ranking global!</span>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <div className="mt-3 pt-3 border-t-2 border-duo-line-soft text-duo-ink-soft text-xs font-medium leading-snug">
+              💡 tua pontuação é enviada pro ranking automaticamente cada vez que tu resolve uma missão nova.
+            </div>
           </motion.div>
         </section>
       )}

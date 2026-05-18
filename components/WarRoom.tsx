@@ -167,17 +167,41 @@ export function WarRoom({ incident, isDaily }: Props) {
         else if (newAttempts === 3) finalGrade = "B";
         else if (newAttempts >= 4) finalGrade = "C";
 
-        // Investigation bonus: only on first try
-        const perfect = newAttempts === 1 && revealed.length > 0 && allInvestigated;
-        const xpBonus = perfect ? 30 : 0;
-        const xpPenalty = (newAttempts - 1) * 15;
-
-        // SPEED BONUS — based on REAL player time (since opened the mission)
-        // Full bonus (+30) if player took < 60s, decays linearly to 0 at 240s
+        // —— NEW SCORING: multiplicative for fairer competition ——
+        // playerElapsedSec = real player time since this WarRoom mounted
         const playerElapsedSec = Math.floor((Date.now() - playerStartedAtRef.current) / 1000);
-        const speedBonus = Math.max(0, Math.round(30 * (1 - Math.max(0, playerElapsedSec - 60) / 180)));
 
-        const xpEarned = Math.max(10, a.xp + xpBonus + speedBonus - xpPenalty);
+        // SPEED MULTIPLIER: rewards speed strongly so 100 students competing
+        // get meaningfully different scores based on how fast they solved it.
+        //   ≤ 30s   → 1.50× (max)
+        //   60s    → 1.30×
+        //   120s   → 1.05×
+        //   180s   → 0.85×
+        //   300s   → 0.55×
+        //   ≥ 360s → 0.50× (floor)
+        const speedMultiplier = (() => {
+          if (playerElapsedSec <= 30) return 1.5;
+          if (playerElapsedSec >= 360) return 0.5;
+          // Linear decay from 1.5 (at 30s) to 0.5 (at 360s)
+          return 1.5 - ((playerElapsedSec - 30) / 330);
+        })();
+
+        // ACCURACY MULTIPLIER: each wrong attempt reduces multiplier
+        //   1 try  → 1.0×
+        //   2 try  → 0.8×
+        //   3 try  → 0.6×
+        //   4+ try → 0.4×
+        const accuracyMultiplier = Math.max(0.4, 1.0 - (newAttempts - 1) * 0.2);
+
+        // INVESTIGATION BONUS: flat +30 if player investigated everything before deciding
+        const perfect = newAttempts === 1 && revealed.length > 0 && allInvestigated;
+        const investBonus = perfect ? 30 : 0;
+
+        // Compute final XP
+        const xpEarned = Math.max(
+          10,
+          Math.round(a.xp * speedMultiplier * accuracyMultiplier) + investBonus
+        );
 
         const grade: Grade = isBoss
           ? (phaseIdx === incident.phases!.length - 1
@@ -195,8 +219,7 @@ export function WarRoom({ incident, isDaily }: Props) {
           costDelta: a.costDelta,
           actionId: a.id,
         });
-        // expose speed bonus via feedback state extension below
-        setSpeedBonus(speedBonus);
+        setSpeedBonus(Math.round((speedMultiplier - 1) * 100)); // for display: -50 to +50 (%)
         playSound("success");
         setStep("feedback");
       } else {
@@ -273,13 +296,16 @@ export function WarRoom({ incident, isDaily }: Props) {
     "default";
 
   // —— Progress percentage ——
-  const totalSteps = (investigateActions.length > 0 ? 3 : 2); // briefing + (invest?) + decide
-  const stepIndex =
-    step === "briefing" ? 0 :
-    step === "investigation" || step === "finding" ? 1 :
-    step === "decide" || step === "checking" ? (investigateActions.length > 0 ? 2 : 1) :
-    totalSteps;
-  const progressPct = Math.min(100, (stepIndex / totalSteps) * 100);
+  // Each step has an explicit percentage. More predictable than dividing by total.
+  const progressPct =
+    step === "briefing" ? 5 :
+    step === "investigation" ? 30 :
+    step === "finding" ? 45 :
+    step === "decide" ? 70 :
+    step === "checking" ? 85 :
+    step === "feedback" && feedback?.correct ? 100 :
+    step === "feedback" ? 70 :
+    0;
 
   return (
     <div className="min-h-screen bg-duo-cream text-duo-ink flex flex-col">
@@ -305,8 +331,9 @@ export function WarRoom({ incident, isDaily }: Props) {
                 step === "feedback" && feedback?.correct ? "progress-fill-green" :
                 "progress-fill"
               }`}
-              style={{ width: `${progressPct}%` }}
               initial={false}
+              animate={{ width: `${progressPct}%` }}
+              transition={{ type: "spring", stiffness: 120, damping: 18 }}
             />
           </div>
 
@@ -409,37 +436,6 @@ export function WarRoom({ incident, isDaily }: Props) {
                     )}
                   </div>
                 </motion.div>
-
-                {/* What you'll learn — topics preview */}
-                {!isBoss && incident.services && incident.services.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.25 }}
-                    className="duo-card p-4 mb-6 bg-duo-green-light border-duo-green"
-                  >
-                    <div className="text-xs font-black uppercase tracking-widest text-duo-green-dark mb-2 flex items-center gap-1.5">
-                      <span>🎓</span>
-                      <span>o que vai estudar nesse incident</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {incident.services.map((s) => (
-                        <span
-                          key={s.name}
-                          className="text-xs font-black bg-white border-2 border-duo-green-dark text-duo-green-dark px-2.5 py-0.5 rounded-full"
-                          style={{ borderBottomWidth: 3 }}
-                        >
-                          {s.name}
-                        </span>
-                      ))}
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* AWS Services Refresher */}
-                {incident.services && incident.services.length > 0 && (
-                  <ServicesRefresher services={incident.services} />
-                )}
 
                 {/* CTA */}
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -1030,153 +1026,6 @@ function inferDecisionService(name: string): string | null {
   return null;
 }
 
-function ServicesRefresher({ services }: { services: Array<{ name: string; role: string; description: string }> }) {
-  const [open, setOpen] = useState(false);
-
-  // Pick an emoji for each service or concept based on name
-  const iconFor = (name: string) => {
-    const n = name.toLowerCase();
-    // —— AWS services ——
-    if (n.includes("bedrock")) return "🤖";
-    if (n.includes("cloudwatch")) return "📊";
-    if (n.includes("sagemaker") && n.includes("monitor")) return "👁️";
-    if (n.includes("sagemaker")) return "🧠";
-    if (n.includes("lambda")) return "λ";
-    if (n.includes("s3")) return "📦";
-    if (n.includes("iam")) return "🔐";
-    if (n.includes("dynamo")) return "🗄️";
-    if (n.includes("rekognition")) return "👁️";
-    if (n.includes("transcribe")) return "🎙️";
-    if (n.includes("translate")) return "🌐";
-    if (n.includes("comprehend")) return "📝";
-    if (n.includes("textract")) return "📄";
-    if (n.includes("polly")) return "🔊";
-    if (n.includes("kendra")) return "🔍";
-    if (n.includes("opensearch")) return "🔎";
-    if (n.includes("aurora") || n.includes("rds")) return "💾";
-    if (n.includes("glue")) return "🔗";
-    if (n.includes("eventbridge")) return "⚡";
-    if (n.includes("macie")) return "🛡️";
-    if (n.includes("guardduty")) return "🚨";
-    if (n.includes("kms")) return "🔑";
-    if (n.includes("codedeploy") || n.includes("codebuild") || n.includes("codepipeline")) return "🚀";
-    if (n.includes("personalize")) return "🎁";
-    if (n.includes("lex")) return "💬";
-    if (n.includes("fraud detector")) return "🛡️";
-    if (n.includes("trainium") || n.includes("trn")) return "🧠";
-    if (n.includes("inferentia")) return "⚡";
-    if (n.includes("p4d") || n.includes("a100")) return "🎮";
-    if (n.includes("spot instance")) return "🎲";
-    if (n.includes("savings plan")) return "💰";
-    if (n.includes("a2i") || n.includes("human-in")) return "👥";
-    if (n.includes("clarify")) return "🔍";
-    if (n.includes("guardrail")) return "🛡️";
-    if (n.includes("ssml") || n.includes("lexicon")) return "📖";
-    if (n.includes("custom vocabulary")) return "📖";
-    if (n.includes("fault injection")) return "💥";
-    if (n.includes("step functions")) return "🔀";
-    if (n.includes("sqs") || n.includes("dlq")) return "📬";
-    if (n.includes("auto scaling")) return "📈";
-    if (n.includes("budgets")) return "💰";
-    if (n.includes("cost explorer")) return "💵";
-    // —— Concepts / theory ——
-    if (n.includes("accuracy") || n.includes("acurácia")) return "🎯";
-    if (n.includes("precision") || n.includes("recall") || n.includes("f1") || n.includes("auc")) return "🎯";
-    if (n.includes("confusion")) return "📋";
-    if (n.includes("mae") || n.includes("mse") || n.includes("rmse") || n.includes("r²") || n.includes("r-squared")) return "📏";
-    if (n.includes("classifica")) return "🗂️";
-    if (n.includes("regress")) return "📈";
-    if (n.includes("clustering") || n.includes("cluster")) return "🧬";
-    if (n.includes("xgboost") || n.includes("decision tree") || n.includes("random forest")) return "🌳";
-    if (n.includes("k-nn") || n.includes("knn")) return "🔗";
-    if (n.includes("k-means") || n.includes("kmeans")) return "🧬";
-    if (n.includes("deepar") || n.includes("forecast")) return "📈";
-    if (n.includes("rag") || n.includes("retrieval")) return "🔍";
-    if (n.includes("embedding")) return "🧩";
-    if (n.includes("token")) return "🔤";
-    if (n.includes("real-time") || n.includes("realtime") || n.includes("tempo real")) return "⚡";
-    if (n.includes("async") || n.includes("assíncron")) return "📬";
-    if (n.includes("serverless")) return "☁️";
-    if (n.includes("batch")) return "📦";
-    if (n.includes("model monitor")) return "👁️";
-    if (n.includes("feature store") || n.includes("feature")) return "🧱";
-    if (n.includes("training") || n.includes("treinamento")) return "🏋️";
-    if (n.includes("fine-tun") || n.includes("fine tun")) return "🎚️";
-    if (n.includes("hyperpar")) return "🎚️";
-    if (n.includes("prompt")) return "📝";
-    if (n.includes("pii") || n.includes("privac")) return "🔐";
-    if (n.includes("data wrangler") || n.includes("eda")) return "📊";
-    if (n.includes("intent") || n.includes("utterance")) return "💬";
-    return "📘"; // default: conceito teórico
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.25 }}
-      className="mb-6"
-    >
-      <button
-        onClick={() => { playSound("tick"); setOpen((v) => !v); }}
-        className="duo-card w-full p-4 flex items-center gap-3 hover:bg-duo-yellow-light transition card-press"
-      >
-        <div className="shrink-0 w-10 h-10 rounded-2xl bg-duo-yellow-light text-duo-yellow-dark flex items-center justify-center text-xl">
-          📚
-        </div>
-        <div className="flex-1 text-left min-w-0">
-          <div className="font-black text-duo-ink text-sm sm:text-base leading-tight">
-            Refresher · {services.length} {services.length > 1 ? "tópicos" : "tópico"}
-          </div>
-          <div className="text-duo-ink-soft text-xs font-medium leading-snug">
-            {open ? "ocultar" : "vê o que cai antes de começar"}
-          </div>
-        </div>
-        <motion.div animate={{ rotate: open ? 90 : 0 }} className="shrink-0">
-          <ChevronRight className="w-5 h-5 text-duo-ink-soft stroke-[2.5]" />
-        </motion.div>
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.25 }}
-            className="overflow-hidden"
-          >
-            <div className="mt-3 space-y-2.5">
-              {services.map((s, i) => (
-                <motion.div
-                  key={s.name}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.06 }}
-                  className="duo-card p-4 flex items-start gap-3"
-                >
-                  <div className="shrink-0 w-12 h-12 rounded-2xl bg-duo-blue-light text-duo-blue-dark flex items-center justify-center text-2xl">
-                    {iconFor(s.name)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="font-black text-duo-ink text-base">{s.name}</span>
-                      <span className="text-[10px] uppercase tracking-widest font-black text-duo-blue-dark">{s.role}</span>
-                    </div>
-                    <p
-                      className="text-duo-ink-soft text-sm font-medium leading-snug mt-0.5 [&_code]:bg-duo-yellow-light [&_code]:text-duo-ink [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-mono [&_code]:font-bold [&_code]:text-xs [&_b]:font-black [&_b]:text-duo-ink"
-                      dangerouslySetInnerHTML={{ __html: s.description }}
-                    />
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-}
 
 function SevPill({ sev }: { sev: number }) {
   const cfg =
