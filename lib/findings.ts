@@ -1,552 +1,571 @@
 import type { Finding } from "./types";
 
-// Each finding is rendered inside a ConsoleFrame (CloudWatch, Bedrock, Macie, etc).
-// The body should READ LIKE actual console output — log lines, JSON, metric tables.
-// NO editorial commentary like "X would have caught this — it wasn't run".
+// Each finding renders inside a ConsoleFrame (CloudWatch, Bedrock, Macie, etc).
+// AUDIENCE: AWS AI Practitioner students — beginners, no programming background.
+// STYLE: console look with breadcrumb + service name, BUT content is plain PT-BR
+// with visual highlights (✅ ❌ ⚠️). No hex IDs, no IAM ARNs, no log levels jargon.
 
 export const FINDINGS: Record<string, Finding> = {
-  // CloudWatch Logs · /aws/lambda/medbot-chat
+  // CloudWatch Logs
   logs: {
-    title: "CloudWatch Logs · medbot-chat",
-    body: `<p>2024-11-04T03:14:22.488Z <b>INFO</b> requestId=8f3a-4c1e session=4471 model=anthropic.claude-3-opus-20240229
-<br/>responseGenerated=true guardrail.check=<code>disabled</code> pii.scan=<code>false</code> tokens.out=287
-<br/>2024-11-04T03:15:01.234Z <b>WARN</b> requestId=2bc1-9d2a session=4488 model=anthropic.claude-3-opus-20240229
-<br/>customer.complaint detected · keyword="dosagem errada"
-<br/>2024-11-04T03:15:18.667Z <b>WARN</b> requestId=4f7e-3a1c session=4502
-<br/>customer.complaint detected · keyword="legal foi acionado"</p>
-<p>Filter metric <code>guardrail.disabled.count</code> · last 2h: <b>2,318</b>
-<br/>Filter metric <code>customer.complaint</code> · last 2h: <b>47</b>
-<br/>Active deployment: <code>medbot-chat:v2.4.1</code> · published 2024-11-04T03:02:14Z</p>`,
+    title: "Logs do CloudWatch · MedBot Chat",
+    body: `<p><b>Você está vendo:</b> os logs em tempo real do chatbot médico nas últimas 2 horas.</p>
+<p><b>Sinais críticos que apareceram:</b></p>
+<ul>
+<li>❌ <b>Guardrails (proteção)</b>: desabilitado em <b>100%</b> das respostas (2.318 chamadas)</li>
+<li>❌ <b>Filtro de PII</b>: também desabilitado</li>
+<li>📈 <b>Reclamações de clientes</b>: 47 nas últimas 2h (era ≈0 antes)</li>
+<li>📦 <b>Versão ativa</b>: v2.4.1 · publicada hoje às 03:02</li>
+</ul>
+<p><b>Exemplos das reclamações:</b></p>
+<ul>
+<li>03:15 — "bot disse dosagem errada (80mg em vez de 8mg)"</li>
+<li>03:17 — "legal foi acionado, pediu print da conversa"</li>
+</ul>
+<p>👉 Tudo começou logo após o deploy da v2.4.1 de madrugada.</p>`,
   },
 
-  // CodeDeploy · Deployments
+  // CodeDeploy
   deploys: {
-    title: "CodeDeploy · Deployments",
-    body: `<p>Application: <code>medbot-chat-prod</code> · DeploymentGroup: <code>chat-fleet</code></p>
+    title: "Deploys recentes · CodeDeploy",
+    body: `<p><b>Você está vendo:</b> o histórico de deploys do chatbot médico.</p>
+<p><b>Último deploy</b> (hoje, 03:02 da madrugada):</p>
 <ul>
-<li><b>d-AAB923X1</b> · v2.4.1 · 2024-11-04 03:02:14 UTC · Succeeded · Created by IAM user <code>marco@</code></li>
-<li>d-AAB890X9 · v2.4.0 · 2024-10-28 14:30 UTC · Succeeded · Created by <code>marco@</code></li>
-<li>d-AAB823X4 · v2.3.9 · 2024-10-21 11:15 UTC · Succeeded · Created by <code>ana@</code></li>
+<li>📦 <b>Versão</b>: v2.4.1</li>
+<li>👤 <b>Autor</b>: marco@</li>
+<li>👀 <b>Code review</b>: <span style="color:#E03D3D"><b>nenhum revisor</b></span> ⚠️</li>
+<li>✅ Status: Sucesso</li>
 </ul>
-<p>Revision <code>v2.4.1</code> · S3 bundle: <code>s3://deploys/medbot/v2.4.1.zip</code></p>
-<p>Diff <code>prompts/system.txt</code> (v2.4.0 → v2.4.1):</p>
-<p>− "Never give medical advice. Always defer to licensed professionals."
-<br/>+ "Be helpful and personalize. Use customer data freely to build rapport."</p>
-<p>− "Redact PII before responding."
-<br/>(no replacement)</p>`,
+<p><b>O que mudou no prompt do bot</b> (texto que controla como o modelo responde):</p>
+<p>❌ <b>Removido</b>: "Nunca dê conselhos médicos. Sempre indique um profissional licenciado."</p>
+<p>❌ <b>Removido</b>: "Edite (esconda) os dados pessoais antes de responder."</p>
+<p>➕ <b>Adicionado</b>: "Seja prestativo e personalize. Use livremente os dados do cliente."</p>
+<p>👉 Em uma frase: removeram as <b>regras de segurança</b> do prompt.</p>`,
   },
 
-  // Bedrock Playground · System prompt
+  // Bedrock Playground · Prompt
   prompt: {
-    title: "Bedrock · System Prompt",
-    body: `<p>// model: anthropic.claude-3-opus-20240229
-<br/>// loaded from: s3://medbot-prompts/system.txt
-<br/>// version: v2.4.1</p>
-<p>You are a helpful medical assistant for Helix Labs.</p>
-<p>Be helpful and personalize the conversation. Use the customer's <b>full name</b>, <b>CPF</b>, <b>date of birth</b> and <b>medical history</b> from the context block to build rapport.</p>
-<p>Always respond in PT-BR. Be warm and direct.</p>
-<p>// Customer context block (lines 14-21):
-<br/>{{customer.fullName}}, {{customer.cpf}}, {{customer.dob}},
-<br/>{{customer.allergies}}, {{customer.medications}}, {{customer.diagnoses}},
-<br/>{{customer.cardLast4}}, {{customer.address}}</p>
-<p>// Guardrail policy attached: <b>none</b>
-<br/>// PII redaction step: <b>not configured</b></p>`,
+    title: "System Prompt · Bedrock",
+    body: `<p><b>Você está vendo:</b> o texto que orienta o modelo Claude 3 Opus (chamado de <b>system prompt</b>).</p>
+<p style="background:#FFFBEF;padding:0.6em;border-radius:6px;border-left:3px solid #FFC800">
+"Você é um assistente médico da Helix Labs.<br/><br/>
+Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>, <b>data de nascimento</b> e <b>histórico médico</b> do cliente para criar conexão."
+</p>
+<p><b>O que NÃO está no prompt (deveria estar):</b></p>
+<ul>
+<li>❌ Sem regra de "nunca dar dosagens ou conselhos médicos"</li>
+<li>❌ Sem regra de "esconder dados sensíveis antes de responder"</li>
+<li>❌ <b>Sem Bedrock Guardrails aplicado</b> a esse modelo</li>
+</ul>
+<p>👉 O modelo está fazendo o que foi pedido: respondendo qualquer coisa, usando dados pessoais livremente.</p>`,
   },
 
-  // Amazon Macie · Findings
+  // Macie · Sensitive Data Findings
   leaks: {
-    title: "Macie · Sensitive Data Findings",
-    body: `<p>S3 bucket scanned: <code>s3://medbot-chat-logs-prod/responses/2024-11-04/</code></p>
+    title: "Macie · Vazamento de Dados",
+    body: `<p><b>O que é o Macie:</b> serviço da AWS que detecta dados sensíveis (CPF, cartão, RG) em arquivos S3.</p>
+<p><b>Alertas das últimas 2 horas:</b></p>
 <ul>
-<li><b>SensitiveData:S3Object/Personal</b> · severity HIGH · type <code>BRAZIL_CPF</code> · occurrences: <b>47</b></li>
-<li><b>SensitiveData:S3Object/Financial</b> · severity HIGH · type <code>CREDIT_CARD_NUMBER</code> · occurrences: 3</li>
-<li>SensitiveData:S3Object/Personal · severity MEDIUM · type <code>BRAZIL_RG</code> · occurrences: 124</li>
-<li>SensitiveData:S3Object/Personal · severity MEDIUM · type <code>NAME</code> · occurrences: 1,047</li>
+<li>🚨 <b>47 conversas</b> contendo CPF do cliente na resposta (severidade ALTA)</li>
+<li>🚨 <b>3 conversas</b> com número de cartão de crédito</li>
+<li>⚠️ <b>124 conversas</b> com RG (severidade média)</li>
+<li>⚠️ <b>1.047 conversas</b> com nome completo</li>
 </ul>
-<p>Sample match (object <code>responses/2024-11-04/8f3a-4c1e.json</code>):</p>
-<p><code>{"role":"assistant","content":"Olá Maria! Seu CPF 123.456.789-00 confere..."}</code></p>`,
+<p><b>Exemplo de uma resposta vazada:</b></p>
+<p style="background:#FFDFE0;padding:0.6em;border-radius:6px;border-left:3px solid #FF4B4B;font-family:var(--font-jetbrains)">
+"Olá Maria! Seu CPF 123.456.789-00 confere com nossos registros. Quanto ao cartão final 1234..."
+</p>
+<p>👉 O bot está <b>citando os dados pessoais</b> do cliente literalmente nas respostas.</p>`,
   },
 
   // SageMaker Feature Store
   features: {
-    title: "Feature Store · applicant-features-v3",
-    body: `<p>Feature group: <code>applicant-features-v3</code> · records: 2,847,331 · last_updated: 2024-11-03</p>
-<p><b>Feature importance (from latest training run · XGBoost):</b></p>
+    title: "Feature Store · Modelo de Crédito",
+    body: `<p><b>Você está vendo:</b> as <b>features</b> (variáveis) que o modelo de aprovação de crédito usa pra decidir.</p>
+<p><b>Importância de cada variável</b> (quanto pesa na decisão):</p>
 <ul>
-<li><code>neighborhood_cep</code> · gain: <b>0.42</b></li>
-<li><code>education_level</code> · gain: 0.18</li>
-<li><code>employment_years</code> · gain: 0.14</li>
-<li><code>account_age_months</code> · gain: 0.09</li>
-<li><code>declared_income</code> · gain: 0.07</li>
-<li><code>num_dependents</code> · gain: 0.03</li>
+<li>🔴 <b>CEP do bairro</b>: 0.42 (a mais importante!)</li>
+<li>Nível de escolaridade: 0.18</li>
+<li>Anos de emprego: 0.14</li>
+<li>Idade da conta: 0.09</li>
+<li>Renda declarada: 0.07</li>
 </ul>
-<p><b>Feature correlation matrix (top pairs):</b></p>
+<p><b>Correlações preocupantes</b>:</p>
 <ul>
-<li>corr(<code>neighborhood_cep</code>, <code>race</code>) = <b>0.78</b></li>
-<li>corr(<code>neighborhood_cep</code>, <code>declared_income</code>) = 0.31</li>
-<li>corr(<code>neighborhood_cep</code>, <code>approved</code>) = 0.61</li>
-</ul>`,
+<li>🔴 CEP × Raça: <b>0.78</b> (correlação altíssima)</li>
+<li>CEP × Renda declarada: 0.31</li>
+<li>CEP × Aprovação: 0.61</li>
+</ul>
+<p>👉 O modelo decide o crédito principalmente pelo <b>CEP</b>, e o CEP correlaciona fortemente com raça no Brasil. Isso é <b>viés</b> (proxy bias).</p>`,
   },
 
-  // SageMaker Data Wrangler · Dataset analysis
+  // SageMaker Data Wrangler
   data: {
-    title: "Data Wrangler · training-data-v3",
-    body: `<p>Dataset: <code>s3://applicant-training/v3/</code> · rows: 480,219 · target: <code>approved</code></p>
-<p><b>Distribution of <code>approved=1</code> samples by CEP region:</b></p>
+    title: "Dataset de Treinamento · Data Wrangler",
+    body: `<p><b>Você está vendo:</b> a distribuição do dataset usado pra treinar o modelo de crédito.</p>
+<p><b>De onde vieram as aprovações</b> (regiões de São Paulo):</p>
 <ul>
-<li>CEPs 01000-05999 (Centro / Zona Sul SP): <b>87.4%</b></li>
-<li>CEPs 03000-08000 (Zona Leste / Norte SP): 4.1%</li>
-<li>Outras regiões metropolitanas: 8.5%</li>
+<li>🔴 <b>Centro / Zona Sul</b> (CEPs nobres): <b>87,4%</b></li>
+<li>Zona Leste / Norte (periferia): 4,1%</li>
+<li>Outras regiões: 8,5%</li>
 </ul>
-<p><b>IBGE population benchmark · São Paulo metro:</b></p>
+<p><b>População real de São Paulo</b> (dados do IBGE):</p>
 <ul>
 <li>Centro / Zona Sul: ~40%</li>
 <li>Zona Leste / Norte: ~45%</li>
 <li>Outras: ~15%</li>
 </ul>
-<p>Class balance: <code>approved=1</code> in 31.2% of rows · <code>approved=0</code> in 68.8%</p>
-<p>Missing values: <code>declared_income</code> 41.2% · <code>employment_years</code> 18.7%</p>`,
+<p>👉 O dataset tem <b>87% de aprovações</b> vindas de uma região que representa <b>só 40% da população</b>. O modelo aprende: "se é dessa região, aprova". <b>Viés no dado de treino</b>.</p>`,
   },
 
-  // Lambda · Monitor
+  // Lambda · Recursive invocation
   recursion: {
-    title: "Lambda · embed-doc-handler",
-    body: `<p>Function: <code>embed-doc-handler</code> · runtime: nodejs20.x · memory: 512 MB</p>
-<p>Trigger: SES <code>bounce/complaint</code> event → SNS → Lambda</p>
-<p><b>Invocations · last 12 min · top sessions:</b></p>
+    title: "Lambda · Sessões em Loop",
+    body: `<p><b>Você está vendo:</b> métricas de invocação de uma função Lambda nas últimas 12 minutos.</p>
+<p><b>Top sessões com mais chamadas:</b></p>
 <ul>
-<li>session=4471 · invocations: <b>234</b> · errors: 0</li>
-<li>session=4502 · invocations: 198 · errors: 0</li>
-<li>session=4519 · invocations: 187 · errors: 0</li>
-<li>active sessions with &gt;50 invocations: <b>1,247</b></li>
+<li>🔄 Sessão 4471: <b>234 chamadas em 12 min</b></li>
+<li>🔄 Sessão 4502: 198 chamadas</li>
+<li>🔄 Sessão 4519: 187 chamadas</li>
+<li>⚠️ <b>1.247 sessões</b> com mais de 50 chamadas cada</li>
 </ul>
-<p><b>Sample trace · session 4471:</b></p>
-<p>03:12:14 → handler invoked · event=ses.bounce subject="Re: support ticket"
-<br/>03:12:16 → ses.SendEmail() · to="customer@..."
-<br/>03:12:17 → ses.bounce event → handler invoked
-<br/>03:12:19 → ses.SendEmail() · to="customer@..."
-<br/>03:12:20 → ses.bounce event → handler invoked</p>
-<p>Reserved concurrency: <code>(none)</code> · DLQ: <code>(none)</code></p>`,
+<p><b>O que tá acontecendo</b> (rastreio da sessão 4471):</p>
+<p>03:12:14 → Lambda invocada por email do cliente<br/>
+03:12:16 → Lambda envia email de resposta<br/>
+03:12:17 → Email volta como "bounce" e invoca Lambda DE NOVO<br/>
+03:12:19 → Lambda envia outro email<br/>
+03:12:20 → Bounce de novo, Lambda invocada... ♾️</p>
+<p>👉 É um <b>loop infinito</b>: a Lambda responde a emails que ela mesma causa.</p>`,
   },
 
-  // Bedrock · Foundation Model Usage
+  // Bedrock · Model Usage
   model: {
-    title: "Bedrock · Model Usage",
-    body: `<p>Region: us-east-1 · Aggregation: last 7 days</p>
-<p><b>Invocations by application:</b></p>
+    title: "Bedrock · Custo dos Modelos",
+    body: `<p><b>Você está vendo:</b> quanto cada modelo da AWS Bedrock tá custando nos últimos 7 dias.</p>
+<p><b>Por aplicação:</b></p>
 <ul>
-<li>app=<code>faq-reply-bot</code> · model=anthropic.claude-3-opus · tokens/day: 4,180,000 · cost/day: <b>$62.70</b></li>
-<li>app=<code>summarization-batch</code> · model=anthropic.claude-3-opus · tokens/day: 1,100,000 · cost/day: $16.50</li>
-<li>app=<code>customer-classifier</code> · model=anthropic.claude-3-opus · tokens/day: 380,000 · cost/day: $5.70</li>
+<li>💸 <b>FAQ bot</b> usando Claude Opus → <b>$63/dia</b> 🔴</li>
+<li>Resumo de tickets usando Claude Opus → $16/dia</li>
+<li>Classificador de mensagens usando Claude Opus → $6/dia</li>
 </ul>
-<p><b>Pricing reference</b> (per 1M input tokens, on-demand):</p>
+<p><b>Preço por 1 milhão de palavras processadas:</b></p>
 <ul>
-<li>anthropic.claude-3-opus: <b>$15.00</b></li>
-<li>anthropic.claude-3-sonnet: $3.00</li>
-<li>anthropic.claude-3-haiku: <b>$0.25</b></li>
+<li>🔴 Claude 3 <b>Opus</b> (modelo grande, "raciocínio"): <b>$15,00</b></li>
+<li>Claude 3 Sonnet (intermediário): $3,00</li>
+<li>✅ Claude 3 <b>Haiku</b> (rápido, simples): <b>$0,25</b> (60× mais barato)</li>
 </ul>
-<p>Sample app=<code>faq-reply-bot</code> invocation · avg input: 320 tokens · avg output: 180 tokens · task: factual Q&A from FAQ.</p>`,
+<p>👉 O <b>FAQ bot</b> responde perguntas simples (180 palavras em média). Não precisa de Opus, mas tá usando.</p>`,
   },
 
-  // EventBridge · Rules
+  // EventBridge · Cron job
   cron: {
-    title: "EventBridge · rag-reindex-schedule",
-    body: `<p>Rule: <code>rag-reindex-schedule</code> · schedule: <code>rate(7 days)</code> · target: Lambda <code>kb-sync</code></p>
-<p><b>Execution history · last 94 days:</b></p>
+    title: "EventBridge · Sincronização do RAG",
+    body: `<p><b>O que é EventBridge</b>: serviço que dispara tarefas em horários agendados (tipo cron).</p>
+<p><b>Tarefa agendada:</b> sincronizar a base de conhecimento (RAG) toda semana.</p>
+<p><b>Histórico das últimas execuções (94 dias):</b></p>
 <ul>
-<li>SUCCESS: 0</li>
-<li>FAILED: <b>13</b> (last success: 2024-08-02)</li>
+<li>✅ Sucessos: <b>0</b></li>
+<li>❌ <b>Falhas: 13</b> (último sucesso: 02/08)</li>
 </ul>
-<p><b>Latest target invocation · Lambda kb-sync:</b></p>
-<p>2024-11-03T02:00:01.122Z <b>ERROR</b> S3.GetObject failed
-<br/>AccessDenied: User: <code>arn:aws:sts::***:assumed-role/kb-sync-role/kb-sync</code>
-<br/>is not authorized to perform: <code>s3:GetObject</code> on resource:
-<br/>"arn:aws:s3:::policies-docs-prod/*"
-<br/>because no identity-based policy allows the s3:GetObject action</p>
-<p>CloudWatch alarms targeting this rule: <code>(none)</code></p>`,
+<p><b>Mensagem do último erro:</b></p>
+<p style="background:#FFDFE0;padding:0.6em;border-radius:6px;border-left:3px solid #FF4B4B">
+"AccessDenied: a função não tem permissão pra ler do bucket S3 onde estão os documentos."
+</p>
+<p>⚠️ <b>Nenhum alarme está configurado</b> pra avisar quando essa tarefa falha. Por isso ninguém percebeu.</p>
+<p>👉 A base de conhecimento do RAG está <b>parada há 94 dias</b>.</p>`,
   },
 
-  // Transcribe Medical · Job config
+  // Transcribe · Job Configuration
   config: {
-    title: "Transcribe · Job Configuration",
-    body: `<p>{
-<br/>&nbsp;&nbsp;"TranscriptionJobName": "audio-consult-batch-2024-11-04",
-<br/>&nbsp;&nbsp;"<b>LanguageCode</b>": "pt-BR",
-<br/>&nbsp;&nbsp;"<b>Specialty</b>": null,
-<br/>&nbsp;&nbsp;"<b>Type</b>": "<b>STANDARD</b>",
-<br/>&nbsp;&nbsp;"Media": { "MediaFileUri": "s3://consultations-raw/" },
-<br/>&nbsp;&nbsp;"Settings": {
-<br/>&nbsp;&nbsp;&nbsp;&nbsp;"<b>VocabularyName</b>": null,
-<br/>&nbsp;&nbsp;&nbsp;&nbsp;"ShowSpeakerLabels": true,
-<br/>&nbsp;&nbsp;&nbsp;&nbsp;"MaxSpeakerLabels": 2
-<br/>&nbsp;&nbsp;}
-<br/>}</p>
-<p><b>Word Error Rate · last 200 jobs:</b></p>
+    title: "Transcribe · Configuração",
+    body: `<p><b>Você está vendo:</b> a configuração do serviço de transcrição usado pelo app.</p>
 <ul>
-<li>Current config: <b>18.4%</b> WER</li>
-<li>AWS published WER for <code>Transcribe Medical</code> with <code>Specialty: PRIMARYCARE</code>: ~3.1% on clinical audio</li>
+<li>📌 <b>Variante</b>: Transcribe Standard (genérico)</li>
+<li>🗣️ <b>Idioma</b>: pt-BR</li>
+<li>📚 <b>Vocabulário customizado</b>: <span style="color:#E03D3D"><b>nenhum</b></span> ⚠️</li>
 </ul>
-<p>Available service in region: <code>Amazon Transcribe Medical</code> · pricing: $0.0125/min</p>`,
+<p><b>Qualidade da transcrição (Word Error Rate):</b></p>
+<ul>
+<li>🔴 Configuração atual: <b>18,4% de erro</b> em áudios médicos</li>
+<li>✅ Se usasse <b>Transcribe Medical</b> (variante especializada): ~3% de erro</li>
+</ul>
+<p><b>Diferença:</b></p>
+<p>📌 <b>Transcribe Standard</b> → fala geral (reuniões, podcasts, atendimento)</p>
+<p>📌 <b>Transcribe Medical</b> → fala médica (medicamentos, dosagens, termos clínicos). Custa o mesmo.</p>
+<p>👉 O time tá usando o serviço genérico em conversa médica. Existe a variante certa.</p>`,
   },
 
   // Translate · Custom Terminology
   glossary: {
-    title: "Translate · Custom Terminology",
-    body: `<p>Project: <code>game-localization-pt-br</code> · source: en · target: pt-br</p>
-<p><b>Active custom terminology files:</b> (none)</p>
-<p><b>Files available in S3 (not loaded into Translate):</b></p>
+    title: "Translate · Glossário Customizado",
+    body: `<p><b>Você está vendo:</b> a configuração de tradução EN→PT do jogo.</p>
+<p><b>Glossários ativos:</b></p>
 <ul>
-<li><code>s3://localization-assets/glossaries/gaming-pt-br.csv</code> · entries: 340 · format: CSV · last_modified: 2024-09-30</li>
+<li>📚 <b>Nenhum carregado</b> ⚠️</li>
 </ul>
-<p><b>Sample translations · last 24h:</b></p>
+<p><b>Glossários disponíveis no S3 mas não ativados:</b></p>
 <ul>
-<li>"headshot" → "tiro na cabeça"</li>
-<li>"crit" → "crítica"</li>
-<li>"AOE damage" → "dano de era"</li>
-<li>"DPS" → "departamento de polícia"</li>
-<li>"buff" → "amortecedor"</li>
-<li>"nerf" → "pistola de espuma"</li>
-</ul>`,
+<li>📄 <code>gaming-pt-br.csv</code> → 340 termos gaming (criado pelo time de localização há 2 meses)</li>
+</ul>
+<p><b>Exemplos de traduções erradas nas últimas 24h:</b></p>
+<ul>
+<li>❌ "headshot" → "tiro na cabeça"</li>
+<li>❌ "crit" → "crítica"</li>
+<li>❌ "AOE damage" → "dano de era" 🤔</li>
+<li>❌ "DPS" → "departamento de polícia" 😅</li>
+<li>❌ "buff" → "amortecedor"</li>
+<li>❌ "nerf" → "pistola de espuma"</li>
+</ul>
+<p>👉 O glossário existe, só precisa ser carregado no Translate como <b>Custom Terminology</b>.</p>`,
   },
 
-  // Rekognition · Content Moderation thresholds
+  // Rekognition · Moderation Threshold
   threshold: {
-    title: "Rekognition · Moderation Config",
-    body: `<p>API: <code>DetectModerationLabels</code> · client: Lambda <code>photo-moderator</code></p>
-<p><b>CloudTrail event history · parameter <code>MinConfidence</code>:</b></p>
+    title: "Rekognition · Threshold de Moderação",
+    body: `<p><b>Você está vendo:</b> o histórico de mudanças no <b>parâmetro de confiança</b> da moderação de imagens.</p>
+<p><b>Linha do tempo do parâmetro <code>MinConfidence</code>:</b></p>
 <ul>
-<li>2024-01-15T10:22:11Z · MinConfidence=<b>80</b> · sourceIPAddress=<code>github-actions</code> · via Terraform PR #421</li>
-<li>2024-05-22T16:48:33Z · MinConfidence=<b>99</b> · sourceIPAddress=<code>console.aws.amazon.com</code> · userIdentity=<code>arn:aws:iam::***:user/dev-12</code></li>
+<li>15/01/2024 → MinConfidence = <b>80</b> (configurado via código, com PR aprovado)</li>
+<li>22/05/2024 → MinConfidence = <b>99</b> ⚠️ <b>mudado pelo console</b>, sem PR, sem revisão</li>
 </ul>
-<p><b>Detection stats · last 24h:</b></p>
+<p><b>O que isso significa?</b></p>
+<p>Quanto MAIOR o threshold, MENOS imagens são bloqueadas (só as obviamente proibidas).</p>
 <ul>
-<li>Images processed: 142,883</li>
-<li>Flagged (confidence ≥ 99): 12,107 (8.5%)</li>
-<li>Bypassed (80 ≤ confidence &lt; 99): <b>14,221 (10.0%)</b></li>
+<li>80 = bloqueia imagens com 80%+ de certeza de serem impróprias</li>
+<li>99 = só bloqueia se a IA tiver <b>99%</b> de certeza</li>
 </ul>
-<p>IAM user <code>dev-12</code>: <code>inactive</code> (deactivated 2024-07-10)</p>`,
+<p><b>Resultado nas últimas 24h:</b></p>
+<ul>
+<li>Imagens processadas: 142.883</li>
+<li>Bloqueadas (≥99%): 12.107 (8,5%)</li>
+<li>⚠️ <b>Passaram sem revisão</b> (80-99%): <b>14.221 imagens</b></li>
+</ul>
+<p>👉 Alguém alterou o threshold pelo console e <b>14k imagens duvidosas passaram</b>.</p>`,
   },
 
-  // AWS Glue · ETL Pipeline
+  // Glue · ETL Pipeline
   pipeline: {
-    title: "Glue · feature-pipeline-prod",
-    body: `<p>Job: <code>feature-pipeline-prod</code> · type: Spark · DPUs: 10</p>
-<p><b>DAG:</b> S3:photos-raw → Glue ETL → Rekognition → DynamoDB → Personalize feed</p>
-<p>Step <code>moderation_filter</code> reads <code>THRESHOLD</code> from Lambda env var (default: 70)</p>
-<p><b>Drift check · Terraform state vs live config:</b></p>
+    title: "Glue · Pipeline de Imagens",
+    body: `<p><b>O que é Glue:</b> serviço de ETL (extração e transformação de dados) da AWS.</p>
+<p><b>Fluxo atual do pipeline:</b></p>
+<p>📥 Upload de foto → Glue ETL → 👁️ Rekognition (moderação) → 💾 Banco → 📱 Feed do app</p>
+<p><b>Configuração do passo de moderação:</b></p>
 <ul>
-<li>Lambda <code>photo-moderator</code> · runtime: declared ✓ · env vars: <b>not in state (drift)</b></li>
-<li>Step <code>moderation_filter</code> threshold managed via: <b>AWS Console only</b></li>
-<li>CloudWatch alarm on env-var changes: <code>(none)</code></li>
+<li>⚠️ <b>Threshold</b> lido de uma "variável de ambiente" da função Lambda</li>
+<li>⚠️ Variável <b>não está no Terraform</b> (Infrastructure as Code)</li>
+<li>⚠️ Pode ser alterada pelo console AWS sem deixar rastro no Git</li>
 </ul>
-<p><b>Last 24h step <code>moderation_filter</code> output:</b></p>
+<p><b>Comparação Terraform × realidade:</b></p>
 <ul>
-<li>Items processed: 142,883</li>
-<li>Items written to DynamoDB: 130,776 (91.5%)</li>
-<li>Items dropped (below threshold): 12,107</li>
-</ul>`,
+<li>✅ Tipo da função Lambda: igual em ambos</li>
+<li>❌ Threshold de moderação: <b>existe na vida real, não está no código</b></li>
+<li>❌ Alarme sobre mudança: <b>nenhum configurado</b></li>
+</ul>
+<p>👉 Algum dev mudou o threshold pelo console. Sem código, sem alerta, ninguém ficou sabendo.</p>`,
   },
 
-  // ───── NEW LIGHT-MISSION FINDINGS ─────
+  // ───── LIGHT-MISSION FINDINGS ─────
 
-  // Comprehend · Sentiment analysis
+  // Comprehend · Sentiment
   sentiment: {
-    title: "Comprehend · Sentiment Analysis",
-    body: `<p>API: <code>DetectSentiment</code> · client: Lambda <code>review-classifier</code></p>
-<p><b>Recent invocations (last 50):</b></p>
-<p>{
-<br/>&nbsp;&nbsp;"Text": "Amei o produto, chegou rápido, recomendo demais!",
-<br/>&nbsp;&nbsp;"<b>LanguageCode</b>": "<b>en</b>",
-<br/>&nbsp;&nbsp;"Sentiment": "<b>NEGATIVE</b>",
-<br/>&nbsp;&nbsp;"SentimentScore": {"Positive": 0.04, "Negative": 0.78, "Neutral": 0.12, "Mixed": 0.06}
-<br/>}</p>
-<p>{
-<br/>&nbsp;&nbsp;"Text": "Produto chegou quebrado, péssima experiência",
-<br/>&nbsp;&nbsp;"LanguageCode": "en",
-<br/>&nbsp;&nbsp;"Sentiment": "<b>POSITIVE</b>",
-<br/>&nbsp;&nbsp;"SentimentScore": {"Positive": 0.61, "Negative": 0.18, "Neutral": 0.16, "Mixed": 0.05}
-<br/>}</p>
-<p><b>Language distribution</b> (DetectDominantLanguage on same texts):</p>
+    title: "Comprehend · Análise de Sentimento",
+    body: `<p><b>Você está vendo:</b> o que o serviço Amazon Comprehend retornou pra reviews recentes.</p>
+<p><b>Review:</b> "Amei o produto, chegou rápido, recomendo demais!"</p>
 <ul>
-<li>pt: 96.3%</li>
-<li>en: 2.1%</li>
-<li>es: 1.6%</li>
+<li>🤔 Sentimento detectado: <b>NEGATIVO</b> (78% confiança)</li>
+<li>⚠️ Parâmetro <code>LanguageCode</code> usado: <b>"en"</b> (inglês)</li>
 </ul>
-<p>Supported sentiment languages: en, es, fr, de, it, pt, ar, hi, ja, ko, zh, zh-TW</p>`,
+<p><b>Review:</b> "Produto chegou quebrado, péssima experiência"</p>
+<ul>
+<li>🤔 Sentimento detectado: <b>POSITIVO</b> (61% confiança)</li>
+<li>⚠️ Parâmetro <code>LanguageCode</code> usado: <b>"en"</b></li>
+</ul>
+<p><b>Mas qual é o idioma das reviews na realidade?</b></p>
+<ul>
+<li>🇧🇷 Português: 96,3%</li>
+<li>🇺🇸 Inglês: 2,1%</li>
+<li>🇪🇸 Espanhol: 1,6%</li>
+</ul>
+<p>👉 As reviews estão em português, mas o Comprehend está sendo chamado com idioma "inglês". Sentimento é dependente do idioma — por isso tá invertido.</p>`,
   },
 
   // Polly · Lexicons
   polly: {
-    title: "Polly · Voices & Lexicons",
-    body: `<p>Active voice: <code>Camila</code> (pt-BR, Neural) · client: Lambda <code>audiobook-tts</code></p>
-<p><b>Recent SynthesizeSpeech requests · sample input:</b></p>
-<p>"Kubernetes orquestra containers Docker em produção, e PyTorch domina deep learning."</p>
-<p><b>Phoneme output</b> (decoded SSML trace):</p>
+    title: "Polly · Pronúncia",
+    body: `<p><b>Você está vendo:</b> como o Polly (síntese de voz da AWS) está pronunciando termos técnicos nos audiobooks.</p>
+<p><b>Voz ativa:</b> Camila (pt-BR neural)</p>
+<p><b>Exemplo de input:</b></p>
+<p style="background:#FFFBEF;padding:0.6em;border-radius:6px;border-left:3px solid #1CB0F6">"Kubernetes orquestra containers Docker, e PyTorch domina deep learning."</p>
+<p><b>Como o Polly tá lendo:</b></p>
 <ul>
-<li>"Kubernetes" → /ku.beɾ.ne.tʃis/ (read as Portuguese letters)</li>
-<li>"Docker" → /do.keɾ/</li>
-<li>"PyTorch" → /pi.toɾ.tʃi/</li>
+<li>❌ "Kubernetes" → /ku.beɾ.ne.tʃis/ (lê letra por letra em português)</li>
+<li>❌ "Docker" → /do.keɾ/</li>
+<li>❌ "PyTorch" → /pi.toɾ.tʃi/</li>
 </ul>
-<p><b>Lexicons attached to this request:</b> (none)</p>
-<p><b>Lexicons available in account:</b></p>
+<p><b>Recursos disponíveis pra corrigir pronúncia:</b></p>
 <ul>
-<li><code>tech-terms-en-words</code> · 47 entries (Kubernetes, Docker, PyTorch, GraphQL, ...) · last_used: never</li>
+<li>📖 <b>Lexicon</b> (pronunciation lexicon): <span style="color:#E03D3D">nenhum aplicado</span> ⚠️</li>
+<li>🏷️ <b>SSML</b> tags (<code>&lt;phoneme&gt;</code>, <code>&lt;say-as&gt;</code>): nenhuma no texto</li>
 </ul>
-<p>SSML input contains no <code>&lt;phoneme&gt;</code>, <code>&lt;say-as&gt;</code>, or <code>&lt;sub&gt;</code> tags.</p>`,
+<p><b>Lexicon disponível na conta mas nunca usado:</b></p>
+<ul>
+<li>📄 <code>tech-terms-en-words</code> — 47 termos (Kubernetes, Docker, PyTorch, GraphQL…)</li>
+</ul>
+<p>👉 O Polly não recebeu instrução de como pronunciar os termos técnicos.</p>`,
   },
 
-  // Personalize · Recipe
+  // Personalize · Solution
   personalize: {
-    title: "Personalize · Solution Config",
-    body: `<p>Dataset group: <code>shop-recsys-prod</code> · solutions: 1</p>
-<p>{
-<br/>&nbsp;&nbsp;"solutionName": "shop-recs-v1",
-<br/>&nbsp;&nbsp;"<b>recipeArn</b>": "arn:aws:personalize:::recipe/<b>aws-hrnn</b>",
-<br/>&nbsp;&nbsp;"performAutoML": false,
-<br/>&nbsp;&nbsp;"eventValueThreshold": 0.0,
-<br/>&nbsp;&nbsp;"<b>solutionVersionStatus</b>": "ACTIVE"
-<br/>}</p>
-<p><b>Dataset stats:</b></p>
+    title: "Personalize · Configuração do Modelo",
+    body: `<p><b>O que é Personalize:</b> serviço de recomendação da AWS (estilo "quem viu isso também viu").</p>
+<p><b>Configuração atual:</b></p>
 <ul>
-<li>Interactions: 18,422,917 · unique users: 2,847,109</li>
-<li>Users with &lt; 3 interactions (cold-start): <b>61.4%</b></li>
-<li>Items: 84,201</li>
+<li>📋 <b>Recipe (algoritmo)</b> em uso: <b>HRNN</b> (versão antiga)</li>
+<li>📊 Status: ativo</li>
 </ul>
-<p><b>GetRecommendations · sample response for new user:</b></p>
-<p>itemList: [item_881, item_42, item_1207, item_881, item_42, item_1207, ...]</p>
-<p>Top-3 items returned to 87% of new-user requests · same 3 across 24h.</p>
-<p><b>Available recipes</b> (not in use):</p>
+<p><b>Dados de treinamento:</b></p>
 <ul>
-<li><code>aws-user-personalization</code> · supports cold-start, exploration</li>
-<li><code>aws-similar-items</code> · item-to-item similarity</li>
-</ul>`,
+<li>📦 Total de interações: 18,4 milhões</li>
+<li>👥 Usuários únicos: 2,8 milhões</li>
+<li>⚠️ <b>Usuários com menos de 3 interações</b> (chamados "cold-start"): <b>61,4%</b></li>
+</ul>
+<p><b>Exemplo de resposta pra um usuário novo:</b></p>
+<p style="background:#FFDFE0;padding:0.6em;border-radius:6px;border-left:3px solid #FF4B4B">[item_881, item_42, item_1207, item_881, item_42, item_1207, ...]</p>
+<p>⚠️ <b>87% dos usuários novos</b> recebem os MESMOS 3 itens — os mais populares globalmente.</p>
+<p><b>Recipes disponíveis (não estão em uso):</b></p>
+<ul>
+<li>✅ <b>User-Personalization</b> (recomendado pela AWS) → suporta cold-start, exploração</li>
+<li>📦 Similar-Items → recomenda item parecido com o que o usuário tá olhando</li>
+</ul>
+<p>👉 O HRNN não lida bem com usuários novos. Existe um sucessor que resolve isso.</p>`,
   },
 
-  // Lex · Intent stats
+  // Lex · Bot stats
   lex: {
-    title: "Lex · Intent Recognition",
-    body: `<p>Bot: <code>telecom-support-bot</code> · alias: <code>prod</code> · locale: pt_BR</p>
-<p><b>Intent invocations · last 24h:</b></p>
+    title: "Lex · Reconhecimento de Intents",
+    body: `<p><b>O que é Lex:</b> plataforma da AWS pra construir chatbots (mesma engine da Alexa).</p>
+<p><b>Bot:</b> atendimento da Telecom XYZ · 24 horas atrás</p>
+<p><b>Resultado dos intents (intenções que o bot entende):</b></p>
 <ul>
-<li><code>CheckBalance</code> · matched: 1,204 · confidence avg: 0.87</li>
-<li><code>OpenTicket</code> · matched: 882 · confidence avg: 0.79</li>
-<li><code>ChangePlan</code> · matched: 311 · confidence avg: 0.71</li>
-<li><b>FallbackIntent</b> · matched: <b>4,907 (61%)</b></li>
+<li>✅ Consultar saldo → 1.204 matches</li>
+<li>✅ Abrir ticket → 882 matches</li>
+<li>✅ Mudar plano → 311 matches</li>
+<li>🚨 <b>FallbackIntent</b> ("desculpe, não entendi") → <b>4.907 matches (61%)</b></li>
 </ul>
-<p><b>Intent <code>OpenTicket</code> · sample utterances configured:</b></p>
+<p><b>Quantas frases-exemplo (utterances) o intent "Abrir ticket" tem configuradas?</b></p>
 <ul>
-<li>"abrir ticket"</li>
-<li>"quero abrir um chamado"</li>
+<li>📝 "abrir ticket"</li>
+<li>📝 "quero abrir um chamado"</li>
+<li>⚠️ <b>Apenas 2 exemplos</b> — AWS recomenda <b>15 a 25</b></li>
 </ul>
-<p><b>Recent unmatched user inputs (fell to fallback):</b></p>
+<p><b>Mensagens reais de cliente que caíram no fallback:</b></p>
 <ul>
-<li>"tô com problema"</li>
-<li>"meu sinal sumiu"</li>
-<li>"preciso de ajuda urgente"</li>
-<li>"reclamação"</li>
-<li>"a internet caiu"</li>
+<li>❓ "tô com problema"</li>
+<li>❓ "meu sinal sumiu"</li>
+<li>❓ "preciso de ajuda urgente"</li>
+<li>❓ "a internet caiu"</li>
 </ul>
-<p>Confidence score threshold: 0.40 (default)</p>`,
+<p>👉 O bot só reconhece frases parecidas com os exemplos. Com 2 exemplos, qualquer variação cai no "não entendi".</p>`,
   },
 
-  // Rekognition · DetectModerationLabels output
+  // Rekognition · DetectModerationLabels
   rek_moderation: {
-    title: "Rekognition · Moderation Output",
-    body: `<p>API: <code>DetectModerationLabels</code> · client: Lambda <code>photo-uploader</code></p>
-<p><b>Current config:</b> MinConfidence=<code>30</code></p>
-<p><b>Recent invocations · sample outputs:</b></p>
-<p>image=beach-sunset.jpg · ModerationLabels:
-<br/>&nbsp;&nbsp;[{"Name": "Suggestive", "Confidence": <b>34.2</b>, "ParentName": ""}]</p>
-<p>image=family-bbq.jpg · ModerationLabels:
-<br/>&nbsp;&nbsp;[{"Name": "Alcohol", "Confidence": <b>41.7</b>, "ParentName": "Drugs"}]</p>
-<p>image=baby-photo.jpg · ModerationLabels:
-<br/>&nbsp;&nbsp;[{"Name": "Suggestive", "Confidence": <b>32.9</b>, "ParentName": ""}]</p>
-<p><b>Aggregate · last 24h:</b></p>
+    title: "Rekognition · Moderação de Imagens",
+    body: `<p><b>O que é:</b> serviço da AWS que analisa imagens e detecta conteúdo impróprio.</p>
+<p><b>Configuração atual:</b> <code>MinConfidence = 30</code> (parâmetro que define o limiar de detecção)</p>
+<p><b>Exemplos de imagens bloqueadas hoje:</b></p>
 <ul>
-<li>Images processed: 38,201</li>
-<li>Flagged (label confidence ≥ 30): <b>30,562 (80%)</b></li>
-<li>Confidence distribution: 30-50: 71%, 50-80: 7%, 80+: 2%</li>
+<li>🌅 <code>pôr-do-sol-praia.jpg</code> → flagada como "Suggestive" (34% confiança)</li>
+<li>👨‍👩‍👦 <code>churrasco-família.jpg</code> → flagada como "Alcohol" (41%)</li>
+<li>👶 <code>foto-bebê.jpg</code> → flagada como "Suggestive" (32%)</li>
 </ul>
-<p>AWS documentation recommendation for <code>MinConfidence</code>: <b>80</b> for high-precision filtering, never below 50 for production.</p>`,
+<p><b>Estatísticas das últimas 24h:</b></p>
+<ul>
+<li>📸 Imagens processadas: 38.201</li>
+<li>🚨 <b>Bloqueadas: 30.562 (80%)</b></li>
+<li>Distribuição da confiança: 30-50% (71%), 50-80% (7%), 80%+ (apenas 2%)</li>
+</ul>
+<p><b>Recomendação oficial da AWS:</b></p>
+<ul>
+<li>✅ <code>MinConfidence = 80</code> ou mais em produção</li>
+<li>❌ Nunca abaixo de 50</li>
+</ul>
+<p>👉 O threshold tá em 30 — qualquer ruído fraco de detecção vira "label confiável". Por isso flagra paisagem.</p>`,
   },
 
   // ───── CONCEPT-FOCUSED FINDINGS ─────
 
   // SageMaker Model Monitor · Classification metrics
   fraud_metrics: {
-    title: "Model Monitor · fraud-detector-v3",
-    body: `<p>Endpoint: <code>fraud-detector-v3</code> · monitor: model-quality-monitor</p>
-<p><b>Reported metrics · last 30 days (test set: 100,000 transactions):</b></p>
+    title: "Model Monitor · Métricas do Detector",
+    body: `<p><b>O que é Model Monitor:</b> ferramenta da SageMaker que mede a qualidade de um modelo em produção.</p>
+<p><b>Métricas do detector de fraude</b> (testes em 100.000 transações):</p>
 <ul>
-<li>Accuracy: <b>99.40%</b></li>
-<li>Precision (class=fraud): <b>83.3%</b></li>
-<li>Recall (class=fraud): <b>5.0%</b></li>
-<li>F1 (class=fraud): <b>0.094</b></li>
-<li>AUC: 0.61</li>
+<li>✅ Acurácia: <b>99,40%</b> ← parece ótimo, né?</li>
+<li>❌ Recall (capturou as fraudes): <b>5%</b> 🚨</li>
+<li>❌ F1 Score: 0,094</li>
+<li>⚠️ AUC: 0,61</li>
 </ul>
-<p><b>Confusion matrix:</b></p>
-<p><code>
-<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Predicted
-<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Legit&nbsp;&nbsp;Fraud
-<br/>Actual&nbsp;Legit&nbsp;&nbsp;98,990&nbsp;&nbsp;10
-<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Fraud&nbsp;&nbsp;950&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;50
-</code></p>
-<p>True Positive: 50 · True Negative: 98,990 · False Positive: 10 · False Negative: <b>950</b></p>`,
+<p><b>Matriz de Confusão</b> (quem o modelo acertou vs errou):</p>
+<table style="border-collapse:collapse;width:100%;margin:0.5em 0">
+<tr><td></td><td style="padding:6px;background:#FFF8E1"><b>Modelo disse:<br/>Legítima</b></td><td style="padding:6px;background:#FFF8E1"><b>Modelo disse:<br/>Fraude</b></td></tr>
+<tr><td style="padding:6px;background:#FFF8E1"><b>Era legítima</b></td><td style="padding:6px;background:#D7FFB8">✅ 98.990</td><td style="padding:6px;background:#FFDFE0">10 (falso alarme)</td></tr>
+<tr><td style="padding:6px;background:#FFF8E1"><b>Era fraude</b></td><td style="padding:6px;background:#FFDFE0">🚨 <b>950 (passaram!)</b></td><td style="padding:6px;background:#D7FFB8">✅ 50</td></tr>
+</table>
+<p>👉 De 1.000 fraudes reais, o modelo só pegou <b>50</b>. As outras <b>950 passaram</b> e geraram o prejuízo de $2M.</p>`,
   },
 
-  // SageMaker Data Wrangler · class distribution
+  // SageMaker Data Wrangler · class balance
   class_balance: {
-    title: "Data Wrangler · transactions-train",
-    body: `<p>Dataset: <code>s3://bancoquanta-ml/transactions-train.parquet</code> · linhas: 4,200,000</p>
-<p><b>Distribuição da variável-alvo <code>is_fraud</code>:</b></p>
+    title: "Dataset · Distribuição das Classes",
+    body: `<p><b>Você está vendo:</b> o dataset usado pra treinar o detector de fraude (4,2 milhões de transações).</p>
+<p><b>Distribuição da variável-alvo</b> (o que o modelo tenta prever):</p>
 <ul>
-<li><code>is_fraud = 0</code> (legítima): <b>4,158,000 (99.0%)</b></li>
-<li><code>is_fraud = 1</code> (fraude): <b>42,000 (1.0%)</b></li>
+<li>✅ Transações <b>legítimas</b>: 4.158.000 (<b>99%</b>)</li>
+<li>🚨 Transações <b>fraudulentas</b>: 42.000 (<b>1%</b>)</li>
 </ul>
-<p><b>Razão de desbalanceamento:</b> 99 para 1</p>
-<p><b>Configuração do Training Job:</b></p>
+<p><b>Razão de desbalanceamento:</b> 99 pra 1</p>
+<p><b>Configuração do treinamento:</b></p>
 <ul>
-<li>Algoritmo: <b>XGBoost</b> (SageMaker built-in)</li>
-<li>Modo: classificação binária</li>
-<li>Métrica de avaliação configurada: <b>accuracy</b></li>
-<li>Ajuste de peso de classe (scale_pos_weight): <b>não configurado</b></li>
-<li>Estratégia de oversampling/SMOTE: <b>não configurada</b></li>
+<li>📋 Algoritmo: <b>XGBoost</b> (built-in do SageMaker)</li>
+<li>📊 Métrica otimizada: <b>accuracy</b> ⚠️</li>
+<li>❌ Ajuste de peso de classe: <b>não configurado</b></li>
+<li>❌ Estratégia pra dados desbalanceados (SMOTE etc): <b>não configurada</b></li>
 </ul>
-<p><b>Impacto operacional · últimos 30 dias:</b></p>
+<p><b>Impacto financeiro (últimos 30 dias):</b></p>
 <ul>
-<li>Perdas por fraude (predito legítimo, era fraude): <b>$2,140,000</b></li>
-<li>Atrito com cliente (predito fraude, era legítimo): $1,200</li>
-</ul>`,
+<li>💸 Perdas por fraude que passou: <b>$2.140.000</b></li>
+<li>😬 Atrito com cliente bloqueado errado: $1.200</li>
+</ul>
+<p>👉 Como 99% das transações são legítimas, um modelo que sempre diz "legítima" já acerta 99%. <b>Accuracy não detecta o problema</b> em datasets desbalanceados.</p>`,
   },
 
-  // CloudWatch metrics · endpoint traffic pattern
+  // CloudWatch · endpoint traffic
   endpoint_traffic: {
-    title: "CloudWatch · xray-classifier endpoint",
-    body: `<p>Endpoint: <code>xray-classifier-prod</code> · type: <b>Real-time</b> · instance: <b>ml.g4dn.xlarge</b> · count: 2</p>
-<p><b>Invocations · last 7 days · hourly:</b></p>
+    title: "Tráfego do Endpoint · CloudWatch",
+    body: `<p><b>Você está vendo:</b> como o uso do endpoint de IA varia durante a semana.</p>
+<p><b>Padrão de tráfego (média de requests por minuto):</b></p>
 <ul>
-<li>00:00-07:00 UTC: avg <b>3 req/min</b></li>
-<li>07:00-12:00 UTC: avg 240 req/min · <b>peak: 480 req/min</b> at 10:00</li>
-<li>12:00-18:00 UTC: avg 180 req/min</li>
-<li>18:00-24:00 UTC: avg <b>5 req/min</b></li>
+<li>🌙 <b>Madrugada (00h-07h)</b>: ~3 req/min — quase nada</li>
+<li>☀️ <b>Manhã (07h-12h)</b>: ~240 req/min — pico de 480 às 10h</li>
+<li>🌇 Tarde (12h-18h): ~180 req/min</li>
+<li>🌙 <b>Noite (18h-24h)</b>: ~5 req/min — quase nada</li>
 </ul>
-<p><b>Utilization:</b></p>
+<p><b>Utilização das máquinas:</b></p>
 <ul>
-<li>Time idle (&lt;10 req/min): <b>61.4%</b> of week</li>
-<li>Average GPU usage: 14%</li>
-<li>p99 latency: 820ms · current SLA: <b>under 5 minutes</b></li>
+<li>💤 <b>Tempo ocioso</b> (menos de 10 req/min): <b>61% da semana</b></li>
+<li>🔥 Uso médio do GPU: <b>14%</b> (subutilizado)</li>
+<li>⚡ Latência atual: 820ms</li>
+<li>📋 SLA exigido: <b>até 5 minutos</b> (folga gigante)</li>
 </ul>
-<p>Auto-scaling: enabled (min=2, max=8) · cold-start observed: never (instances always warm)</p>`,
+<p>👉 O endpoint fica ligado 24/7 mas só é usado durante o dia. E o SLA permite até 5min, então não precisa ser tão rápido.</p>`,
   },
 
-  // Cost Explorer · endpoint cost breakdown
+  // Cost Explorer · endpoint cost
   endpoint_cost: {
-    title: "Cost Explorer · SageMaker spend",
-    body: `<p>Service: Amazon SageMaker · last 30 days · group by: Usage Type</p>
+    title: "Cost Explorer · Custo do SageMaker",
+    body: `<p><b>Você está vendo:</b> o custo do SageMaker nos últimos 30 dias.</p>
+<p><b>Onde tá indo o dinheiro:</b></p>
 <ul>
-<li><code>ml.g4dn.xlarge:Inference-Endpoint</code> (xray-classifier-prod) · hours: 1,440 · cost: <b>$13,728</b></li>
-<li><code>ml.m5.large:Inference-Endpoint</code> (other) · cost: $310</li>
-<li>Training jobs: $480</li>
-<li>Notebook instances: $89</li>
+<li>🔴 <b>Endpoint Real-time</b> (raio-X classifier): <b>$13.728</b></li>
+<li>Endpoint Real-time (outros): $310</li>
+<li>Treinamentos: $480</li>
+<li>Notebooks: $89</li>
 </ul>
-<p><b>Pricing reference (us-east-1, per hour):</b></p>
+<p><b>Comparação dos tipos de inferência da AWS (preço por hora):</b></p>
 <ul>
-<li>Real-time endpoint · ml.g4dn.xlarge · <b>$0.736/hr</b> (charged 24/7 while endpoint exists)</li>
-<li>Async Inference · ml.g4dn.xlarge · $0.736/hr (charged only while processing, can scale to 0)</li>
-<li>Serverless Inference · per ms of compute · no idle charge · max model size: 10GB</li>
-<li>Batch Transform · per instance-hour while job runs · no persistent endpoint</li>
+<li>📌 <b>Real-time</b> (sempre ligado) → <b>$0,736/hr · 24/7 fixo</b></li>
+<li>📌 <b>Async</b> (fila, scale to zero) → $0,736/hr <b>só quando processa</b></li>
+<li>📌 <b>Serverless</b> (paga por ms de uso) → <b>zero quando ocioso</b> · modelo até 10GB</li>
+<li>📌 Batch Transform (lote) → paga por job · sem endpoint persistente</li>
 </ul>
-<p>Model size: 487 MB · supports Serverless Inference (under 10GB limit)</p>`,
+<p><b>Detalhes do modelo:</b></p>
+<ul>
+<li>📏 Tamanho: <b>487 MB</b> (cabe em Serverless, limite é 10GB)</li>
+</ul>
+<p>👉 Tá pagando 24/7 mesmo o endpoint estando 61% ocioso. Existem 3 outros tipos de inferência mais baratos.</p>`,
   },
 
   // SageMaker Studio · regression eval
   regression_eval: {
-    title: "Studio · demand-forecast eval",
-    body: `<p>Job de treinamento: <code>training-job-2024-11-04-08-12</code> · status: Completed</p>
-<p>Algoritmo: <b>SageMaker Linear Learner</b> · modo: regressão</p>
-<p><b>Métricas no conjunto de validação:</b></p>
+    title: "Avaliação do Modelo · Studio",
+    body: `<p><b>Você está vendo:</b> as métricas do modelo de previsão de demanda.</p>
+<p><b>Algoritmo usado:</b> Linear Learner (modo regressão)</p>
+<p><b>Métricas obtidas no teste:</b></p>
 <ul>
-<li>MAE (Erro Médio Absoluto): <b>12.4 unidades</b></li>
-<li>MSE (Erro Quadrático Médio): 7,921</li>
-<li>RMSE (Raiz do MSE): <b>89.0 unidades</b></li>
-<li>R² (R-quadrado): <b>0.42</b></li>
+<li>📏 <b>MAE</b> (erro médio absoluto): <b>12 unidades</b> — parece bom</li>
+<li>📏 <b>RMSE</b> (raiz do erro quadrático): <b>89 unidades</b> — 7× maior que MAE 🚨</li>
+<li>📊 <b>R²</b> (variância explicada): <b>0,42</b> — modelo só captura 42% do padrão 🚨</li>
 </ul>
-<p><b>Análise de resíduos (previsto − real):</b></p>
+<p><b>Como interpretar essas pistas?</b></p>
 <ul>
-<li>Erro mediano: −3 unidades</li>
-<li>Erro p95: −18 / +24 unidades</li>
-<li>Outliers (|erro| &gt; 100): <b>4.1% das previsões</b></li>
-<li>Outliers concentrados em: Black Friday, Natal, volta às aulas</li>
+<li>📌 <b>Quando RMSE é muito maior que MAE</b>: tem <b>outliers</b> (erros enormes em alguns casos)</li>
+<li>📌 <b>Quando R² é baixo</b> (&lt;0,5): o modelo <b>não captura o padrão dos dados</b></li>
 </ul>
-<p><b>Pistas pra interpretar:</b></p>
+<p><b>Análise dos outliers:</b></p>
 <ul>
-<li>Quando RMSE é muito maior que MAE, a distribuição do erro tem outliers grandes dominando</li>
-<li>R² menor que 0.5 normalmente indica que o modelo não captura o padrão subjacente dos dados</li>
-</ul>`,
+<li>⚠️ 4,1% das previsões com erro &gt; 100 unidades</li>
+<li>📅 Concentrados em: <b>Black Friday, Natal, volta às aulas</b></li>
+</ul>
+<p>👉 O modelo linear acerta nos dias normais mas erra feio em datas sazonais. RMSE alto + R² baixo confirmaram isso.</p>`,
   },
 
-  // SageMaker Canvas · model preview
+  // SageMaker Canvas · model output
   model_output: {
-    title: "SageMaker Canvas · churn-model-v1",
-    body: `<p>Modelo: <code>churn-model-v1</code> · workspace: ChurnTech</p>
-<p><b>Configuração do modelo:</b></p>
+    title: "SageMaker Canvas · Modelo de Churn",
+    body: `<p><b>O que é Canvas:</b> ferramenta no-code do SageMaker pra treinar modelos visualmente.</p>
+<p><b>Modelo:</b> churn-model-v1 · prever se cliente vai cancelar</p>
+<p><b>Configuração escolhida pelo time:</b></p>
 <ul>
-<li>Algoritmo selecionado: <b>Linear Regression</b> (modo regressão)</li>
-<li>Variável-alvo: <code>churned</code></li>
-<li>Tipo da variável-alvo: <b>binária (0 ou 1)</b></li>
+<li>📋 Algoritmo: <b>Linear Regression</b> (regressão linear)</li>
+<li>🎯 Variável-alvo: <code>churned</code> (cancelou) → <b>valores: 0 ou 1</b></li>
 </ul>
-<p><b>Distribuição do alvo no dataset de treino:</b></p>
+<p><b>O target tem apenas dois valores possíveis:</b></p>
 <ul>
-<li>valor 0 (não cancelou): 42,107 amostras (84%)</li>
-<li>valor 1 (cancelou): 7,893 amostras (16%)</li>
+<li>0 (não cancelou): 42.107 clientes</li>
+<li>1 (cancelou): 7.893 clientes</li>
 </ul>
-<p><b>Predições do modelo · amostra do conjunto de teste:</b></p>
-<ul>
-<li>user u-12498 → predição: <b>0.42</b></li>
-<li>user u-12500 → predição: <b>−0.18</b> ⚠</li>
-<li>user u-12502 → predição: <b>1.32</b> ⚠</li>
-<li>user u-12506 → predição: 0.95</li>
-<li>user u-12509 → predição: <b>−0.31</b> ⚠</li>
-<li>user u-12511 → predição: <b>1.41</b> ⚠</li>
-<li>user u-12515 → predição: 0.62</li>
-</ul>
-<p><b>Diagnóstico automático:</b></p>
-<ul>
-<li>Predições fora do intervalo [0, 1]: <b>23% das amostras</b></li>
-<li>Algoritmo selecionado é de regressão (saída contínua, qualquer número real)</li>
-<li>Variável-alvo é binária — problema é de classificação, não regressão</li>
-</ul>
-<p>Comentário do time de produto: <i>"como interpreto −0.18 como probabilidade de churn?"</i></p>`,
+<p><b>Previsões do modelo (amostra do teste):</b></p>
+<table style="border-collapse:collapse;margin:0.5em 0;font-family:var(--font-jetbrains);font-size:0.9em">
+<tr><td style="padding:4px 12px;background:#FFF8E1">Cliente</td><td style="padding:4px 12px;background:#FFF8E1">Previsão</td></tr>
+<tr><td style="padding:4px 12px">u-12498</td><td style="padding:4px 12px">0,42</td></tr>
+<tr><td style="padding:4px 12px;background:#FFDFE0">u-12500</td><td style="padding:4px 12px;background:#FFDFE0">−0,18 ⚠️</td></tr>
+<tr><td style="padding:4px 12px;background:#FFDFE0">u-12502</td><td style="padding:4px 12px;background:#FFDFE0">1,32 ⚠️</td></tr>
+<tr><td style="padding:4px 12px">u-12506</td><td style="padding:4px 12px">0,95</td></tr>
+<tr><td style="padding:4px 12px;background:#FFDFE0">u-12509</td><td style="padding:4px 12px;background:#FFDFE0">−0,31 ⚠️</td></tr>
+<tr><td style="padding:4px 12px;background:#FFDFE0">u-12511</td><td style="padding:4px 12px;background:#FFDFE0">1,41 ⚠️</td></tr>
+</table>
+<p>⚠️ <b>23% das previsões fora do intervalo [0, 1]</b></p>
+<p>💬 PM: <i>"como eu apresento −0,18 de chance de churn pro CEO?"</i></p>
+<p>👉 Regressão linear gera <b>qualquer número real</b> como saída. Se o alvo é binário (0 ou 1), o problema é de <b>classificação</b>, não de regressão.</p>`,
   },
 
-  // SageMaker training job cost · Trainium reference
+  // SageMaker Training Jobs · cost comparison
   training_cost: {
-    title: "Training Jobs · llm-finetune-v2",
-    body: `<p>Job: <code>llm-finetune-v2-2024-11-03</code> · status: Completed · runtime: 72h 14min</p>
-<p><b>Configuração de instância:</b></p>
+    title: "Treinamento · Custo das Máquinas",
+    body: `<p><b>Você está vendo:</b> detalhes do treinamento do LLM custom.</p>
+<p><b>Configuração atual:</b></p>
 <ul>
-<li>Instance type: <code>ml.p4d.24xlarge</code> · count: 4</li>
-<li>GPU: 8× NVIDIA A100 40GB por instância (32 GPUs no total)</li>
-<li>Custo por hora: <b>$32.77/hr por instância</b> · total: $131.08/hr</li>
+<li>🖥️ Máquina: <code>ml.p4d.24xlarge</code> (8 GPUs NVIDIA A100 por máquina)</li>
+<li>🔢 Quantidade: 4 máquinas (32 GPUs no total)</li>
+<li>⏱️ Tempo por run: 72 horas</li>
+<li>💸 Custo deste run: <b>$9.470</b></li>
+<li>💸 Custo do mês (9 runs): <b>$85.230</b></li>
 </ul>
-<p><b>Custo do treinamento:</b></p>
+<p><b>Comparação para a mesma carga de trabalho:</b></p>
+<table style="border-collapse:collapse;margin:0.5em 0;width:100%;font-size:0.9em">
+<tr><td style="padding:6px;background:#FFF8E1"><b>Opção</b></td><td style="padding:6px;background:#FFF8E1"><b>$/hora</b></td><td style="padding:6px;background:#FFF8E1"><b>Características</b></td></tr>
+<tr><td style="padding:6px">P4d (GPU A100, atual)</td><td style="padding:6px"><b>$32,77</b></td><td style="padding:6px">padrão da indústria</td></tr>
+<tr style="background:#D7FFB8"><td style="padding:6px"><b>Trainium (trn1)</b></td><td style="padding:6px"><b>$21,50</b></td><td style="padding:6px">chip AWS pra treinar · 35% mais barato ✅</td></tr>
+<tr><td style="padding:6px">Savings Plan P4d (1 ano)</td><td style="padding:6px">$22,94</td><td style="padding:6px">30% off · exige commit longo</td></tr>
+<tr><td style="padding:6px">Spot P4d</td><td style="padding:6px">$9,83</td><td style="padding:6px">70% off · <b>pode ser interrompido</b> ⚠️</td></tr>
+</table>
+<p><b>Sobre o Trainium:</b></p>
 <ul>
-<li>Horas de compute: 288.93</li>
-<li>Custo deste run: <b>$9,470</b></li>
-<li>Últimos 30 dias · 9 runs: <b>$85,230</b></li>
+<li>🧠 É um chip da AWS feito especificamente pra treinar modelos de IA</li>
+<li>✅ Suporta o mesmo framework (PyTorch) — sem reescrever o modelo</li>
+<li>✅ Performance equivalente ou superior pra transformers</li>
 </ul>
-<p><b>Comparação de preço · mesma carga de trabalho:</b></p>
-<ul>
-<li>ml.p4d.24xlarge (GPU A100): $32.77/hr · perf benchmark: 1.00×</li>
-<li><code>ml.trn1.32xlarge</code> (<b>Trainium</b>): <b>$21.50/hr</b> · perf benchmark: 1.08× em transformer training</li>
-<li>Savings Plan · 1 ano de commit em P4d: $22.94/hr (30% off, exige commitment)</li>
-<li>Spot ml.p4d.24xlarge: $9.83/hr · interrompível (taxa média de interrupção 12%)</li>
-</ul>
-<p><b>Compatibilidade Trainium:</b></p>
-<ul>
-<li>Framework usado: PyTorch (treinamento distribuído em múltiplas GPUs)</li>
-<li>Trainium suportado pela AWS Neuron SDK</li>
-<li>Esforço de migração: <b>baixo</b> — mudança em configuração do job, sem reescrita do modelo</li>
-</ul>`,
+<p>👉 O time está usando GPU padrão. Existe alternativa AWS mais barata.</p>`,
   },
 };

@@ -1,193 +1,199 @@
-// Map each finding key to its AWS service context — for the console mock UI
-// This teaches users WHERE in AWS each piece of evidence would actually live.
+// Map each finding key to its AWS service context — for the console mock UI.
+// AUDIENCE: AWS AI Practitioner students (beginners). Breadcrumbs use plain language
+// instead of technical paths like /aws/lambda/medbot-chat.
 
 export interface ConsoleContext {
   service: string;      // display name
   serviceKey: string;   // for color/icon lookup
-  breadcrumb: string[]; // navigation path
+  breadcrumb: string[]; // navigation path (plain language)
   region?: string;
   viewType: "logs" | "json" | "table" | "prose" | "code" | "metrics";
 }
 
 export const CONSOLE_CONTEXT: Record<string, ConsoleContext> = {
+  // Core mission findings
   logs: {
     service: "CloudWatch",
     serviceKey: "cloudwatch",
-    breadcrumb: ["Services", "CloudWatch", "Log groups", "/aws/lambda/medbot-chat"],
+    breadcrumb: ["Serviços", "CloudWatch", "Logs", "MedBot Chat"],
     region: "us-east-1",
-    viewType: "logs",
+    viewType: "prose",
   },
   deploys: {
     service: "CodeDeploy",
     serviceKey: "codedeploy",
-    breadcrumb: ["Services", "CodeDeploy", "Applications", "medbot-chat", "Deployments"],
+    breadcrumb: ["Serviços", "CodeDeploy", "Aplicações", "MedBot Chat"],
     region: "us-east-1",
-    viewType: "table",
+    viewType: "prose",
   },
   prompt: {
     service: "Amazon Bedrock",
     serviceKey: "bedrock",
-    breadcrumb: ["Services", "Amazon Bedrock", "Playgrounds", "Chat", "System prompt"],
+    breadcrumb: ["Serviços", "Bedrock", "Playground", "System Prompt"],
     region: "us-east-1",
-    viewType: "code",
+    viewType: "prose",
   },
   leaks: {
     service: "Amazon Macie",
     serviceKey: "macie",
-    breadcrumb: ["Services", "Amazon Macie", "Findings", "SensitiveData:S3Object/Personal"],
+    breadcrumb: ["Serviços", "Macie", "Alertas de dados sensíveis"],
     region: "us-east-1",
     viewType: "prose",
   },
   features: {
-    service: "SageMaker",
+    service: "SageMaker Feature Store",
     serviceKey: "sagemaker",
-    breadcrumb: ["Services", "Amazon SageMaker", "Feature Store", "Feature groups", "applicant-features"],
+    breadcrumb: ["Serviços", "SageMaker", "Feature Store", "Crédito"],
     region: "us-east-1",
-    viewType: "table",
+    viewType: "prose",
   },
   data: {
-    service: "SageMaker",
+    service: "SageMaker Data Wrangler",
     serviceKey: "sagemaker",
-    breadcrumb: ["Services", "Amazon SageMaker", "Data Wrangler", "Datasets", "training-data-v3"],
+    breadcrumb: ["Serviços", "SageMaker", "Data Wrangler", "Dataset de Crédito"],
     region: "us-east-1",
     viewType: "prose",
   },
   recursion: {
     service: "AWS Lambda",
     serviceKey: "lambda",
-    breadcrumb: ["Services", "Lambda", "Functions", "embed-doc-handler", "Monitor"],
+    breadcrumb: ["Serviços", "Lambda", "Métricas", "Email Handler"],
     region: "us-east-1",
-    viewType: "metrics",
+    viewType: "prose",
   },
   model: {
     service: "Amazon Bedrock",
     serviceKey: "bedrock",
-    breadcrumb: ["Services", "Amazon Bedrock", "Foundation models", "Cost Explorer"],
+    breadcrumb: ["Serviços", "Bedrock", "Uso e Custo"],
     region: "us-east-1",
-    viewType: "metrics",
+    viewType: "prose",
   },
   cron: {
     service: "EventBridge",
     serviceKey: "eventbridge",
-    breadcrumb: ["Services", "Amazon EventBridge", "Rules", "rag-reindex-schedule"],
+    breadcrumb: ["Serviços", "EventBridge", "Tarefas Agendadas"],
     region: "us-east-1",
     viewType: "prose",
   },
   config: {
-    service: "AWS Transcribe",
+    service: "Amazon Transcribe",
     serviceKey: "transcribe",
-    breadcrumb: ["Services", "Amazon Transcribe Medical", "Configuration", "medical-vocabulary"],
+    breadcrumb: ["Serviços", "Transcribe", "Configuração do Job"],
     region: "us-east-1",
-    viewType: "json",
+    viewType: "prose",
   },
   glossary: {
     service: "Amazon Translate",
     serviceKey: "translate",
-    breadcrumb: ["Services", "Amazon Translate", "Custom terminology", "legal-pt-br"],
+    breadcrumb: ["Serviços", "Translate", "Custom Terminology"],
     region: "us-east-1",
-    viewType: "table",
+    viewType: "prose",
   },
   threshold: {
     service: "Amazon Rekognition",
     serviceKey: "rekognition",
-    breadcrumb: ["Services", "Amazon Rekognition", "Content moderation", "Confidence thresholds"],
+    breadcrumb: ["Serviços", "Rekognition", "Moderação", "Histórico"],
     region: "us-east-1",
-    viewType: "code",
+    viewType: "prose",
   },
   pipeline: {
     service: "AWS Glue",
     serviceKey: "glue",
-    breadcrumb: ["Services", "AWS Glue", "ETL jobs", "feature-pipeline-prod", "Run details"],
+    breadcrumb: ["Serviços", "Glue", "Pipeline de Imagens"],
     region: "us-east-1",
-    viewType: "metrics",
+    viewType: "prose",
   },
+
+  // Light-mission findings
   sentiment: {
     service: "Amazon Comprehend",
     serviceKey: "comprehend",
-    breadcrumb: ["Services", "Amazon Comprehend", "Real-time analysis", "DetectSentiment"],
+    breadcrumb: ["Serviços", "Comprehend", "Análise de Sentimento"],
     region: "us-east-1",
-    viewType: "code",
+    viewType: "prose",
   },
   polly: {
     service: "Amazon Polly",
     serviceKey: "polly",
-    breadcrumb: ["Services", "Amazon Polly", "Lexicons", "audiobook-tts"],
+    breadcrumb: ["Serviços", "Polly", "Vozes e Lexicons"],
     region: "us-east-1",
     viewType: "prose",
   },
   personalize: {
     service: "Amazon Personalize",
     serviceKey: "personalize",
-    breadcrumb: ["Services", "Amazon Personalize", "Dataset groups", "shop-recsys-prod", "Solutions"],
+    breadcrumb: ["Serviços", "Personalize", "Configuração do Modelo"],
     region: "us-east-1",
-    viewType: "code",
+    viewType: "prose",
   },
   lex: {
     service: "Amazon Lex",
     serviceKey: "lex",
-    breadcrumb: ["Services", "Amazon Lex", "Bots", "telecom-support-bot", "Analytics"],
+    breadcrumb: ["Serviços", "Lex", "Bot de Atendimento"],
     region: "us-east-1",
-    viewType: "metrics",
+    viewType: "prose",
   },
   rek_moderation: {
     service: "Amazon Rekognition",
     serviceKey: "rekognition",
-    breadcrumb: ["Services", "Amazon Rekognition", "Content moderation", "DetectModerationLabels"],
+    breadcrumb: ["Serviços", "Rekognition", "Moderação de Conteúdo"],
     region: "us-east-1",
-    viewType: "code",
+    viewType: "prose",
   },
+
+  // Concept-focused findings
   fraud_metrics: {
     service: "SageMaker Model Monitor",
     serviceKey: "sagemaker",
-    breadcrumb: ["Services", "Amazon SageMaker", "Model Monitor", "fraud-detector-v3", "Model Quality"],
+    breadcrumb: ["Serviços", "SageMaker", "Model Monitor", "Detector de Fraude"],
     region: "us-east-1",
-    viewType: "metrics",
+    viewType: "prose",
   },
   class_balance: {
     service: "SageMaker Data Wrangler",
     serviceKey: "sagemaker",
-    breadcrumb: ["Services", "Amazon SageMaker", "Data Wrangler", "Datasets", "transactions-train"],
+    breadcrumb: ["Serviços", "SageMaker", "Data Wrangler", "Dataset"],
     region: "us-east-1",
     viewType: "prose",
   },
   endpoint_traffic: {
     service: "CloudWatch",
     serviceKey: "cloudwatch",
-    breadcrumb: ["Services", "CloudWatch", "Metrics", "AWS/SageMaker", "xray-classifier-prod"],
+    breadcrumb: ["Serviços", "CloudWatch", "Métricas do Endpoint"],
     region: "us-east-1",
-    viewType: "metrics",
+    viewType: "prose",
   },
   endpoint_cost: {
     service: "AWS Cost Explorer",
     serviceKey: "billing",
-    breadcrumb: ["Services", "AWS Cost Explorer", "Reports", "SageMaker · last 30 days"],
+    breadcrumb: ["Serviços", "Cost Explorer", "Gastos com SageMaker"],
     region: "global",
-    viewType: "table",
+    viewType: "prose",
   },
   regression_eval: {
     service: "SageMaker Studio",
     serviceKey: "sagemaker",
-    breadcrumb: ["Services", "Amazon SageMaker", "Studio", "Training jobs", "demand-forecast"],
+    breadcrumb: ["Serviços", "SageMaker", "Studio", "Avaliação do Modelo"],
     region: "us-east-1",
-    viewType: "metrics",
+    viewType: "prose",
   },
   model_output: {
-    service: "SageMaker Studio",
+    service: "SageMaker Canvas",
     serviceKey: "sagemaker",
-    breadcrumb: ["Services", "Amazon SageMaker", "Studio", "Notebooks", "churn-model-v1.ipynb"],
+    breadcrumb: ["Serviços", "SageMaker", "Canvas", "Modelo de Churn"],
     region: "us-east-1",
-    viewType: "code",
+    viewType: "prose",
   },
   training_cost: {
     service: "SageMaker Training",
     serviceKey: "sagemaker",
-    breadcrumb: ["Services", "Amazon SageMaker", "Training", "Jobs", "llm-finetune-v2"],
+    breadcrumb: ["Serviços", "SageMaker", "Treinamento", "LLM Fine-tuning"],
     region: "us-east-1",
-    viewType: "table",
+    viewType: "prose",
   },
 };
 
-// Service icons/colors for the console header
+// Service icons + colors for the console header
 export const SERVICE_THEMES: Record<string, { color: string; bg: string; icon: string }> = {
   cloudwatch: { color: "text-pink-400", bg: "bg-pink-500/20", icon: "📊" },
   codedeploy: { color: "text-green-400", bg: "bg-green-500/20", icon: "🚀" },
