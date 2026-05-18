@@ -239,7 +239,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>"a transcrição inverteu a dose, quase tomei errado"</li>
 <li>"escreveu 'penicilina' onde a médica falou 'azitromicina'"</li>
 </ul>
-<p>👉 O Transcribe atual não conhece vocabulário médico. Os erros se concentram em <b>nomes de medicamentos e termos clínicos</b>.</p>`,
+<p>👉 Os erros se concentram em <b>nomes de medicamentos e termos clínicos</b>. Palavras comuns saem certas.</p>`,
   },
 
   // Translate · Custom Terminology
@@ -269,7 +269,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>💬 Review típica: <i>"tradução parece feita por alguém que nunca jogou um jogo"</i></li>
 <li>📊 Nota média no Steam: caiu de 8,7 pra 6,2</li>
 </ul>
-<p>👉 O Translate tá fazendo tradução genérica de dicionário comum, não entende jargão de gaming.</p>`,
+<p>👉 O Translate tá fazendo tradução padrão, sem nenhuma referência ao contexto de gaming.</p>`,
   },
 
   // Rekognition · Moderation Threshold
@@ -388,7 +388,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 </ul>
 <p><b>Resposta típica do modelo pra um usuário novo:</b></p>
 <p style="background:#FFDFE0;padding:0.6em;border-radius:6px;border-left:3px solid #FF4B4B">[item_881, item_42, item_1207, item_881, item_42, item_1207, ...]</p>
-<p>👉 O algoritmo atual não tem mecanismo específico pra usuários sem histórico, todos eles recebem o mesmo "best-sellers global".</p>`,
+<p>👉 Usuários com pouco histórico estão todos recebendo a mesma lista global.</p>`,
   },
 
   // Lex · Bot stats

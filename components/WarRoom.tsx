@@ -52,6 +52,25 @@ export function WarRoom({ incident, isDaily }: Props) {
   const [quizSelectedIdx, setQuizSelectedIdx] = useState<number | null>(null);
   const [quizRevealed, setQuizRevealed] = useState(false);
 
+  // ── SHUFFLE QUIZ OPTIONS ──
+  // Randomize the option order at mount time so the correct answer doesn't
+  // always sit in the same position (which we noticed was concentrated on B/C).
+  // `shuffled` is an array of original indices in the new display order.
+  // E.g. shuffled=[2,0,3,1] means: render original opt[2] first, opt[0] second, etc.
+  // We resolve correctness by comparing the SELECTED display position back to
+  // the original correctIdx via this mapping.
+  const [quizShuffleOrder] = useState<number[]>(() => {
+    if (!incident.quizQuestion) return [];
+    const n = incident.quizQuestion.options.length;
+    const order = Array.from({ length: n }, (_, i) => i);
+    // Fisher-Yates
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    return order;
+  });
+
   // Real player time (since this WarRoom mounted) — used for display & speed bonus
   const playerStartedAtRef = useRef<number>(Date.now());
 
@@ -973,12 +992,14 @@ export function WarRoom({ incident, isDaily }: Props) {
                   />
                 </div>
 
-                {/* Options */}
+                {/* Options — rendered in shuffled order, but quizSelectedIdx
+                    stores the ORIGINAL index so correctIdx logic is unchanged. */}
                 <div className="space-y-2.5 flex-1 mb-5">
-                  {incident.quizQuestion.options.map((opt, i) => {
-                    const letter = String.fromCharCode(65 + i);
-                    const isSelected = quizSelectedIdx === i;
-                    const isCorrect = i === incident.quizQuestion!.correctIdx;
+                  {quizShuffleOrder.map((originalIdx, displayPos) => {
+                    const opt = incident.quizQuestion!.options[originalIdx];
+                    const letter = String.fromCharCode(65 + displayPos);
+                    const isSelected = quizSelectedIdx === originalIdx;
+                    const isCorrect = originalIdx === incident.quizQuestion!.correctIdx;
                     const showResult = quizRevealed;
 
                     let cardClasses = "duo-card";
@@ -992,15 +1013,15 @@ export function WarRoom({ incident, isDaily }: Props) {
 
                     return (
                       <motion.button
-                        key={i}
+                        key={originalIdx}
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.05 }}
+                        transition={{ delay: displayPos * 0.05 }}
                         onClick={() => {
                           if (showResult) return;
                           playSound("tick");
                           haptic("tap");
-                          setQuizSelectedIdx(i);
+                          setQuizSelectedIdx(originalIdx);
                         }}
                         onMouseEnter={() => !showResult && playSound("hover")}
                         disabled={showResult}

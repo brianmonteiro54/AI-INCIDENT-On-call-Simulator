@@ -70,7 +70,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#war-room-helix",
     desc: "São 3h05 da madrugada. Teu celular vibra feito louco, o canal #war-room-helix tá pegando fogo. A Helix Labs (saúde digital) fez deploy do chatbot médico há 5 minutos. Os primeiros tickets chegaram dizendo que o bot mandou tomar 80mg de ibuprofeno (a dose certa é 8mg). O time legal de um cliente já encaminhou print da conversa pro email do CEO. Tá só você, o servidor e três horas até o time da Europa acordar.",
     short: "Bedrock alucinando · resposta médica perigosa",
-    slackRecap: "Confirmado: o deploy de hoje (v2.4.1) removeu as <b>regras de segurança</b> do prompt E o <b>Bedrock Guardrails</b> tá desabilitado nesse endpoint. O bot tá respondendo qualquer coisa sem filtro.",
+    slackRecap: "Confirmado: o deploy de hoje (v2.4.1) <b>removeu as regras de segurança</b> que tavam no prompt do sistema. Sem aquela camada de instruções, o modelo tá respondendo qualquer coisa, inclusive recomendações médicas. 47 conversas problemáticas só na última hora.",
     hint: "Tudo começou com um deploy de madrugada que removeu regras do prompt. Pensa em <b>recursos do próprio Bedrock pra impor restrições</b> além do prompt, algo que age como camada de proteção.",
     quizQuestion: {
       question: "Você quer EVITAR que um chatbot Bedrock dê conselhos médicos, mesmo se o usuário pedir explicitamente ou tentar contornar com prompts criativos. Qual abordagem é MAIS ROBUSTA?",
@@ -137,7 +137,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#war-room-trustly",
     desc: "Trustly Bank, 3h08 da manhã. O Slack #war-room-trustly começou a explodir quando a equipe de auditoria detectou um padrão estranho: depois do último deploy, o bot de atendimento começou a citar dados pessoais dos clientes nas respostas. CPF, número de cartão, RG, tudo em texto puro. O jurídico acordou na mesa, dizendo \"a LGPD vai ralar a gente\". O CEO ligou pro CTO. O CTO ligou pra ti.",
     short: "PII vazando em respostas do bot · LGPD risk",
-    slackRecap: "Confirmado: o novo prompt manda o bot <b>'personalizar usando dados do cliente'</b>, e <b>não tem filtro de PII</b> antes da resposta. Já vazou CPF de 47 clientes em 2h. LGPD ralando.",
+    slackRecap: "Confirmado: o novo prompt manda o bot <b>'personalizar usando dados do cliente'</b>, e as respostas tão saindo com CPF, RG e número de cartão em texto puro. Já vazou dados de 47 clientes em 2h. Sem nenhum filtro entre o modelo e a resposta. Jurídico no telhado.",
     hint: "O prompt manda usar dados pessoais livremente. Vazamento de PII em chatbot AWS resolve-se com <b>uma feature específica do Bedrock</b> que detecta e bloqueia dados sensíveis nas respostas.",
     quizQuestion: {
       question: "Antes de enviar dados pra treinar um modelo de ML, você precisa REMOVER OU MASCARAR dados sensíveis (CPF, cartão, email) que aparecem nos textos. Qual feature do Amazon Comprehend ajuda nisso?",
@@ -203,7 +203,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#ml-fairness",
     desc: "Quinta-feira, 9h. Tu abre o LinkedIn e vê uma reportagem do Estadão circulando: 'Sistema de IA de imobiliária aprova 87% dos pedidos de bairros nobres e 4% das periferias'. Tua cliente. O time legal marcou call pras 10h. O modelo é o sistema de pontuação de crédito imobiliário que entrou em produção há 6 meses, alguém precisa entender o que aconteceu antes do call, e o histórico recente do treinamento aponta pra um problema no dataset.",
     short: "Personalize discriminando por CEP · viés racial",
-    slackRecap: "Confirmado: o modelo usa <b>CEP</b> como feature principal (importância 0,42). O dataset tem 87% das aprovações vindas da zona sul nobre, periferia mal representada. <b>CEP virou proxy de raça</b>.",
+    slackRecap: "Confirmado: o modelo usa <b>CEP</b> como feature de maior importância (0,42). Dataset tem 87% das aprovações vindas de bairros nobres, periferia quase ausente. Aprovação cai de 76% (zona sul) pra 11% (zona oeste). CEP tá funcionando como proxy de algo que ele não deveria estar capturando.",
     hint: "CEP é a feature principal (importância 0,42) e correlaciona 0,78 com raça. Pensa: <b>tirar a feature</b>, <b>balancear o dataset</b>, ou usar uma <b>ferramenta AWS específica pra detectar viés</b>?",
     quizQuestion: {
       question: "Você quer entender QUAIS FEATURES mais influenciaram uma predição INDIVIDUAL do modelo (ex: por que o crédito desse cliente específico foi NEGADO). Qual técnica ajuda nisso?",
@@ -269,7 +269,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#finance-alert",
     desc: "Terça-feira, 14h22. O CFO abre o Cost Explorer da AWS pra preparar o report mensal pro board. Número na tela: $84.000 projetados pra este mês. Mês passado foi $9.000. Ele vai direto pro Slack: 'pessoal, alguém pode explicar isso até as 15h?'. O Ricardo (SRE) pinga teu nick. Tu olha o gráfico: o pico começou exatamente quando ativaram o auto-resposta de email. Bedrock invocado milhares de vezes por hora.",
     short: "Custo Bedrock explodiu 9x · loop infinito?",
-    slackRecap: "Confirmado: o auto-resposta de email entrou em <b>loop infinito</b> (bot responde → email volta como bounce → bot responde de novo). 1.247 sessões em loop. Pior: tá usando <b>Claude Opus</b> em FAQ simples (60× mais caro que Haiku).",
+    slackRecap: "Confirmado: o auto-resposta de email entrou em <b>loop infinito</b> (bot responde, email volta como bounce, bot responde de novo). 1.247 sessões em loop. Pior: tá usando o modelo mais caro do catálogo pra responder pergunta de FAQ tipo 'qual o horário?'. Gastou em 8h o que era pra ser o mês.",
     hint: "Dois fatores combinados: <b>volume artificial</b> (loop infinito) E <b>modelo caro pra a tarefa</b> (FAQ usando o mais caro da Bedrock). Ataca o que tá causando mais dano primeiro.",
     quizQuestion: {
       question: "Você está rodando um LLM via API on-demand do Bedrock. Em qual UNIDADE de medida o Bedrock cobra você?",
@@ -335,7 +335,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#support-eng",
     desc: "Quarta-feira, 14h45. O time de suporte percebeu há uma semana: o chatbot tá dando respostas de manual que foi descontinuado faz tempo. Cliente liga: 'o bot disse pra mexer no menu Configurações > Avançado, mas virou Settings > Pro há 3 meses'. Ninguém priorizou investigar até hoje, quando um cliente premium ameaçou cancelar o contrato. Tu pegou o ticket pra entender por que a base de conhecimento (RAG) tá tão atrasada.",
     short: "Knowledge Base com documento desatualizado",
-    slackRecap: "Confirmado: a tarefa de sincronizar a base RAG tá <b>falhando há 94 dias</b> por permissão de IAM revogada na auditoria. Nenhum alarme configurado. Bot continua respondendo com docs de 3 meses atrás.",
+    slackRecap: "Confirmado: a tarefa que sincroniza a base de conhecimento do bot <b>tá falhando há 94 dias</b>. Permissão de IAM foi revogada numa auditoria e ninguém notou. Não tem alarme em cima dessa task. Bot continua respondendo com docs de 3 meses atrás, incluindo política de troca que já mudou.",
     hint: "A tarefa do RAG falha há 94 dias por permissão de IAM, e ninguém percebeu. São dois problemas: <b>corrigir o IAM</b> agora E <b>garantir que isso seja detectado</b> no futuro.",
     quizQuestion: {
       question: "Em RAG, antes de fazer a busca semântica, cada documento da base é convertido em uma REPRESENTAÇÃO NUMÉRICA densa que captura seu significado. Como isso se chama?",
@@ -400,7 +400,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#medtech-urgent",
     desc: "Quinta-feira, 10h14. Email URGENT do CTO da ClinicAI. O app deles transcreve consultas médicas em tempo real pra gerar prontuário automático. Funcionou bem por seis meses. Mas ontem aconteceu o pior: o médico ditou '5 miligramas de dipirona', o app transcreveu '50 mg', o paciente tomou a dose errada e teve reação adversa. Felizmente nada grave. Mas o jurídico tá em pânico e o CEO marcou call pra daqui 2 horas.",
     short: "Transcribe genérico em contexto médico",
-    slackRecap: "Confirmado: o app tá usando <b>Transcribe Standard (genérico)</b>, sem vocabulário customizado. Erro de transcrição em 18,4% das palavras médicas. A AWS tem o <b>Transcribe Medical</b> que faz isso com ~3% de erro.",
+    slackRecap: "Confirmado: o app tá usando o <b>Transcribe Standard (genérico)</b> pra transcrever as consultas. Taxa de erro em palavras médicas: <b>18,4%</b>. Medicamentos virando outras palavras: 'omeprazol' vira 'oem prazo', 'metformina' vira 'meta formina'. Em palavras comuns o erro é só 2%.",
     hint: "O AWS Transcribe tem <b>variantes</b> além do genérico. Pensa em domínios onde o vocabulário é muito específico (medicina, jurídico).",
     quizQuestion: {
       question: "Você está transcrevendo chamadas de call center. Cada chamada tem áudio em DOIS CANAIS separados (agente em um canal, cliente em outro). Qual feature do Transcribe é a indicada?",
@@ -465,7 +465,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#intl-launch",
     desc: "Sexta-feira, 12h. A GameStudio acabou de lançar o novo MMORPG globalmente. 2 milhões de pré-downloads. Reviewers começaram a postar print da tradução pt-BR: 'headshot' virou 'tiro na cabeça', 'crit chance' virou 'chance crítica', 'DPS' virou 'departamento de polícia'. O subreddit do jogo tá rindo. O time de marketing tá gritando 'arruma isso AGORA'. Tu abriu o ticket: o Translate da AWS tá rodando, mas alguma coisa não tá certa.",
     short: "Translate sem custom terminology · gaming",
-    slackRecap: "Confirmado: o Translate tá rodando sem nenhum <b>glossário customizado</b>. Tem um arquivo CSV com 340 termos gaming preparado no S3, só falta carregar como Custom Terminology no Translate.",
+    slackRecap: "Confirmado: o Translate tá rodando com a <b>configuração padrão</b>, sem nenhuma customização de domínio. 'Headshot' vira 'tiro na cabeça', 'crit' vira 'crítica', 'DPS' vira 'departamento de polícia'. Existe um CSV com 340 termos de gaming no S3 mas ele não tá sendo usado em lugar nenhum.",
     hint: "O Translate funciona com base em um <b>dicionário geral</b>. Quando o conteúdo tem <b>jargão de um domínio específico</b>, qual mecanismo do próprio Translate resolveria isso?",
     quizQuestion: {
       question: "Você precisa traduzir entre um par de idiomas pouco comum (ex: Tailandês → Vietnamita). O que o Amazon Translate faz internamente?",
@@ -528,7 +528,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#trust-and-safety",
     desc: "Quinta-feira, 15h30. Plataforma social com 2 milhões de usuários. Time de Trust & Safety em alerta: um post com imagem explicitamente violenta tá circulando, foi denunciado 47 vezes em 20 minutos, e o sistema automático NÃO bloqueou. A foto já apareceu reportada no TikTok e Instagram também. A diretoria perguntou no Slack: 'cadê a IA de moderação?'. Você abre o painel do Rekognition pra entender por que a foto passou batida.",
     short: "Rekognition moderação labels desconfiguradas",
-    slackRecap: "Confirmado: alguém mudou o <b>threshold de moderação</b> de 80% pra 99% direto pelo console (sem PR, sem código). Resultado: 14.221 imagens duvidosas passaram sem revisão nas últimas 24h.",
+    slackRecap: "Confirmado: alguém alterou o <b>threshold de moderação</b> de 80% pra 99% direto pelo console ontem (sem PR, sem código). Resultado: 14.221 imagens marcadas como duvidosas <b>passaram sem revisão</b> nas últimas 24h. Não tem registro nenhum no Git de quem fez ou por quê.",
     hint: "Alguém mudou o threshold ontem pelo console. Tem duas frentes: <b>corrigir o valor agora</b> e <b>impedir que isso aconteça de novo</b>.",
     quizQuestion: {
       question: "Alguém alterou uma configuração crítica direto pelo Console AWS, e ninguém sabe quem ou quando. Qual serviço guarda esse HISTÓRICO de chamadas de API com identidade, ação e timestamp?",
@@ -594,7 +594,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#war-room-CEO-watching",
     desc: "23h46. Black Friday. O e-commerce tá processando o maior volume da história, $4.000 em vendas por SEGUNDO. Aí o site começa a engasgar. Primeiro o chatbot entra em loop infinito. Depois a base de conhecimento estoura. O filtro de PII bate no limite. O CloudFront começa a retornar erro 503. Cascata clássica. O CEO mandou DM: 'qualquer coisa que precisarem, façam AGORA'. CFO no Slack: 'a cada minuto são $240k'. Tu é o on-call. Boa sorte.",
     short: "BOSS · 3 fases · cascading failure em todo o stack AI",
-    slackRecap: "Black Friday tá derretendo tudo. <b>Bedrock em throttling</b>, base de conhecimento em timeout, Comprehend rate-limited, CloudFront 503. Lambda no limite de concurrency, 40 mil mensagens na DLQ. <b>Estancar o sangramento primeiro.</b>",
+    slackRecap: "Black Friday derretendo tudo. <b>Bedrock em throttling</b>, base de conhecimento em timeout, Comprehend retornando 429, CloudFront em 503. Lambda no limite de concurrency, 40 mil mensagens empilhadas na DLQ. Cada componente tentando reiniciar tá piorando os outros.",
     hint: "Black Friday derretendo tudo: primeiro <b>estanca o sangramento</b> (limitar tráfego, fallbacks), depois <b>investiga a causa</b>, depois <b>previne</b>. Ordem importa.",
     quizQuestion: {
       question: "Em arquitetura resiliente, qual estratégia mantém o app funcionando MESMO quando uma dependência falha (ex: continuar mostrando produtos mesmo se o serviço de recomendações estiver fora)?",
@@ -726,7 +726,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#war-room-reviewhub",
     desc: "Quarta-feira, 14h. O all-hands semanal acabou de terminar e a Maria, PM do ReviewHub, ainda tá processando o que viu: o dashboard de NPS que ela mostrou pro CEO indica que 90% das reviews da última semana são NEGATIVAS. Aí ela abre o app pra conferir: 'amei o produto', 'chegou rapidinho', 'recomendo demais, comprei pra minha mãe', todas com 5 estrelas. Algo tá MUITO errado entre o que o cliente escreve e o que o dashboard mostra. O Slack #war-room-reviewhub vibrou: 'precisamos entender isso antes da reunião do board na sexta'.",
     short: "Comprehend retornando NEGATIVE pra reviews 5 estrelas",
-    slackRecap: "Confirmado: o Comprehend tá sendo chamado com <code>LanguageCode='en'</code>, mas 96% das reviews estão em <b>português</b>. Sentimento é dependente do idioma, por isso 'amei o produto' vira NEGATIVE.",
+    slackRecap: "Confirmado: o Comprehend tá sendo chamado com <code>LanguageCode='en'</code> hardcoded no Lambda, mas <b>96% das reviews estão em português</b>. 'Amei o produto, recomendo!' tá voltando como NEGATIVE. Sentimento é dependente do idioma, e ele tá tentando interpretar PT como se fosse EN.",
     hint: "A inconsistência tá entre <b>o idioma das reviews</b> e <b>o que o Comprehend foi instruído a esperar</b>. Olha o parâmetro de idioma.",
     quizQuestion: {
       question: "Você precisa classificar tickets de suporte em categorias específicas do seu negócio (billing, técnico, abuse, churn). As categorias built-in do Comprehend não servem. Qual feature resolve isso?",
@@ -789,7 +789,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#war-room-audioready",
     desc: "Segunda-feira, 8h21. Tu abre o Slack e o canal #war-room-audioready tem 12 mensagens novas. A AudioReady (startup de audiobooks) lançou uma coleção sobre carreira em tech. Os primeiros reviewers começaram a dar 1 estrela: 'narrador não sabe ler nada de tecnologia'. Print: a voz da Polly tá lendo 'Kubernetes' como 'cubernetes', 'PyTorch' como 'pee-torch', 'Docker' como 'doquér'. O editor disse que desistiu de revisar manualmente, tem 47 audiobooks na fila. CEO quer fix antes do final do dia.",
     short: "Polly pronunciando termos técnicos errado",
-    slackRecap: "Confirmado: o Polly tá rodando sem <b>Pronunciation Lexicon</b>. Tem um lexicon com 47 termos tech (Kubernetes, Docker, PyTorch) já criado na conta, mas <b>nunca foi anexado</b> nas chamadas.",
+    slackRecap: "Confirmado: o Polly tá lendo termos técnicos em inglês usando <b>regras fonéticas do português</b>. 'Kubernetes' sai como 'kú-ber-ne-tchis', 'PyTorch' vira 'pee-tór-tchi'. Reclamação aumentou 840% em 2 semanas. A configuração atual não tem nenhuma instrução sobre como esses termos devem ser pronunciados.",
     hint: "Pensa: o problema é a <b>voz escolhida</b>, o <b>texto enviado</b>, ou alguma <b>instrução de pronúncia</b> que o serviço aceita mas não recebeu?",
     quizQuestion: {
       question: "Quando faz MAIS SENTIDO criar um Pronunciation Lexicon em vez de usar tags SSML inline em cada texto que o Polly vai ler?",
@@ -851,7 +851,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#war-room-recsys",
     desc: "Sexta-feira, 11h42. ShopMaster (marketplace de moda) acabou de fechar uma campanha de aquisição que dobrou os usuários novos em 2 semanas. Time de growth comemorando, até olhar as métricas de engajamento. Click-through caiu de 4,8% pra 1,2%. Cesta média desabou. O CMO acordou o time de dados: 'algo tá errado'. Você abre o app: pra cada usuário novo, o sistema de recomendação mostra exatamente os mesmos 3 produtos. Problema clássico de recomendação.",
     short: "Personalize recomendando os 3 mesmos pra todos",
-    slackRecap: "Confirmado: a solução do Personalize tá usando o algoritmo <b>HRNN</b> (antigo, não trata cold-start). 61% dos usuários novos têm menos de 3 interações, por isso todo mundo recebe os 3 itens top globais.",
+    slackRecap: "Confirmado: a solução do Personalize tá usando uma <b>recipe antiga</b> (HRNN). 61% dos usuários novos têm menos de 3 interações no app, e essa recipe não foi feita pra esse cenário. Todo usuário novo recebe os mesmos 3 itens top globais. Conversão em onboarding caiu 73%.",
     hint: "O Personalize tem várias <b>recipes</b> (algoritmos). Algumas lidam melhor com usuários novos que não têm histórico ainda.",
     quizQuestion: {
       question: "Você acabou de lançar um e-commerce e tem POUCOS dados de interação por usuário. O User-Personalization vai recomendar bem mesmo assim. Como isso funciona internamente?",
@@ -914,7 +914,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#war-room-bot",
     desc: "Quinta-feira, 15h18. A Telecom XYZ implementou um chatbot de atendimento há 1 mês com a promessa de reduzir 70% dos tickets humanos. O time que construiu o bot fez deploy e saiu de férias. Realidade hoje: 61% das conversas terminam com 'desculpe, não entendi', os clientes ligam pro 0800 frustrados, o backlog do suporte humano triplicou. O CMO marcou call urgente pras 17h. Você abriu o painel do Lex pra investigar antes da reunião.",
     short: "Lex respondendo 'desculpe não entendi' em 61% dos casos",
-    slackRecap: "Confirmado: cada intent do Lex tem só <b>2 frases-exemplo</b>. A AWS recomenda <b>15-25 utterances</b> por intent. Qualquer variação do cliente ('tô com problema', 'meu sinal sumiu') cai no fallback.",
+    slackRecap: "Confirmado: cada intent do bot tem só <b>2 frases-exemplo</b> cadastradas. AWS recomenda <b>15 a 25</b> por intent. Qualquer variação da fala real do cliente ('tô com problema', 'meu sinal sumiu', 'cadê meu wifi') cai no fallback porque não bate exatamente com as 2 frases.",
     hint: "O bot só entende o que ele <b>foi treinado pra entender</b>. Com poucos exemplos por intent, qualquer variação cai no fallback. Onde se ajusta isso?",
     quizQuestion: {
       question: "No Amazon Lex, qual é a diferença prática entre um <b>Intent</b> e um <b>Slot</b>?",
@@ -977,7 +977,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#war-room-content-mod",
     desc: "Quinta-feira, 9h15. PhotoShare (rede social de fotos) acordou em estado de pânico. Um update foi pra produção ontem às 17h. Desde então, 80% das fotos enviadas tão sendo bloqueadas como 'inadequadas'. Pôr-do-sol: bloqueado. Foto de bebê: bloqueada. Churrasco em família: bloqueado. Suporte recebeu 1.200 tickets de manhã. App rating no Google Play caiu de 4,6 pra 2,1 em uma noite. Você é a primeira pessoa do time tech a chegar, precisa entender e resolver antes do CEO acordar.",
     short: "Rekognition bloqueando fotos normais como NSFW",
-    slackRecap: "Confirmado: o <b>MinConfidence</b> do Rekognition foi alterado de 80 pra 30 ontem via console. Threshold tão baixo flagra paisagens como 'Suggestive' (34%) e bebês como 'Suggestive' (33%). 80% das fotos legítimas bloqueadas.",
+    slackRecap: "Confirmado: o <b>MinConfidence</b> do Rekognition foi alterado de 80 pra <b>30</b> ontem via console. Threshold baixo tá flagando paisagem (34% confidence) e bebê (33% confidence) como 'Suggestive'. 80% das fotos legítimas bloqueadas. Lojistas perdendo prazo, suporte explodindo.",
     hint: "Bloqueando paisagem com 34% de confiança e bebê com 33%. O número-chave aqui é o <b>MinConfidence</b>. Pra onde ele deveria voltar?",
     quizQuestion: {
       question: "Você precisa identificar UMA pessoa específica em centenas de imagens (ex: bater foto contra uma base de funcionários). Qual approach do Rekognition ESCALA pra isso?",
@@ -1048,7 +1048,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#war-room-fraud",
     desc: "Sexta-feira, 13h. O CEO do BancoQuanta agendou uma call pras 14h com um único item de pauta: 'explicar o prejuízo de $2,1M com fraudes no mês'. Na sala ao lado, o Data Scientist da equipe tá indignado: 'mas o modelo tem 99,4% de acurácia, eu medi! Funcionou no treinamento!'. O Risk Officer responde com cansaço: 'então me explica como passaram 950 fraudes este mês'. Tem 1 hora pra entender o que tá acontecendo. Você abre as métricas do modelo.",
     short: "Modelo com 99% acurácia · empresa perdendo $2M/mês em fraude",
-    slackRecap: "Confirmado: o dataset é <b>99% legítimo / 1% fraude</b>. O modelo foi otimizado pra <b>accuracy</b> e aprendeu a quase nunca dizer 'fraude', capturou só 50 de 1000 fraudes reais (Recall = 5%). <b>Accuracy 99,4% é matemática enganosa, não detecção</b>.",
+    slackRecap: "Confirmado: o dataset é <b>99% legítimo, 1% fraude</b>. O modelo foi otimizado pra Accuracy e aprendeu a quase nunca dizer 'fraude'. Resultado: <b>capturou 50 de 1000 fraudes reais</b>. Accuracy 99,4% no relatório, fraude passando direto na prática. Compliance no telhado.",
     hint: "Accuracy de 99% num dataset onde 99% é legítimo é matemática enganosa. Qual métrica realmente importa em <b>detecção de fraude</b> (achar os positivos verdadeiros)?",
     quizQuestion: {
       question: "Pra detectar fraude, o modelo deve ter Recall alto (pegar todos os fraudadores). Mas Recall alto SOZINHO pode causar problema. Qual?",
@@ -1114,7 +1114,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#war-room-cfo",
     desc: "Segunda-feira, 1h14 da manhã. CFO da ScanX (startup de radiologia digital) deixou print no Slack do time de tech: a fatura de SageMaker do mês foi de $14.000, em UM endpoint só. 'Pessoal, ou cortamos 60% disso até sexta, ou desligamos o produto'. Quem leu primeiro foi você, o tech lead. O contexto: o modelo analisa raio-X pra dar diagnóstico assistido, médicos aceitam esperar até 5 minutos pelo resultado, mas o endpoint fica ligado 24/7, 61% do tempo ocioso. Você precisa entender as opções de inferência da AWS rapidamente.",
     short: "Endpoint Real-time queimando $14k/mês · ocioso 61% do tempo",
-    slackRecap: "Confirmado: o endpoint tá em modo <b>Real-time</b> (cobra 24/7 mesmo ocioso). GPU fica 14% utilizado em média, 61% do tempo o endpoint não recebe quase nada. O SLA dos médicos permite até <b>5 minutos</b> de latência.",
+    slackRecap: "Confirmado: o endpoint do classificador tá em modo <b>Real-time</b>, cobra 24/7 mesmo parado. GPU em 14% de utilização média, 61% do tempo o endpoint não recebe quase nada. SLA dos médicos é <b>5 minutos</b> de latência aceitável. Gasto: $14.700/mês em algo que poderia ser bem mais barato.",
     hint: "O endpoint fica ocioso 61% do tempo, e o SLA permite latência de até 5 minutos. Pensa nos <b>tipos de inferência</b> do SageMaker, quem cobra só pelo uso real?",
     quizQuestion: {
       question: "Seu modelo em produção precisa lidar com PICOS de tráfego (10× à noite). Qual feature do SageMaker ajusta automaticamente a quantidade de instâncias do endpoint?",
@@ -1179,7 +1179,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#war-room-supply",
     desc: "Segunda-feira pós-Black Friday, 9h. Time da PrintShop entra na call de post-mortem com a expressão de quem já passou por isso: é o TERCEIRO ano consecutivo que acontece. Os cartuchos de tinta acabaram às 8h da manhã da Black Friday. $400 mil em vendas perdidas só nesse SKU. O modelo de previsão de demanda foi 'validado' como bom (MAE=12, parece OK), mas RMSE=89 e R²=0,42 contam outra história. Time de supply, dev e dados sentaram juntos: 'precisamos entender por que o modelo erra SEMPRE em data sazonal'.",
     short: "Previsão de demanda falha em outliers · MAE engana sem RMSE/R²",
-    slackRecap: "Confirmado: MAE=12 enganou o time, mas <b>RMSE=89</b> (7× maior!) indica outliers grandes, e <b>R²=0,42</b> indica que o modelo não captura o padrão. Erros concentrados em Black Friday, Natal, volta às aulas, <b>sazonalidade</b> que o modelo linear não pega.",
+    slackRecap: "Confirmado: MAE=12 (parecia ótimo). Mas <b>RMSE=89 (7x maior!)</b> indica outliers grandes. <b>R²=0,42</b>: o modelo não captura o padrão. Erros concentrados em Black Friday, Natal, volta às aulas. Algo que tem componente sazonal forte tá sendo modelado como se fosse linear.",
     hint: "RMSE 7× MAE indica <b>outliers fortes</b>. R² de 0,42 indica que o modelo <b>não captura o padrão</b>. Pensa: o modelo linear consegue lidar com sazonalidade (datas-pico)?",
     quizQuestion: {
       question: "Um analista de negócios SEM CONHECIMENTO DE CÓDIGO quer criar previsões com ML. Qual feature do SageMaker dá uma interface visual no-code pra construir modelos arrastando colunas?",
@@ -1243,7 +1243,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#war-room-ml",
     desc: "Terça-feira, 11h42. A Karen, PM da ChurnTech (SaaS B2B), abriu o Slack do time de ML com uma pergunta inocente: 'gente, recebi os resultados do novo modelo de churn, mas tem uns valores estranhos, tipo, o cliente u-12500 tem −18% de chance de cancelar, e o u-12502 tem 141%. Como eu apresento isso pro CEO?'. Silêncio no canal. Um DS sênior responde só com 😬. O modelo foi treinado por um DS júnior que entrou esse mês, e ele escolheu o algoritmo errado pro tipo de problema. Você foi chamado pra fazer review e corrigir.",
     short: "Linear regression em target binário · outputs fora de [0,1]",
-    slackRecap: "Confirmado: o DS júnior escolheu <b>Regressão Linear</b> pra um problema binário (churn 0/1). Regressão gera qualquer número real, <b>23% das predições</b> saíram fora do intervalo [0,1]. Algoritmo errado pro tipo de problema.",
+    slackRecap: "Confirmado: o DS júnior usou <b>Regressão Linear</b> pra um problema onde o alvo só tem dois valores (churn: 0 ou 1). Regressão linear gera qualquer número real, <b>23% das predições</b> saíram fora do intervalo [0,1] (algumas em 1,47, outras em -0,3). Tipo de algoritmo não bate com o tipo de problema.",
     hint: "O alvo só tem dois valores (0 ou 1). Isso é <b>problema de classificação</b>, não de regressão. Qual algoritmo é apropriado pra prever uma classe binária?",
     quizQuestion: {
       question: "Você tem dataset tabular com 1M de linhas, 50 features, target binário. Logistic Regression deu um baseline decente, mas você quer melhorar. Qual algoritmo costuma performar MELHOR em dados tabulares estruturados?",
@@ -1307,7 +1307,7 @@ const ALL_INCIDENTS: Incident[] = [
     slack: "#war-room-finops",
     desc: "Quarta-feira, 7h14. CFO da GenLab (startup de IA generativa) entrou na call mensal de finance review e jogou na tela: $85.000 em treinamento de modelo este mês. 'Eu preciso de uma redução de 40% até o final do mês'. O time tá fazendo fine-tuning de um LLM custom em máquinas P4d (8 GPUs A100 por máquina, $32/hora). Cada run leva 72h e custa quase $10k. O lead de ML te chamou: 'precisamos descobrir uma forma de economizar SEM perder qualidade no treino'. Sua missão: investigar as opções e propor algo concreto.",
     short: "Training em P4d (A100) caro · existe alternativa nativa AWS",
-    slackRecap: "Confirmado: o time tá usando <b>P4d (8× GPU A100)</b> a $32/hora. A AWS tem o chip <b>Trainium</b> ($21,50/hora, <b>35% mais barato</b>) com performance equivalente em transformers e suporte nativo pra PyTorch. Sem reescrever modelo.",
+    slackRecap: "Confirmado: o time tá treinando em <b>P4d (8x GPU A100)</b> a $32/hora. Job rodando há 4 semanas, ainda 2 semanas pra terminar. Custo estimado total: $43k pra esse único treinamento. Modelo é um transformer padrão em PyTorch, sem nada custom.",
     hint: "O treino tá em GPUs A100 padrão. A AWS tem <b>chips próprios feitos especificamente pra treinar IA</b> que costumam ser mais baratos. Qual seria?",
     quizQuestion: {
       question: "A AWS oferece dois chips de IA: <b>Trainium</b> e <b>Inferentia</b>. Qual a diferença prática entre eles em termos de FASE do ciclo de vida do modelo?",
