@@ -72,6 +72,8 @@ export interface Incident {
   slack: string;
   desc: string;
   short: string;
+  /** Optional summary from an engineering peer in Slack — helps player recall the problem at decide step */
+  slackRecap?: string;
   ratePerMin: number;
   initialCost: number;
   initialElapsed: number;

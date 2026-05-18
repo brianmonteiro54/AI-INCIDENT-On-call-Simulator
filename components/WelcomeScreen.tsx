@@ -71,8 +71,11 @@ export function WelcomeScreen({ onSubmit, forceShow }: Props) {
               <h1 className="text-display text-4xl sm:text-5xl font-black text-duo-ink mb-2">
                 AI Incident
               </h1>
-              <p className="text-duo-ink-soft font-bold text-base sm:text-lg leading-snug">
+              <p className="text-duo-ink-soft font-bold text-base sm:text-lg leading-snug mb-5">
                 treina pra AWS AI Practitioner 🚀
+              </p>
+              <p className="text-duo-ink-faded text-sm sm:text-base leading-snug font-medium max-w-xs mx-auto">
+                Você é o engenheiro on-call. Recebe um incident de IA, investiga, decide.
               </p>
               <motion.div
                 initial={{ opacity: 0 }}
@@ -95,9 +98,25 @@ export function WelcomeScreen({ onSubmit, forceShow }: Props) {
               <h1 className="text-display text-3xl sm:text-4xl font-black text-duo-ink mb-2 leading-tight">
                 Oi! Como te chamamos?
               </h1>
-              <p className="text-duo-ink-soft font-bold text-sm sm:text-base mb-6 leading-snug">
+              <p className="text-duo-ink-soft font-bold text-sm sm:text-base mb-5 leading-snug">
                 teu nome aparece no ranking — escolhe um bom
               </p>
+
+              {/* Quick "how it works" preview */}
+              <div className="grid grid-cols-3 gap-2 mb-6 text-left">
+                <div className="duo-card p-2.5">
+                  <div className="text-xl mb-0.5">📟</div>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-duo-ink leading-tight">recebe<br/>incident</div>
+                </div>
+                <div className="duo-card p-2.5">
+                  <div className="text-xl mb-0.5">🔍</div>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-duo-ink leading-tight">investiga<br/>pistas</div>
+                </div>
+                <div className="duo-card p-2.5">
+                  <div className="text-xl mb-0.5">⚡</div>
+                  <div className="text-[10px] font-black uppercase tracking-wider text-duo-ink leading-tight">decide<br/>e ganha XP</div>
+                </div>
+              </div>
 
               <form
                 onSubmit={(e) => {

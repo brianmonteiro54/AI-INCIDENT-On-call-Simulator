@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useGame, bestGradeByIncident } from "@/lib/store";
 import { INCIDENTS } from "@/lib/incidents";
-import { getLevel, getLevelIdx, getNextLevel, getTodaysDailyId, getDailyKey, gradeColor, sevLabel } from "@/lib/levels";
+import { getLevel, getLevelIdx, getNextLevel, getTodaysDailyId, getDailyKey, sevLabel } from "@/lib/levels";
 import { ACHIEVEMENTS } from "@/lib/achievements";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { AchievementToasts } from "@/components/AchievementToasts";
@@ -118,10 +118,12 @@ export default function HomePage() {
               </span>
             </div>
 
-            {/* Hearts */}
+            {/* A+ count */}
             <div className="flex items-center gap-1.5">
-              <Heart className="w-6 h-6 fill-duo-red text-duo-red-dark" strokeWidth={2.5} />
-              <span className="font-black text-lg tabular text-duo-red-dark">5</span>
+              <Star className={`w-6 h-6 ${aPlus > 0 ? "fill-duo-yellow text-duo-yellow-dark" : "text-duo-ink-faded"}`} strokeWidth={2.5} />
+              <span className={`font-black text-lg tabular ${aPlus > 0 ? "text-duo-yellow-dark" : "text-duo-ink-faded"}`}>
+                {aPlus}
+              </span>
             </div>
 
             <div className="flex-1" />

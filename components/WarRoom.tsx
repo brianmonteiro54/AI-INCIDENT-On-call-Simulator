@@ -9,7 +9,7 @@ import { sevLabel, formatTime } from "@/lib/levels";
 import { gradeRank } from "@/lib/achievements";
 import { FINDINGS } from "@/lib/findings";
 import { useGame } from "@/lib/store";
-import { playSound, startAlarmLoop, stopAlarmLoop } from "@/lib/sound";
+import { playSound, stopAlarmLoop } from "@/lib/sound";
 import { Mascot, type MascotExpression } from "./Mascot";
 import { ResultScreen } from "./ResultScreen";
 import { ConsoleFrame } from "./ConsoleFrame";
@@ -44,6 +44,7 @@ export function WarRoom({ incident, isDaily }: Props) {
   const [attempts, setAttempts] = useState(0);
   const [wrongFeedback, setWrongFeedback] = useState<{ name: string; sub: string } | null>(null);
   const [result, setResult] = useState<IncidentResult | null>(null);
+  const [showExitModal, setShowExitModal] = useState(false);
 
   // Real player time (since this WarRoom mounted) — used for display & speed bonus
   const playerStartedAtRef = useRef<number>(Date.now());
@@ -286,11 +287,8 @@ export function WarRoom({ incident, isDaily }: Props) {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3 sm:gap-4">
           <button
             onClick={() => {
-              if (confirm("Sair da missão? Tua progresso atual nesse incident será perdido.")) {
-                stopAlarmLoop();
-                playSound("page");
-                window.location.href = "/";
-              }
+              playSound("tick");
+              setShowExitModal(true);
             }}
             className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition"
             aria-label="fechar"
@@ -410,6 +408,32 @@ export function WarRoom({ incident, isDaily }: Props) {
                     )}
                   </div>
                 </motion.div>
+
+                {/* What you'll learn — topics preview */}
+                {!isBoss && incident.services && incident.services.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.25 }}
+                    className="duo-card p-4 mb-6 bg-duo-green-light border-duo-green"
+                  >
+                    <div className="text-xs font-black uppercase tracking-widest text-duo-green-dark mb-2 flex items-center gap-1.5">
+                      <span>🎓</span>
+                      <span>o que vai estudar nesse incident</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {incident.services.map((s) => (
+                        <span
+                          key={s.name}
+                          className="text-xs font-black bg-white border-2 border-duo-green-dark text-duo-green-dark px-2.5 py-0.5 rounded-full"
+                          style={{ borderBottomWidth: 3 }}
+                        >
+                          {s.name}
+                        </span>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
 
                 {/* AWS Services Refresher */}
                 {incident.services && incident.services.length > 0 && (
@@ -587,7 +611,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                   {wrongFeedback && (
                     <motion.div
                       initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      animate={{ opacity: 1, y: 0, scale: 0.95 }}
                       exit={{ opacity: 0, y: -10, scale: 0.95 }}
                       transition={{ type: "spring", stiffness: 250, damping: 18 }}
                       className="duo-card duo-card-wrong p-4 mb-4 flex items-center gap-3"
@@ -597,7 +621,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-black text-duo-red-dark text-sm sm:text-base leading-tight">
-                          Não foi essa! −1 ❤️
+                          Não foi essa
                         </div>
                         <div className="text-duo-red-dark/80 text-xs font-medium mt-0.5 leading-snug">
                           {wrongFeedback.sub}
@@ -747,17 +771,11 @@ export function WarRoom({ incident, isDaily }: Props) {
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.15 }}
                   >
-                    <div className={`text-display font-black mb-2 text-4xl sm:text-5xl tracking-tight ${
-                      feedback.correct ? "text-duo-green" : "text-duo-red"
-                    }`}>
-                      {feedback.correct ? (
-                        attempts === 1 ? (
-                          <>Mandou bem! <span className="underline decoration-wavy">{feedback.grade}</span></>
-                        ) : (
-                          <>Acertou! <span className="underline decoration-wavy">{feedback.grade}</span></>
-                        )
+                    <div className={`text-display font-black mb-2 text-4xl sm:text-5xl tracking-tight text-duo-green`}>
+                      {attempts === 1 ? (
+                        <>Mandou bem! <span className="underline decoration-wavy">{feedback.grade}</span></>
                       ) : (
-                        <>Sem vidas · Nota {feedback.grade}</>
+                        <>Acertou! <span className="underline decoration-wavy">{feedback.grade}</span></>
                       )}
                     </div>
 
@@ -782,7 +800,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                       </motion.div>
                     )}
 
-                    {feedback.correct && speedBonus > 0 && (
+                    {speedBonus > 0 && (
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
@@ -794,15 +812,15 @@ export function WarRoom({ incident, isDaily }: Props) {
                       </motion.div>
                     )}
 
-                    {!feedback.correct && (
+                    {attempts > 1 && (
                       <motion.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
-                        transition={{ delay: 0.5, type: "spring", stiffness: 250 }}
-                        className="inline-flex items-center gap-2 chip border-duo-red-dark bg-duo-red-light text-duo-red-dark text-base px-4 py-2 mb-2 ml-2"
+                        transition={{ delay: 0.65, type: "spring", stiffness: 250 }}
+                        className="inline-flex items-center gap-2 chip border-duo-orange-dark bg-duo-orange-light text-duo-orange-dark text-sm px-3 py-1.5 mb-2 ml-2"
                       >
                         <span>↩</span>
-                        <span className="font-black">tentou {attempts} vezes</span>
+                        <span className="font-bold">tentou {attempts} vez{attempts > 1 ? "es" : ""}</span>
                       </motion.div>
                     )}
                   </motion.div>
@@ -811,7 +829,7 @@ export function WarRoom({ incident, isDaily }: Props) {
 
               <div className="sticky bottom-0 left-0 right-0 bg-duo-cream/95 backdrop-blur-sm border-t-2 border-duo-line p-4">
                 <div className="max-w-2xl mx-auto">
-                  <button onClick={handleContinue} className={`duo-btn w-full ${feedback.correct ? "duo-green" : "duo-red"}`}>
+                  <button onClick={handleContinue} className="duo-btn w-full duo-green">
                     {isBoss && phaseIdx < incident.phases!.length - 1 ? "próxima fase →" : "continuar"}
                   </button>
                 </div>
@@ -824,6 +842,60 @@ export function WarRoom({ incident, isDaily }: Props) {
 
       {/* Confete on correct */}
       {step === "feedback" && feedback?.correct && <Confetti />}
+
+      {/* Exit confirmation modal */}
+      <AnimatePresence>
+        {showExitModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-duo-ink/40 backdrop-blur-sm flex items-center justify-center px-4"
+            onClick={() => setShowExitModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 24 }}
+              className="duo-card p-6 max-w-sm w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-center mb-3">
+                <Mascot expression="thinking" size={100} />
+              </div>
+              <h3 className="text-display text-2xl font-black text-duo-ink text-center mb-2 leading-tight">
+                Sair da missão?
+              </h3>
+              <p className="text-duo-ink-soft text-sm font-medium text-center mb-5 leading-snug">
+                Vai perder o progresso desse incident.
+              </p>
+              <div className="space-y-2.5">
+                <button
+                  onClick={() => {
+                    playSound("page");
+                    stopAlarmLoop();
+                    window.location.href = "/";
+                  }}
+                  className="duo-btn duo-red w-full"
+                >
+                  Sair sem salvar
+                </button>
+                <button
+                  onClick={() => {
+                    playSound("tick");
+                    setShowExitModal(false);
+                  }}
+                  className="duo-btn duo-white w-full"
+                >
+                  Continuar resolvendo
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Result modal */}
       <AnimatePresence>

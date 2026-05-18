@@ -37,10 +37,8 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className={`${bricolage.variable} ${dmsans.variable} ${jetbrains.variable} ${serif.variable}`}>
-      <body className="font-sans antialiased text-gray-200 selection:bg-acid-500/30">
-        <div className="scan-overlay" />
-        <div className="vignette" />
-        <div className="relative z-10">{children}</div>
+      <body className="font-sans antialiased text-duo-ink bg-duo-cream selection:bg-duo-yellow selection:text-duo-ink">
+        {children}
       </body>
     </html>
   );

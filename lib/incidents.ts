@@ -1,6 +1,63 @@
 import type { Incident } from "./types";
 
-export const INCIDENTS: Incident[] = [
+// Pedagogical mission order: easy → hard. Player meets one service at a time first,
+// then conceptual stuff (metrics, inference, hardware), then advanced (Bedrock,
+// responsibility AI, boss).
+const MISSION_ORDER: string[] = [
+  // ── Tier 0 · Junior (minLevel 0) — single service, clear fix ──
+  "polly-mispronounce",   // 1. Polly · Pronunciation Lexicon
+  "translation-domain",   // 2. Translate · Custom Terminology
+  "lex-fallback",         // 3. Lex · sample utterances
+  "sentiment-flip",       // 4. Comprehend · LanguageCode
+  "transcribe-medical",   // 5. Transcribe Medical (variant)
+  "personalize-cold",     // 6. Personalize · cold-start recipe
+
+  // ── Tier 1 · Mid (minLevel 1) — config drift, inference types, algorithm choice ──
+  "rekognition-paranoid", // 7. Rekognition · MinConfidence too low
+  "image-mod-fail",       // 8. Rekognition · config drift opposite case
+  "endpoint-too-expensive", // 9. Real-time vs Async vs Serverless
+  "wrong-algorithm",      // 10. Classification vs Regression
+  "training-eternal",     // 11. Trainium vs P4d
+
+  // ── Tier 2 · Senior (minLevel 2) — metrics, RAG, cost optimization ──
+  "forecast-metrics-lie", // 12. MAE/RMSE/R²
+  "fraud-99-percent",     // 13. Class balance + recall/F1
+  "rag-stale",            // 14. RAG + IAM + monitoring
+  "cost-explosion",       // 15. Loop + Opus/Haiku trade-off
+
+  // ── Tier 3 · Staff (minLevel 3) — Bedrock, security, responsible AI ──
+  "hallucination",        // 16. Bedrock Guardrails
+  "pii-leak",             // 17. PII + LGPD
+  "bias",                 // 18. Proxy bias (responsible AI)
+
+  // ── Boss ──
+  "the-cascade",          // 19. Cascading failure
+];
+
+// Override minLevel per mission to enforce progression
+const MISSION_LEVEL: Record<string, number> = {
+  "polly-mispronounce": 0,
+  "translation-domain": 0,
+  "lex-fallback": 0,
+  "sentiment-flip": 0,
+  "transcribe-medical": 0,
+  "personalize-cold": 0,
+  "rekognition-paranoid": 1,
+  "image-mod-fail": 1,
+  "endpoint-too-expensive": 1,
+  "wrong-algorithm": 1,
+  "training-eternal": 1,
+  "forecast-metrics-lie": 2,
+  "fraud-99-percent": 2,
+  "rag-stale": 2,
+  "cost-explosion": 2,
+  "hallucination": 3,
+  "pii-leak": 3,
+  "bias": 3,
+  "the-cascade": 3,
+};
+
+const ALL_INCIDENTS: Incident[] = [
   // ============================================================
   // SEV-1: The Hallucinator
   // ============================================================
@@ -13,6 +70,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#war-room-helix",
     desc: "São 3h05 da madrugada. Teu celular vibra feito louco — o canal #war-room-helix tá pegando fogo. A Helix Labs (saúde digital) fez deploy do chatbot médico há 5 minutos. Os primeiros tickets chegaram dizendo que o bot mandou tomar 80mg de ibuprofeno (a dose certa é 8mg). O time legal de um cliente já encaminhou print da conversa pro email do CEO. Tá só você, o servidor e três horas até o time da Europa acordar.",
     short: "Bedrock alucinando · resposta médica perigosa",
+    slackRecap: "Confirmado: o deploy de hoje (v2.4.1) removeu as <b>regras de segurança</b> do prompt E o <b>Bedrock Guardrails</b> tá desabilitado nesse endpoint. O bot tá respondendo qualquer coisa sem filtro.",
     ratePerMin: 412,
     initialCost: 5847,
     initialElapsed: 14 * 60 + 32,
@@ -67,6 +125,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#war-room-trustly",
     desc: "Trustly Bank, 3h08 da manhã. O Slack #war-room-trustly começou a explodir quando a equipe de auditoria detectou um padrão estranho: depois do último deploy, o bot de atendimento começou a citar dados pessoais dos clientes nas respostas. CPF, número de cartão, RG — tudo em texto puro. O jurídico acordou na mesa, dizendo \"a LGPD vai ralar a gente\". O CEO ligou pro CTO. O CTO ligou pra ti.",
     short: "PII vazando em respostas do bot · LGPD risk",
+    slackRecap: "Confirmado: o novo prompt manda o bot <b>'personalizar usando dados do cliente'</b>, e <b>não tem filtro de PII</b> antes da resposta. Já vazou CPF de 47 clientes em 2h. LGPD ralando.",
     ratePerMin: 680,
     initialCost: 9120,
     initialElapsed: 11 * 60 + 8,
@@ -120,6 +179,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#ml-fairness",
     desc: "Quinta-feira, 9h. Tu abre o LinkedIn e vê uma reportagem do Estadão circulando: 'Sistema de IA de imobiliária aprova 87% dos pedidos de bairros nobres e 4% das periferias'. Tua cliente. O time legal marcou call pras 10h. O modelo é o sistema de pontuação de crédito imobiliário que entrou em produção há 6 meses — alguém precisa entender o que aconteceu antes do call, e o histórico recente do treinamento aponta pra um problema no dataset.",
     short: "Personalize discriminando por CEP · viés racial",
+    slackRecap: "Confirmado: o modelo usa <b>CEP</b> como feature principal (importância 0,42). O dataset tem 87% das aprovações vindas da zona sul nobre — periferia mal representada. <b>CEP virou proxy de raça</b>.",
     ratePerMin: 90,
     initialCost: 14200,
     initialElapsed: 48 * 60,
@@ -173,6 +233,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#finance-alert",
     desc: "Terça-feira, 14h22. O CFO abre o Cost Explorer da AWS pra preparar o report mensal pro board. Número na tela: $84.000 projetados pra este mês. Mês passado foi $9.000. Ele vai direto pro Slack: 'pessoal, alguém pode explicar isso até as 15h?'. O Ricardo (SRE) pinga teu nick. Tu olha o gráfico: o pico começou exatamente quando ativaram o auto-resposta de email. Bedrock invocado milhares de vezes por hora.",
     short: "Custo Bedrock explodiu 9x · loop infinito?",
+    slackRecap: "Confirmado: o auto-resposta de email entrou em <b>loop infinito</b> (bot responde → email volta como bounce → bot responde de novo). 1.247 sessões em loop. Pior: tá usando <b>Claude Opus</b> em FAQ simples (60× mais caro que Haiku).",
     ratePerMin: 140,
     initialCost: 18400,
     initialElapsed: 6 * 60 + 22,
@@ -226,6 +287,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#support-eng",
     desc: "Quarta-feira, 14h45. O time de suporte percebeu há uma semana: o chatbot tá dando respostas de manual que foi descontinuado faz tempo. Cliente liga: 'o bot disse pra mexer no menu Configurações > Avançado, mas virou Settings > Pro há 3 meses'. Ninguém priorizou investigar até hoje, quando um cliente premium ameaçou cancelar o contrato. Tu pegou o ticket pra entender por que a base de conhecimento (RAG) tá tão atrasada.",
     short: "Knowledge Base com documento desatualizado",
+    slackRecap: "Confirmado: a tarefa de sincronizar a base RAG tá <b>falhando há 94 dias</b> por permissão de IAM revogada na auditoria. Nenhum alarme configurado. Bot continua respondendo com docs de 3 meses atrás.",
     ratePerMin: 60,
     initialCost: 3400,
     initialElapsed: 32 * 60,
@@ -278,6 +340,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#medtech-urgent",
     desc: "Quinta-feira, 10h14. Email URGENT do CTO da ClinicAI. O app deles transcreve consultas médicas em tempo real pra gerar prontuário automático. Funcionou bem por seis meses. Mas ontem aconteceu o pior: o médico ditou '5 miligramas de dipirona', o app transcreveu '50 mg', o paciente tomou a dose errada e teve reação adversa. Felizmente nada grave. Mas o jurídico tá em pânico e o CEO marcou call pra daqui 2 horas.",
     short: "Transcribe genérico em contexto médico",
+    slackRecap: "Confirmado: o app tá usando <b>Transcribe Standard (genérico)</b>, sem vocabulário customizado. Erro de transcrição em 18,4% das palavras médicas. A AWS tem o <b>Transcribe Medical</b> que faz isso com ~3% de erro.",
     ratePerMin: 300,
     initialCost: 7800,
     initialElapsed: 18 * 60 + 12,
@@ -330,6 +393,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#intl-launch",
     desc: "Sexta-feira, 12h. A GameStudio acabou de lançar o novo MMORPG globalmente. 2 milhões de pré-downloads. Reviewers começaram a postar print da tradução pt-BR: 'headshot' virou 'tiro na cabeça', 'crit chance' virou 'chance crítica', 'DPS' virou 'departamento de polícia'. O subreddit do jogo tá rindo. O time de marketing tá gritando 'arruma isso AGORA'. Tu abriu o ticket: o Translate da AWS tá rodando, mas alguma coisa não tá certa.",
     short: "Translate sem custom terminology · gaming",
+    slackRecap: "Confirmado: o Translate tá rodando sem nenhum <b>glossário customizado</b>. Tem um arquivo CSV com 340 termos gaming preparado no S3 — só falta carregar como Custom Terminology no Translate.",
     ratePerMin: 25,
     initialCost: 850,
     initialElapsed: 120 * 60,
@@ -380,6 +444,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#trust-and-safety",
     desc: "Quinta-feira, 15h30. Plataforma social com 2 milhões de usuários. Time de Trust & Safety em alerta: um post com imagem explicitamente violenta tá circulando, foi denunciado 47 vezes em 20 minutos, e o sistema automático NÃO bloqueou. A foto já apareceu reportada no TikTok e Instagram também. A diretoria perguntou no Slack: 'cadê a IA de moderação?'. Você abre o painel do Rekognition pra entender por que a foto passou batida.",
     short: "Rekognition moderação labels desconfiguradas",
+    slackRecap: "Confirmado: alguém mudou o <b>threshold de moderação</b> de 80% pra 99% direto pelo console (sem PR, sem código). Resultado: 14.221 imagens duvidosas passaram sem revisão nas últimas 24h.",
     ratePerMin: 520,
     initialCost: 11800,
     initialElapsed: 22 * 60 + 45,
@@ -433,6 +498,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#war-room-CEO-watching",
     desc: "23h46. Black Friday. O e-commerce tá processando o maior volume da história — $4.000 em vendas por SEGUNDO. Aí o site começa a engasgar. Primeiro o chatbot entra em loop infinito. Depois a base de conhecimento estoura. O filtro de PII bate no limite. O CloudFront começa a retornar erro 503. Cascata clássica. O CEO mandou DM: 'qualquer coisa que precisarem, façam AGORA'. CFO no Slack: 'a cada minuto são $240k'. Tu é o on-call. Boa sorte.",
     short: "BOSS · 3 fases · cascading failure em todo o stack AI",
+    slackRecap: "Black Friday tá derretendo tudo. <b>Bedrock em throttling</b>, base de conhecimento em timeout, Comprehend rate-limited, CloudFront 503. Lambda no limite de concurrency, 40 mil mensagens na DLQ. <b>Estancar o sangramento primeiro.</b>",
     ratePerMin: 1850,
     initialCost: 42000,
     initialElapsed: 4 * 60 + 12,
@@ -552,6 +618,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#war-room-reviewhub",
     desc: "Quarta-feira, 14h. O all-hands semanal acabou de terminar e a Maria, PM do ReviewHub, ainda tá processando o que viu: o dashboard de NPS que ela mostrou pro CEO indica que 90% das reviews da última semana são NEGATIVAS. Aí ela abre o app pra conferir: 'amei o produto', 'chegou rapidinho', 'recomendo demais, comprei pra minha mãe' — todas com 5 estrelas. Algo tá MUITO errado entre o que o cliente escreve e o que o dashboard mostra. O Slack #war-room-reviewhub vibrou: 'precisamos entender isso antes da reunião do board na sexta'.",
     short: "Comprehend retornando NEGATIVE pra reviews 5 estrelas",
+    slackRecap: "Confirmado: o Comprehend tá sendo chamado com <code>LanguageCode='en'</code>, mas 96% das reviews estão em <b>português</b>. Sentimento é dependente do idioma — por isso 'amei o produto' vira NEGATIVE.",
     ratePerMin: 90,
     initialCost: 480,
     initialElapsed: 8 * 60,
@@ -602,6 +669,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#war-room-audioready",
     desc: "Segunda-feira, 8h21. Tu abre o Slack e o canal #war-room-audioready tem 12 mensagens novas. A AudioReady (startup de audiobooks) lançou uma coleção sobre carreira em tech. Os primeiros reviewers começaram a dar 1 estrela: 'narrador não sabe ler nada de tecnologia'. Print: a voz da Polly tá lendo 'Kubernetes' como 'cubernetes', 'PyTorch' como 'pee-torch', 'Docker' como 'doquér'. O editor disse que desistiu de revisar manualmente — tem 47 audiobooks na fila. CEO quer fix antes do final do dia.",
     short: "Polly pronunciando termos técnicos errado",
+    slackRecap: "Confirmado: o Polly tá rodando sem <b>Pronunciation Lexicon</b>. Tem um lexicon com 47 termos tech (Kubernetes, Docker, PyTorch) já criado na conta — mas <b>nunca foi anexado</b> nas chamadas.",
     ratePerMin: 40,
     initialCost: 260,
     initialElapsed: 22 * 60,
@@ -651,6 +719,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#war-room-recsys",
     desc: "Sexta-feira, 11h42. ShopMaster (marketplace de moda) acabou de fechar uma campanha de aquisição que dobrou os usuários novos em 2 semanas. Time de growth comemorando — até olhar as métricas de engajamento. Click-through caiu de 4,8% pra 1,2%. Cesta média desabou. O CMO acordou o time de dados: 'algo tá errado'. Você abre o app: pra cada usuário novo, o sistema de recomendação mostra exatamente os mesmos 3 produtos. Problema clássico de recomendação.",
     short: "Personalize recomendando os 3 mesmos pra todos",
+    slackRecap: "Confirmado: a solução do Personalize tá usando o algoritmo <b>HRNN</b> (antigo, não trata cold-start). 61% dos usuários novos têm menos de 3 interações — por isso todo mundo recebe os 3 itens top globais.",
     ratePerMin: 80,
     initialCost: 580,
     initialElapsed: 16 * 60,
@@ -701,6 +770,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#war-room-bot",
     desc: "Quinta-feira, 15h18. A Telecom XYZ implementou um chatbot de atendimento há 1 mês com a promessa de reduzir 70% dos tickets humanos. O time que construiu o bot fez deploy e saiu de férias. Realidade hoje: 61% das conversas terminam com 'desculpe, não entendi', os clientes ligam pro 0800 frustrados, o backlog do suporte humano triplicou. O CMO marcou call urgente pras 17h. Você abriu o painel do Lex pra investigar antes da reunião.",
     short: "Lex respondendo 'desculpe não entendi' em 61% dos casos",
+    slackRecap: "Confirmado: cada intent do Lex tem só <b>2 frases-exemplo</b>. A AWS recomenda <b>15-25 utterances</b> por intent. Qualquer variação do cliente ('tô com problema', 'meu sinal sumiu') cai no fallback.",
     ratePerMin: 110,
     initialCost: 720,
     initialElapsed: 19 * 60,
@@ -751,6 +821,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#war-room-content-mod",
     desc: "Quinta-feira, 9h15. PhotoShare (rede social de fotos) acordou em estado de pânico. Um update foi pra produção ontem às 17h. Desde então, 80% das fotos enviadas tão sendo bloqueadas como 'inadequadas'. Pôr-do-sol: bloqueado. Foto de bebê: bloqueada. Churrasco em família: bloqueado. Suporte recebeu 1.200 tickets de manhã. App rating no Google Play caiu de 4,6 pra 2,1 em uma noite. Você é a primeira pessoa do time tech a chegar — precisa entender e resolver antes do CEO acordar.",
     short: "Rekognition bloqueando fotos normais como NSFW",
+    slackRecap: "Confirmado: o <b>MinConfidence</b> do Rekognition foi alterado de 80 pra 30 ontem via console. Threshold tão baixo flagra paisagens como 'Suggestive' (34%) e bebês como 'Suggestive' (33%). 80% das fotos legítimas bloqueadas.",
     ratePerMin: 280,
     initialCost: 1840,
     initialElapsed: 12 * 60 + 40,
@@ -809,6 +880,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#war-room-fraud",
     desc: "Sexta-feira, 13h. O CEO do BancoQuanta agendou uma call pras 14h com um único item de pauta: 'explicar o prejuízo de $2,1M com fraudes no mês'. Na sala ao lado, o Data Scientist da equipe tá indignado: 'mas o modelo tem 99,4% de acurácia, eu medi! Funcionou no treinamento!'. O Risk Officer responde com cansaço: 'então me explica como passaram 950 fraudes este mês'. Tem 1 hora pra entender o que tá acontecendo. Você abre as métricas do modelo.",
     short: "Modelo com 99% acurácia · empresa perdendo $2M/mês em fraude",
+    slackRecap: "Confirmado: o dataset é <b>99% legítimo / 1% fraude</b>. O modelo foi otimizado pra <b>accuracy</b> e aprendeu a quase nunca dizer 'fraude' — capturou só 50 de 1000 fraudes reais (Recall = 5%). <b>Accuracy 99,4% é matemática enganosa, não detecção</b>.",
     ratePerMin: 280,
     initialCost: 2840,
     initialElapsed: 24 * 60,
@@ -862,6 +934,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#war-room-cfo",
     desc: "Segunda-feira, 1h14 da manhã. CFO da ScanX (startup de radiologia digital) deixou print no Slack do time de tech: a fatura de SageMaker do mês foi de $14.000 — em UM endpoint só. 'Pessoal, ou cortamos 60% disso até sexta, ou desligamos o produto'. Quem leu primeiro foi você, o tech lead. O contexto: o modelo analisa raio-X pra dar diagnóstico assistido, médicos aceitam esperar até 5 minutos pelo resultado, mas o endpoint fica ligado 24/7 — 61% do tempo ocioso. Você precisa entender as opções de inferência da AWS rapidamente.",
     short: "Endpoint Real-time queimando $14k/mês · ocioso 61% do tempo",
+    slackRecap: "Confirmado: o endpoint tá em modo <b>Real-time</b> (cobra 24/7 mesmo ocioso). GPU fica 14% utilizado em média, 61% do tempo o endpoint não recebe quase nada. O SLA dos médicos permite até <b>5 minutos</b> de latência.",
     ratePerMin: 30,
     initialCost: 14200,
     initialElapsed: 20 * 60,
@@ -914,6 +987,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#war-room-supply",
     desc: "Segunda-feira pós-Black Friday, 9h. Time da PrintShop entra na call de post-mortem com a expressão de quem já passou por isso: é o TERCEIRO ano consecutivo que acontece. Os cartuchos de tinta acabaram às 8h da manhã da Black Friday. $400 mil em vendas perdidas só nesse SKU. O modelo de previsão de demanda foi 'validado' como bom (MAE=12, parece OK), mas RMSE=89 e R²=0,42 contam outra história. Time de supply, dev e dados sentaram juntos: 'precisamos entender por que o modelo erra SEMPRE em data sazonal'.",
     short: "Previsão de demanda falha em outliers · MAE engana sem RMSE/R²",
+    slackRecap: "Confirmado: MAE=12 enganou o time, mas <b>RMSE=89</b> (7× maior!) indica outliers grandes, e <b>R²=0,42</b> indica que o modelo não captura o padrão. Erros concentrados em Black Friday, Natal, volta às aulas — <b>sazonalidade</b> que o modelo linear não pega.",
     ratePerMin: 50,
     initialCost: 4200,
     initialElapsed: 28 * 60,
@@ -965,6 +1039,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#war-room-ml",
     desc: "Terça-feira, 11h42. A Karen, PM da ChurnTech (SaaS B2B), abriu o Slack do time de ML com uma pergunta inocente: 'gente, recebi os resultados do novo modelo de churn, mas tem uns valores estranhos — tipo, o cliente u-12500 tem −18% de chance de cancelar, e o u-12502 tem 141%. Como eu apresento isso pro CEO?'. Silêncio no canal. Um DS sênior responde só com 😬. O modelo foi treinado por um DS júnior que entrou esse mês, e ele escolheu o algoritmo errado pro tipo de problema. Você foi chamado pra fazer review e corrigir.",
     short: "Linear regression em target binário · outputs fora de [0,1]",
+    slackRecap: "Confirmado: o DS júnior escolheu <b>Regressão Linear</b> pra um problema binário (churn 0/1). Regressão gera qualquer número real — <b>23% das predições</b> saíram fora do intervalo [0,1]. Algoritmo errado pro tipo de problema.",
     ratePerMin: 60,
     initialCost: 1200,
     initialElapsed: 13 * 60,
@@ -1016,6 +1091,7 @@ export const INCIDENTS: Incident[] = [
     slack: "#war-room-finops",
     desc: "Quarta-feira, 7h14. CFO da GenLab (startup de IA generativa) entrou na call mensal de finance review e jogou na tela: $85.000 em treinamento de modelo este mês. 'Eu preciso de uma redução de 40% até o final do mês'. O time tá fazendo fine-tuning de um LLM custom em máquinas P4d (8 GPUs A100 por máquina, $32/hora). Cada run leva 72h e custa quase $10k. O lead de ML te chamou: 'precisamos descobrir uma forma de economizar SEM perder qualidade no treino'. Sua missão: investigar as opções e propor algo concreto.",
     short: "Training em P4d (A100) caro · existe alternativa nativa AWS",
+    slackRecap: "Confirmado: o time tá usando <b>P4d (8× GPU A100)</b> a $32/hora. A AWS tem o chip <b>Trainium</b> ($21,50/hora, <b>35% mais barato</b>) com performance equivalente em transformers e suporte nativo pra PyTorch. Sem reescrever modelo.",
     ratePerMin: 130,
     initialCost: 9470,
     initialElapsed: 30 * 60,
@@ -1058,6 +1134,25 @@ export const INCIDENTS: Incident[] = [
     examNote: "<b>Trainium vs Inferentia é pergunta clássica de prova.</b> Memoriza: <code>Trn</code> = <b>tr</b>aining, <code>Inf</code> = <b>inf</b>erence. Mesma raiz da palavra. Trainium economiza no treino, Inferentia economiza em inference. Confundir é erro fácil de evitar.",
   },
 ];
+
+// Apply pedagogical order + minLevel override. Missions not in MISSION_ORDER
+// (shouldn't happen, but defensive) are appended at the end.
+export const INCIDENTS: Incident[] = (() => {
+  const inOrder: Incident[] = [];
+  const seen = new Set<string>();
+  for (const id of MISSION_ORDER) {
+    const inc = ALL_INCIDENTS.find((i) => i.id === id);
+    if (inc) {
+      inOrder.push({ ...inc, minLevel: MISSION_LEVEL[id] ?? inc.minLevel });
+      seen.add(id);
+    }
+  }
+  // Append any incidents not in order (defensive)
+  for (const inc of ALL_INCIDENTS) {
+    if (!seen.has(inc.id)) inOrder.push(inc);
+  }
+  return inOrder;
+})();
 
 export function getIncidentById(id: string): Incident | undefined {
   return INCIDENTS.find((i) => i.id === id);

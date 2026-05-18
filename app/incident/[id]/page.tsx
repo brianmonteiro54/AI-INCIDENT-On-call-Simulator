@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { ArrowLeft } from "lucide-react";
 import { AchievementToasts } from "@/components/AchievementToasts";
 import { WarRoom } from "@/components/WarRoom";
+import { Mascot } from "@/components/Mascot";
 import { getIncidentById } from "@/lib/incidents";
 import { useGame } from "@/lib/store";
 import { getLevelIdx } from "@/lib/levels";
@@ -13,7 +15,6 @@ import { getLevelIdx } from "@/lib/levels";
 export default function IncidentPage() {
   const params = useParams();
   const search = useSearchParams();
-  const router = useRouter();
   const player = useGame((s) => s.player);
   const hydrated = useGame((s) => s.hydrated);
   const [mounted, setMounted] = useState(false);
@@ -26,20 +27,29 @@ export default function IncidentPage() {
 
   if (!mounted || !hydrated) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-mono text-xs text-gray-500">
-        ● connecting to incident channel…
+      <div className="min-h-screen bg-duo-cream flex items-center justify-center">
+        <div className="text-center">
+          <Mascot expression="thinking" size={120} />
+          <div className="mt-3 text-duo-ink-soft font-bold text-sm">carregando incidente…</div>
+        </div>
       </div>
     );
   }
 
   if (!incident) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-6">
-        <div className="text-center">
-          <div className="text-mono text-[10px] uppercase tracking-[0.3em] text-blood-400 mb-3">404 · not found</div>
-          <h1 className="text-display text-5xl sm:text-7xl font-black text-white mb-4">no signal.</h1>
-          <p className="text-gray-500 mb-8 max-w-md mx-auto">esse incidente não existe ou foi resolvido por outra pessoa.</p>
-          <Link href="/" className="btn-ghost">← back to dashboard</Link>
+      <div className="min-h-screen bg-duo-cream flex items-center justify-center px-6">
+        <div className="text-center max-w-md">
+          <Mascot expression="sad" size={140} className="mx-auto mb-4" />
+          <div className="text-xs font-black uppercase tracking-widest text-duo-red-dark mb-2">404 · não encontrado</div>
+          <h1 className="text-display text-3xl sm:text-4xl font-black text-duo-ink mb-3">missão não existe</h1>
+          <p className="text-duo-ink-soft mb-6 font-medium">
+            essa missão não existe ou já foi resolvida por outra pessoa.
+          </p>
+          <Link href="/" className="duo-btn duo-green inline-flex items-center gap-2">
+            <ArrowLeft className="w-5 h-5" />
+            <span>voltar pra home</span>
+          </Link>
         </div>
       </div>
     );
@@ -48,14 +58,18 @@ export default function IncidentPage() {
   const lvlIdx = getLevelIdx(player.xp);
   if (incident.minLevel > lvlIdx) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-6">
+      <div className="min-h-screen bg-duo-cream flex items-center justify-center px-6">
         <div className="text-center max-w-md">
-          <div className="text-mono text-[10px] uppercase tracking-[0.3em] text-amber-400 mb-3">access denied · level gate</div>
-          <h1 className="text-display text-5xl sm:text-7xl font-black text-white mb-4">not yet.</h1>
-          <p className="text-gray-400 mb-8">
-            esse incidente requer <b className="text-amber-300">level {incident.minLevel + 1}</b> ou superior. continua acumulando XP nos cases anteriores.
+          <Mascot expression="thinking" size={140} className="mx-auto mb-4" />
+          <div className="text-xs font-black uppercase tracking-widest text-duo-yellow-dark mb-2">🔒 missão bloqueada</div>
+          <h1 className="text-display text-3xl sm:text-4xl font-black text-duo-ink mb-3">ainda não!</h1>
+          <p className="text-duo-ink-soft mb-6 font-medium">
+            essa missão precisa de <b className="text-duo-yellow-dark">level {incident.minLevel + 1}+</b>. continua resolvendo as missões anteriores pra ganhar XP.
           </p>
-          <Link href="/" className="btn-ghost">← back to dashboard</Link>
+          <Link href="/" className="duo-btn duo-green inline-flex items-center gap-2">
+            <ArrowLeft className="w-5 h-5" />
+            <span>voltar pra home</span>
+          </Link>
         </div>
       </div>
     );

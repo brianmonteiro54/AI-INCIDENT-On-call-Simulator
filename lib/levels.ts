@@ -1,11 +1,11 @@
-import type { LevelDef, Grade, Severity } from "./types";
+import type { LevelDef, Severity } from "./types";
 
 export const LEVELS: LevelDef[] = [
-  { name: "Junior", min: 0, max: 500, perks: "casos SEV-2 e SEV-3" },
-  { name: "Mid", min: 500, max: 1500, perks: "desbloqueia casos SEV-1" },
-  { name: "Senior", min: 1500, max: 3500, perks: "casos avançados" },
-  { name: "Staff", min: 3500, max: 8000, perks: "BOSS incidents" },
-  { name: "Principal", min: 8000, max: Infinity, perks: "mestre supremo" },
+  { name: "Junior", min: 0, max: 400, perks: "missões básicas — 1 serviço por vez" },
+  { name: "Mid", min: 400, max: 1200, perks: "desbloqueia algoritmos e inferência" },
+  { name: "Senior", min: 1200, max: 2400, perks: "métricas e otimização de custo" },
+  { name: "Staff", min: 2400, max: 4500, perks: "Bedrock, segurança e IA responsável" },
+  { name: "Principal", min: 4500, max: Infinity, perks: "mestre supremo · todas missões" },
 ];
 
 export function getLevel(xp: number): LevelDef {
@@ -38,43 +38,6 @@ export function formatMoney(n: number): string {
   if (n >= 1_000_000) return "$" + (n / 1_000_000).toFixed(2) + "M";
   if (n >= 1_000) return "$" + n.toLocaleString();
   return "$" + Math.round(n);
-}
-
-export function gradeColor(g: Grade): string {
-  if (g === "A+" || g === "A") return "text-acid-400";
-  if (g === "A-" || g === "B") return "text-cyber-400";
-  if (g === "B-" || g === "C") return "text-amber-400";
-  if (g === "C-" || g === "D") return "text-orange-400";
-  return "text-blood-500";
-}
-
-export function gradeGlow(g: Grade): string {
-  if (g === "A+" || g === "A") return "shadow-[0_0_60px_rgba(52,211,153,0.5)]";
-  if (g === "A-" || g === "B") return "shadow-[0_0_60px_rgba(34,211,238,0.4)]";
-  if (g === "B-" || g === "C") return "shadow-[0_0_60px_rgba(251,191,36,0.4)]";
-  if (g === "C-" || g === "D") return "shadow-[0_0_60px_rgba(251,146,60,0.4)]";
-  return "shadow-[0_0_60px_rgba(255,51,85,0.5)]";
-}
-
-export function sevColor(s: Severity): string {
-  if (s === 0) return "text-fuchsia-400"; // boss
-  if (s === 1) return "text-blood-500";
-  if (s === 2) return "text-amber-400";
-  return "text-cyber-400";
-}
-
-export function sevBg(s: Severity): string {
-  if (s === 0) return "bg-fuchsia-500";
-  if (s === 1) return "bg-blood-500";
-  if (s === 2) return "bg-amber-400";
-  return "bg-cyber-400";
-}
-
-export function sevBgSoft(s: Severity): string {
-  if (s === 0) return "bg-fuchsia-500/10 border-fuchsia-500/30";
-  if (s === 1) return "bg-blood-500/10 border-blood-500/30";
-  if (s === 2) return "bg-amber-400/10 border-amber-400/30";
-  return "bg-cyber-400/10 border-cyber-400/30";
 }
 
 export function sevLabel(s: Severity): string {

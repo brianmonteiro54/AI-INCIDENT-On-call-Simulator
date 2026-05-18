@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { ArrowLeft, Flame, Upload, Check, RefreshCw, Trophy, Crown, Medal } from "lucide-react";
+import { ArrowLeft, Flame, Upload, Check, RefreshCw, Trophy, Crown, Medal, TrendingUp, Sparkles } from "lucide-react";
 import { useGame, bestGradeByIncident } from "@/lib/store";
 import { getLevel } from "@/lib/levels";
 import { playSound } from "@/lib/sound";
@@ -29,6 +29,15 @@ export default function LeaderboardPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [myRank, setMyRank] = useState<number | null>(null);
+
+  const myStats = useMemo(() => {
+    const best = bestGradeByIncident(history);
+    return {
+      completedCount: Object.keys(best).length,
+      aPlusCount: Object.values(best).filter((g) => g === "A+").length,
+    };
+  }, [history]);
 
   async function fetchBoard() {
     setLoading(true);
@@ -46,13 +55,20 @@ export default function LeaderboardPage() {
 
   useEffect(() => { fetchBoard(); }, []);
 
+  // Find player position in the loaded list
+  useEffect(() => {
+    if (!hydrated || !entries.length) {
+      setMyRank(null);
+      return;
+    }
+    const idx = entries.findIndex((e) => e.name === player.name && e.xp === player.xp);
+    setMyRank(idx >= 0 ? idx + 1 : null);
+  }, [entries, player.name, player.xp, hydrated]);
+
   async function submit() {
     if (submitting || !hydrated || player.xp === 0) return;
     setSubmitting(true);
     playSound("click");
-    const best = bestGradeByIncident(history);
-    const completedCount = Object.keys(best).length;
-    const aPlusCount = Object.values(best).filter((g) => g === "A+").length;
     try {
       const res = await fetch("/api/submit", {
         method: "POST",
@@ -61,8 +77,8 @@ export default function LeaderboardPage() {
           name: player.name,
           xp: player.xp,
           totalSaved: player.totalSaved,
-          completedCount,
-          aPlusCount,
+          completedCount: myStats.completedCount,
+          aPlusCount: myStats.aPlusCount,
           streak: player.streak,
         }),
       });
@@ -77,9 +93,13 @@ export default function LeaderboardPage() {
     }
   }
 
+  // Check if player should re-submit (their current XP is higher than the published one)
+  const myPublished = useMemo(() => entries.find((e) => e.name === player.name), [entries, player.name]);
+  const hasHigherScore = myPublished && player.xp > myPublished.xp;
+  const canSubmit = hydrated && player.xp > 0 && (!myPublished || hasHigherScore);
+
   return (
     <div className="min-h-screen bg-duo-cream">
-      {/* Top bar */}
       <header className="sticky top-0 z-30 bg-duo-cream/95 backdrop-blur-sm border-b-2 border-duo-line">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
           <Link href="/" onClick={() => playSound("page")} className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition">
@@ -93,7 +113,6 @@ export default function LeaderboardPage() {
         </div>
       </header>
 
-      {/* Hero card */}
       <section className="max-w-3xl mx-auto px-4 sm:px-6 pt-6">
         <div className="duo-card p-5 sm:p-6 flex items-center gap-4 sm:gap-5 bg-duo-yellow-light border-duo-yellow">
           <Mascot expression="celebrate" size={100} className="shrink-0" />
@@ -108,29 +127,73 @@ export default function LeaderboardPage() {
         </div>
       </section>
 
-      {/* Submit panel */}
+      {/* —— PLAYER STATUS CARD: shows current XP + position + submit button —— */}
       {hydrated && player.xp > 0 && (
         <section className="max-w-3xl mx-auto px-4 sm:px-6 mt-4">
-          <div className="duo-card p-4 flex items-center gap-4 flex-wrap">
-            <div className="flex-1 min-w-[180px]">
-              <div className="text-xs font-black uppercase tracking-widest text-duo-ink-soft mb-1">tua pontuação</div>
-              <div className="font-black text-duo-ink text-lg leading-tight">
-                {player.name} · <span className="text-duo-blue-dark tabular">{player.xp.toLocaleString()}</span> XP
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="duo-card p-4 sm:p-5 bg-white"
+          >
+            <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+              <div className="shrink-0 w-14 h-14 rounded-2xl bg-duo-blue-light border-2 border-duo-blue text-duo-blue-dark flex items-center justify-center font-black text-xl" style={{ borderBottomWidth: 4 }}>
+                {myRank ? `#${myRank}` : "?"}
               </div>
+              <div className="flex-1 min-w-[140px]">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-display text-lg font-black text-duo-ink">{player.name}</h3>
+                  {player.streak >= 3 && (
+                    <span className="text-duo-orange-dark text-xs font-bold flex items-center">
+                      <Flame className="w-3 h-3 fill-duo-orange" />{player.streak}
+                    </span>
+                  )}
+                </div>
+                <div className="text-duo-ink-soft text-xs font-bold flex items-center gap-2 flex-wrap mt-0.5">
+                  <span className="text-duo-blue-dark tabular text-sm">{player.xp.toLocaleString()} XP</span>
+                  <span className="text-duo-ink-faded">·</span>
+                  <span>{myStats.completedCount} resolvidos</span>
+                  {myStats.aPlusCount > 0 && (
+                    <>
+                      <span className="text-duo-ink-faded">·</span>
+                      <span className="text-duo-yellow-dark">⭐ {myStats.aPlusCount} A+</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              {canSubmit ? (
+                <button
+                  onClick={submit}
+                  disabled={submitting}
+                  className={`duo-btn duo-green flex items-center gap-2`}
+                >
+                  {submitting ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                  <span>{submitting ? "enviando…" : hasHigherScore ? "atualizar" : "publicar"}</span>
+                </button>
+              ) : myPublished ? (
+                <div className="duo-btn duo-white flex items-center gap-2 cursor-default">
+                  <Check className="w-5 h-5" />
+                  <span>publicado</span>
+                </div>
+              ) : null}
             </div>
-            <button
-              onClick={submit}
-              disabled={submitting || submitted}
-              className={`duo-btn ${submitted ? "duo-white" : "duo-green"} flex items-center gap-2`}
-            >
-              {submitted ? <Check className="w-5 h-5" /> : <Upload className="w-5 h-5" />}
-              <span>{submitted ? "enviado!" : submitting ? "enviando…" : "publicar"}</span>
-            </button>
-          </div>
+
+            <AnimatePresence>
+              {submitted && myRank !== null && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-3 pt-3 border-t-2 border-duo-line-soft flex items-center gap-2 text-duo-green-dark font-bold text-sm"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>tu está em <b>#{myRank}</b> no ranking global!</span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
         </section>
       )}
 
-      {/* Rankings */}
       <section className="max-w-3xl mx-auto px-4 sm:px-6 mt-6 pb-10">
         <div className="flex items-center gap-3 mb-5">
           <div className="h-1 flex-1 bg-duo-line rounded-full" />
@@ -172,7 +235,6 @@ export default function LeaderboardPage() {
                   transition={{ delay: i * 0.04 }}
                   className={`duo-card p-4 flex items-center gap-3 sm:gap-4 ${isMe ? "duo-card-selected" : ""}`}
                 >
-                  {/* Rank */}
                   {medalCfg ? (
                     <div className={`shrink-0 w-12 h-12 rounded-2xl ${medalCfg.bg} border-2 ${medalCfg.border} flex items-center justify-center text-2xl`}
                       style={{ borderBottomWidth: 4 }}>
@@ -185,9 +247,8 @@ export default function LeaderboardPage() {
                     </div>
                   )}
 
-                  {/* Name + meta */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                       <h3 className="text-display text-base sm:text-lg font-black text-duo-ink truncate">
                         {e.name}
                       </h3>
@@ -211,7 +272,6 @@ export default function LeaderboardPage() {
                     </div>
                   </div>
 
-                  {/* XP */}
                   <div className="text-right shrink-0">
                     <div className="font-black text-duo-blue-dark text-lg sm:text-xl tabular leading-none">
                       {e.xp.toLocaleString()}
@@ -227,7 +287,7 @@ export default function LeaderboardPage() {
         )}
 
         <div className="mt-6 text-center text-duo-ink-faded text-xs font-medium">
-          sem upstash, o ranking zera quando o servidor reinicia
+          critério: XP · desempate por A+ · resoluções · streak
         </div>
       </section>
     </div>

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ArrowRight, BookOpen, Home, Clock, DollarSign, Zap } from "lucide-react";
 import type { IncidentResult, Incident, Grade } from "@/lib/types";
 import { INCIDENTS } from "@/lib/incidents";
-import { formatTime, formatMoney } from "@/lib/levels";
+import { formatTime, formatMoney, getLevelIdx } from "@/lib/levels";
 import { useGame } from "@/lib/store";
 import { Mascot } from "./Mascot";
 import { playSound } from "@/lib/sound";
@@ -24,6 +24,7 @@ function gradeRank(g: Grade): number {
 
 export function ResultScreen({ result, incident, onClose }: Props) {
   const history = useGame((s) => s.history);
+  const player = useGame((s) => s.player);
 
   const tier = gradeRank(result.grade); // 0-8
 
@@ -39,7 +40,11 @@ export function ResultScreen({ result, incident, onClose }: Props) {
   }, [isGreat, isGood]);
 
   const completed = new Set(history.map((h) => h.id));
-  const nextIncident = INCIDENTS.find((i) => !completed.has(i.id) && i.id !== result.id);
+  const lvlIdx = getLevelIdx(player.xp + result.xp);
+  // Pick the next incident the player can actually access
+  const nextIncident =
+    INCIDENTS.find((i) => !completed.has(i.id) && i.id !== result.id && i.minLevel <= lvlIdx) ||
+    INCIDENTS.find((i) => !completed.has(i.id) && i.id !== result.id);
 
   const titleText =
     result.grade === "A+" ? "Perfeito!" :
@@ -205,7 +210,7 @@ export function ResultScreen({ result, incident, onClose }: Props) {
           <div className="duo-card p-5">
             <div className="text-xs font-black uppercase tracking-widest text-duo-blue-dark mb-3 flex items-center gap-2">
               <span>🧱</span>
-              SERVIÇOS AWS NESSE INCIDENT
+              TÓPICOS DESSE INCIDENT
             </div>
             <div className="space-y-3">
               {incident.services.map((s) => (
@@ -237,14 +242,24 @@ export function ResultScreen({ result, incident, onClose }: Props) {
             <ArrowRight className="w-5 h-5" />
           </Link>
         )}
-        <Link
-          href="/"
-          onClick={() => playSound("page")}
-          className="duo-btn duo-white w-full flex items-center justify-center gap-2"
-        >
-          <Home className="w-5 h-5" />
-          <span>voltar pra home</span>
-        </Link>
+        <div className="grid grid-cols-2 gap-3">
+          <Link
+            href="/"
+            onClick={() => playSound("page")}
+            className="duo-btn duo-white flex items-center justify-center gap-2"
+          >
+            <Home className="w-5 h-5" />
+            <span>home</span>
+          </Link>
+          <Link
+            href="/leaderboard"
+            onClick={() => playSound("page")}
+            className="duo-btn duo-white flex items-center justify-center gap-2"
+          >
+            <span>🏆</span>
+            <span>ranking</span>
+          </Link>
+        </div>
       </section>
 
       <style jsx global>{`
