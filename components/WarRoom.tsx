@@ -51,6 +51,19 @@ export function WarRoom({ incident, isDaily }: Props) {
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [quizSelectedIdx, setQuizSelectedIdx] = useState<number | null>(null);
   const [quizRevealed, setQuizRevealed] = useState(false);
+  const quizExplanationRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll quiz explanation into view when revealed — fixes mobile UX
+  // where the blue explanation card was rendered below the fold.
+  useEffect(() => {
+    if (quizRevealed && quizExplanationRef.current) {
+      // Wait a tick so the motion.div is in the DOM before scrolling
+      const t = setTimeout(() => {
+        quizExplanationRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+      return () => clearTimeout(t);
+    }
+  }, [quizRevealed]);
 
   // ── SHUFFLE QUIZ OPTIONS ──
   // Randomize the option order at mount time so the correct answer doesn't
@@ -1052,10 +1065,11 @@ export function WarRoom({ incident, isDaily }: Props) {
                 <AnimatePresence>
                   {quizRevealed && (
                     <motion.div
+                      ref={quizExplanationRef}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3 }}
-                      className={`duo-card p-4 mb-5 ${
+                      className={`duo-card p-4 mb-5 scroll-mt-20 ${
                         quizSelectedIdx === incident.quizQuestion.correctIdx
                           ? "duo-card-correct"
                           : "bg-duo-blue-light border-duo-blue"
