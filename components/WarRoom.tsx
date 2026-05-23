@@ -703,15 +703,15 @@ export function WarRoom({ incident, isDaily }: Props) {
                   </div>
                 </div>
 
-                {/* Wrong toast — appears after a wrong attempt */}
+                {/* Wrong toast — fixed bottom popup on mobile, inline on desktop */}
                 <AnimatePresence>
                   {wrongFeedback && (
                     <motion.div
-                      initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 0.95 }}
-                      exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 20, scale: 0.95 }}
                       transition={{ type: "spring", stiffness: 250, damping: 18 }}
-                      className="duo-card duo-card-wrong p-4 mb-4 flex items-center gap-3"
+                      className="duo-card duo-card-wrong p-4 flex items-center gap-3 fixed bottom-4 inset-x-4 z-50 shadow-2xl sm:static sm:inset-auto sm:z-auto sm:shadow-none sm:mb-4"
                     >
                       <div className="shrink-0 w-10 h-10 rounded-2xl bg-duo-red text-white flex items-center justify-center font-black text-xl">
                         ✗
