@@ -320,7 +320,7 @@ export function WarRoom({ incident, isDaily }: Props) {
 
         setSelectedAction(null);
         setStep("decide");
-        setTimeout(() => setWrongFeedback(null), 6000);
+        setTimeout(() => setWrongFeedback(null), 5000);
       }
     }, 500);
   }
