@@ -26,13 +26,15 @@ export const runtime = "nodejs";
 const TOTAL_MISSIONS = 19;
 const ABSOLUTE_XP_CAP = 12_000;
 const ABSOLUTE_SAVED_CAP = 50_000_000;
+// 30 min per mission × 19 missions = 34.2M ms. Cap at 100M as absolute hard ceiling.
+const ABSOLUTE_ELAPSED_MS_CAP = 100_000_000;
 const NAME_MAX_LEN = 16;
 const NAME_MIN_LEN = 1;
 
-// Min XP a real player could have per completed mission (low base × low speed × bad accuracy)
-// 100 × 0.5 × 0.4 = 20 XP. Floor at 10 (just in case).
+// Min XP a real player could have per completed mission (low base × bad accuracy + min speed bonus 15)
+// 100 × 0.4 + 15 = 55. Floor at 10 just in case.
 const MIN_XP_PER_MISSION = 10;
-// Max XP a real player could have per completed mission (high base × 1.5 speed × 1.0 acc + 30 + boss)
+// Max XP a real player could have per completed mission (high base × 1.0 acc + 60 invest + 50 quiz + 100 speed + boss 200)
 const MAX_XP_PER_MISSION = 600;
 
 // ── 2. RATE LIMIT (in-memory, per server instance) ───────────────────────────
@@ -113,6 +115,7 @@ export async function POST(req: NextRequest) {
     // Numeric coercion with hard caps
     const xp = Math.max(0, Math.min(ABSOLUTE_XP_CAP, Number(body.xp) || 0));
     const totalSaved = Math.max(0, Math.min(ABSOLUTE_SAVED_CAP, Number(body.totalSaved) || 0));
+    const totalElapsedMs = Math.max(0, Math.min(ABSOLUTE_ELAPSED_MS_CAP, Number(body.totalElapsedMs) || 0));
     const completedCount = Math.max(0, Math.min(TOTAL_MISSIONS, Number(body.completedCount) || 0));
     const aPlusCount = Math.max(0, Math.min(TOTAL_MISSIONS, Number(body.aPlusCount) || 0));
     const streak = Math.max(0, Math.min(TOTAL_MISSIONS, Number(body.streak) || 0));
@@ -147,6 +150,7 @@ export async function POST(req: NextRequest) {
       name,
       xp,
       totalSaved,
+      totalElapsedMs,
       completedCount,
       aPlusCount,
       streak,

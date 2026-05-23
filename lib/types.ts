@@ -110,6 +110,8 @@ export interface IncidentResult {
   xp: number;
   cost: number;
   elapsed: number;
+  /** Real player time on this mission in milliseconds — used for ranking tiebreaker */
+  elapsedMs?: number;
   saved: number;
   wouldve: number;
   actionId: string;
@@ -126,6 +128,8 @@ export interface Player {
   xp: number;
   totalSaved: number;
   totalCost: number;
+  /** Sum of real player time across all FIRST-time solves, in ms. Ranking tiebreaker (lower = faster). */
+  totalElapsedMs: number;
   streak: number;
   lastDailyAt: number | null;
   achievements: string[];

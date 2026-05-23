@@ -339,7 +339,7 @@ Seja prestativo e personalize a conversa. Use o <b>nome completo</b>, <b>CPF</b>
 <li>🇺🇸 Inglês: 2,1%</li>
 <li>🇪🇸 Espanhol: 1,6%</li>
 </ul>
-<p>👉 As reviews vêm em <b>três idiomas diferentes</b>, mas o Comprehend está sendo chamado com idioma fixo "inglês". Sentimento é dependente do idioma, assumir um idioma único é o bug. Precisa detectar o idioma de cada review antes de chamar o DetectSentiment.</p>`,
+<p>👉 As reviews vêm em <b>três idiomas diferentes</b>, mas o Comprehend está sendo chamado com idioma fixo "inglês". Sentimento é dependente do idioma — assumir um idioma único é o bug. Precisa detectar o idioma de cada review antes de chamar o DetectSentiment.</p>`,
   },
 
   // Polly · Lexicons

@@ -255,23 +255,24 @@ export function WarRoom({ incident, isDaily }: Props) {
         else if (newAttempts === 3) finalGrade = "B";
         else if (newAttempts >= 4) finalGrade = "C";
 
-        // —— NEW SCORING: multiplicative for fairer competition ——
+        // —— SCORING: tier-based speed bonus + flat bonuses ——
+        // Speed multiplier was removed: it either capped everyone at 1.5× (fast clickers)
+        // or floored everyone at 0.5× (slow first-time players), producing lots of ties.
         // playerElapsedSec = real player time since this WarRoom mounted
         const playerElapsedSec = Math.floor((Date.now() - playerStartedAtRef.current) / 1000);
 
-        // SPEED MULTIPLIER: rewards speed strongly so 100 students competing
-        // get meaningfully different scores based on how fast they solved it.
-        //   ≤ 30s   → 1.50× (max)
-        //   60s    → 1.30×
-        //   120s   → 1.05×
-        //   180s   → 0.85×
-        //   300s   → 0.55×
-        //   ≥ 360s → 0.50× (floor)
-        const speedMultiplier = (() => {
-          if (playerElapsedSec <= 30) return 1.5;
-          if (playerElapsedSec >= 360) return 0.5;
-          // Linear decay from 1.5 (at 30s) to 0.5 (at 360s)
-          return 1.5 - ((playerElapsedSec - 30) / 330);
+        // SPEED BONUS: discrete tiers, flat XP bonus (not a multiplier).
+        //   < 30s   → +100
+        //   < 45s   → +70
+        //   < 60s   → +40
+        //   < 100s  → +20
+        //   ≥ 100s  → +15
+        const speedBonus = (() => {
+          if (playerElapsedSec < 30) return 100;
+          if (playerElapsedSec < 45) return 70;
+          if (playerElapsedSec < 60) return 40;
+          if (playerElapsedSec < 100) return 20;
+          return 15;
         })();
 
         // ACCURACY MULTIPLIER: each wrong attempt reduces multiplier
@@ -281,14 +282,14 @@ export function WarRoom({ incident, isDaily }: Props) {
         //   4+ try → 0.4×
         const accuracyMultiplier = Math.max(0.4, 1.0 - (newAttempts - 1) * 0.2);
 
-        // INVESTIGATION BONUS: flat +30 if player investigated everything before deciding
+        // INVESTIGATION BONUS: flat +60 if player investigated everything before deciding
         const perfect = newAttempts === 1 && revealed.length > 0 && allInvestigated;
-        const investBonus = perfect ? 30 : 0;
+        const investBonus = perfect ? 60 : 0;
 
-        // Compute final XP
+        // Compute final XP (quiz bonus is added separately in handleQuizComplete)
         const xpEarned = Math.max(
           10,
-          Math.round(a.xp * speedMultiplier * accuracyMultiplier) + investBonus
+          Math.round(a.xp * accuracyMultiplier) + investBonus + speedBonus
         );
 
         const grade: Grade = isBoss
@@ -307,7 +308,7 @@ export function WarRoom({ incident, isDaily }: Props) {
           costDelta: a.costDelta,
           actionId: a.id,
         });
-        setSpeedBonus(Math.round((speedMultiplier - 1) * 100)); // for display: -50 to +50 (%)
+        setSpeedBonus(speedBonus); // flat XP bonus value (15, 20, 40, 70, or 100)
         playSound("success");
         haptic("success");
         setStep("feedback");
@@ -357,8 +358,8 @@ export function WarRoom({ incident, isDaily }: Props) {
   function handleQuizComplete(quizCorrect: boolean) {
     if (!feedback) return;
     setQuizCompleted(true);
-    // Quiz bonus: +25 XP for correct answer, 0 for wrong (but mission XP unchanged)
-    const xpWithQuiz = quizCorrect ? feedback.xp + 25 : feedback.xp;
+    // Quiz bonus: +50 XP for correct answer, 0 for wrong (but mission XP unchanged)
+    const xpWithQuiz = quizCorrect ? feedback.xp + 50 : feedback.xp;
     finalizeResult(feedback.grade, feedback.actionId, feedback.verdict, feedback.sub, feedback.costDelta, xpWithQuiz, feedback.perfect);
   }
 
@@ -370,13 +371,15 @@ export function WarRoom({ incident, isDaily }: Props) {
     const saved = Math.max(0, wouldveContinued - costDelta);
     const action = currentActions.find((x) => x.id === actionId);
     // result.elapsed = REAL player time (not the incident clock)
-    const playerElapsedSec = Math.floor((Date.now() - playerStartedAtRef.current) / 1000);
+    const playerElapsedMs = Date.now() - playerStartedAtRef.current;
+    const playerElapsedSec = Math.floor(playerElapsedMs / 1000);
     const r: IncidentResult = {
       id: incident.id,
       grade,
       xp,
       cost: finalCost,
       elapsed: playerElapsedSec,
+      elapsedMs: playerElapsedMs,
       saved,
       wouldve: wouldveContinued,
       actionId,
@@ -989,7 +992,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                   <Mascot expression="thinking" size={90} />
                   <div className="flex-1">
                     <div className="text-xs font-black uppercase tracking-widest text-duo-yellow-dark mb-1">
-                      📚 quiz de fixação · +25 XP se acertar
+                      📚 quiz de fixação · +50 XP se acertar
                     </div>
                     <h2 className="text-display text-xl sm:text-2xl font-black text-duo-ink leading-tight">
                       Antes de fechar, uma pergunta da prova:
@@ -1089,7 +1092,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                             : "text-duo-blue-dark"
                         }`}>
                           {quizSelectedIdx === incident.quizQuestion.correctIdx
-                            ? "Boa! +25 XP de bônus 🎯"
+                            ? "Boa! +50 XP de bônus 🎯"
                             : "Não foi essa — mas olha o porquê:"}
                         </div>
                         <div

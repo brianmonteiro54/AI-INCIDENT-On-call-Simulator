@@ -7,6 +7,8 @@ export interface LeaderboardEntry {
   name: string;
   xp: number;
   totalSaved: number;
+  /** Sum of real player time across all first-time solves, in ms. Lower = faster = wins tiebreaker. */
+  totalElapsedMs: number;
   completedCount: number;
   aPlusCount: number;
   streak: number;
@@ -27,10 +29,20 @@ function getRedis(): Redis | null {
 }
 
 function sortEntries(list: LeaderboardEntry[]): LeaderboardEntry[] {
-  // Multi-tier ranking: primary XP, then A+ count, then completion, then streak, then recency
+  // Multi-tier ranking:
+  //   1. XP desc (primary)
+  //   2. A+ count desc (quality)
+  //   3. totalElapsedMs asc (faster wins on ties — guarantees unique ordering)
+  //   4. completedCount desc
+  //   5. streak desc
+  //   6. at desc (recent submission breaks any remaining tie)
   return [...list].sort((a, b) => {
     if (b.xp !== a.xp) return b.xp - a.xp;
     if (b.aPlusCount !== a.aPlusCount) return b.aPlusCount - a.aPlusCount;
+    // tiebreaker: faster (smaller totalElapsedMs) ranks higher. Missing field = treat as Infinity (worst).
+    const aMs = a.totalElapsedMs ?? Number.MAX_SAFE_INTEGER;
+    const bMs = b.totalElapsedMs ?? Number.MAX_SAFE_INTEGER;
+    if (aMs !== bMs) return aMs - bMs;
     if (b.completedCount !== a.completedCount) return b.completedCount - a.completedCount;
     if (b.streak !== a.streak) return b.streak - a.streak;
     return b.at - a.at;

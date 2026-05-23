@@ -13,6 +13,7 @@ interface Entry {
   name: string;
   xp: number;
   totalSaved: number;
+  totalElapsedMs: number;
   completedCount: number;
   aPlusCount: number;
   streak: number;
@@ -70,6 +71,7 @@ export default function LeaderboardPage() {
         name: player.name,
         xp: player.xp,
         totalSaved: player.totalSaved,
+        totalElapsedMs: player.totalElapsedMs,
         completedCount: myStats.completedCount,
         aPlusCount: myStats.aPlusCount,
         streak: player.streak,
