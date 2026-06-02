@@ -78,9 +78,14 @@ export default function LeaderboardPage() {
       }),
     })
       .then((res) => {
-        if (!res.ok) throw new Error(`http ${res.status}`);
-        setSyncError(null);
-        return fetchBoard();
+        // 429 ("too fast") isn't a failure here: it means the post-mission
+        // auto-publish just ran for this name, so the score is already being
+        // saved. Treat it like a success and just refresh the board.
+        if (res.ok || res.status === 429) {
+          setSyncError(null);
+          return fetchBoard();
+        }
+        throw new Error(`http ${res.status}`);
       })
       .catch(() => setSyncError("não foi possível publicar tua pontuação — tenta atualizar"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
