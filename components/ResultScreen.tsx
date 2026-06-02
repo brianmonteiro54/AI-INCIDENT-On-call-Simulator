@@ -11,6 +11,7 @@ import { formatTime, getLevelIdx } from "@/lib/levels";
 import { useGame } from "@/lib/store";
 import { Mascot } from "./Mascot";
 import { playSound } from "@/lib/sound";
+import { Confetti } from "./Confetti";
 
 interface Props {
   result: IncidentResult;
@@ -35,6 +36,7 @@ export function ResultScreen({ result, incident, onClose }: Props) {
   const isOk = tier === 4 || tier === 5;   // B-, B
   const isMid = tier === 2 || tier === 3;  // C-, C
   const isBad = tier <= 1;          // D, F
+  const celebrate = result.grade === "A+" || result.perfect; // confetti-worthy
 
   useEffect(() => {
     if (isGreat || isGood) playSound("promotion");
@@ -91,6 +93,8 @@ export function ResultScreen({ result, incident, onClose }: Props) {
       transition={{ duration: 0.2 }}
       className="fixed inset-0 z-50 bg-duo-cream overflow-y-auto"
     >
+      {celebrate && <Confetti />}
+
       {/* Top banner */}
       <m.div
         initial={{ y: -100 }}

@@ -2,7 +2,7 @@
 
 import { m, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useGame, bestGradeByIncident } from "@/lib/store";
 import { INCIDENTS } from "@/lib/incidents";
 import { getLevel, getLevelIdx, getNextLevel, getTodaysDailyId, getDailyKey, sevLabel } from "@/lib/levels";
@@ -13,6 +13,20 @@ import { Mascot } from "@/components/Mascot";
 import { playSound } from "@/lib/sound";
 import { cleanupStaleMissionSaves, clearAllMissionProgress } from "@/lib/mission-progress";
 import { Sparkles, Flame, Crown, Lock, Check, Star, Volume2, VolumeX, Trophy, Settings, ChevronRight, Zap, BookOpen } from "lucide-react";
+
+// Build a smooth (vertical-tangent) SVG path through a list of points.
+// Shared by the dotted full trail and the colored "done" portion.
+function buildTrailPath(pts: { x: number; y: number }[]): string {
+  if (pts.length < 2) return "";
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1];
+    const b = pts[i];
+    const my = (a.y + b.y) / 2;
+    d += ` C ${a.x} ${my}, ${b.x} ${my}, ${b.x} ${b.y}`;
+  }
+  return d;
+}
 
 export default function HomePage() {
   const player = useGame((s) => s.player);
@@ -25,6 +39,12 @@ export default function HomePage() {
   // —— Welcome / onboarding flow ——
   const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null);
   const [forceReady, setForceReady] = useState(false);
+
+  // —— Mission-path connector line, measured from the rendered node circles ——
+  const pathRef = useRef<HTMLDivElement>(null);
+  const circleRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [nodePoints, setNodePoints] = useState<{ x: number; y: number }[]>([]);
+  const [trailDims, setTrailDims] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
 
   useEffect(() => {
     const t = setTimeout(() => setForceReady(true), 1500);
@@ -83,6 +103,40 @@ export default function HomePage() {
   const aPlus = Object.values(bestByInc).filter((g) => g === "A+").length;
   const ownedAchievements = ACHIEVEMENTS.filter((a) => player.achievements.includes(a.id));
 
+  // Measure each rendered node circle and draw a smooth dotted trail through
+  // their centers. Re-measures on resize, font load, and progress changes
+  // (heights shift), and once onboarding clears (the path mounts).
+  useEffect(() => {
+    const container = pathRef.current;
+    if (!container) return;
+    const measure = () => {
+      const cr = container.getBoundingClientRect();
+      const pts: { x: number; y: number }[] = [];
+      for (const el of circleRefs.current) {
+        if (!el) continue;
+        const r = el.getBoundingClientRect();
+        pts.push({
+          x: +(r.left - cr.left + r.width / 2).toFixed(1),
+          y: +(r.top - cr.top + r.height / 2).toFixed(1),
+        });
+      }
+      if (pts.length < 2) return;
+      setNodePoints(pts);
+      setTrailDims({ w: cr.width, h: cr.height });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(container);
+    window.addEventListener("resize", measure);
+    const fonts = (document as unknown as { fonts?: { ready?: Promise<unknown> } }).fonts;
+    if (fonts?.ready) fonts.ready.then(measure).catch(() => {});
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, needsOnboarding, lvlIdx, completed]);
+
   // Show welcome while we don't know whether to onboard, OR while waiting hydration
   if (needsOnboarding === null) {
     return <WelcomeScreen forceShow />;
@@ -98,6 +152,12 @@ export default function HomePage() {
   const isAnon = !player.name || player.name === "anon";
   // The single "next" mission to play: first unlocked one not yet cleared.
   const currentIdx = INCIDENTS.findIndex((inc) => inc.minLevel <= lvlIdx && !bestByInc[inc.id]);
+  // Trail fill: solid colored up to the furthest mission reached (current node,
+  // or the last completed one if everything unlocked is already done); dotted beyond.
+  const doneMaxIdx = INCIDENTS.reduce((mx, inc, i) => (bestByInc[inc.id] ? i : mx), -1);
+  const fillEnd = Math.max(currentIdx, doneMaxIdx);
+  const fullTrailD = buildTrailPath(nodePoints);
+  const doneTrailD = buildTrailPath(nodePoints.slice(0, fillEnd + 1));
 
   return (
     <>
@@ -240,28 +300,69 @@ export default function HomePage() {
             <div className="h-1 flex-1 bg-duo-line rounded-full" />
           </div>
 
-          <div className="relative overflow-x-clip">
-            {INCIDENTS.map((inc, i) => {
-              const isLocked = inc.minLevel > lvlIdx;
-              const best = bestByInc[inc.id];
-              const isDone = !!best;
-              const isCurrent = i === currentIdx; // only the next playable mission
-              // Winding path: nodes alternate left/right as you go down.
-              const side: "left" | "right" = i % 2 === 0 ? "left" : "right";
-
-              return (
-                <MissionNode
-                  key={inc.id}
-                  incident={inc}
-                  isLocked={isLocked}
-                  isDone={isDone}
-                  isCurrent={isCurrent}
-                  best={best}
-                  index={i}
-                  side={side}
+          <div ref={pathRef} className="relative overflow-x-clip">
+            {trailDims.w > 0 && (
+              <svg
+                className="absolute inset-0 pointer-events-none"
+                width={trailDims.w}
+                height={trailDims.h}
+                viewBox={`0 0 ${trailDims.w} ${trailDims.h}`}
+                fill="none"
+                aria-hidden="true"
+                style={{ zIndex: 0 }}
+              >
+                {/* full path, dotted — the road ahead */}
+                <path
+                  d={fullTrailD}
+                  stroke="#E2E1D8"
+                  strokeWidth={6}
+                  strokeLinecap="round"
+                  strokeDasharray="1 17"
                 />
-              );
-            })}
+                {/* completed portion, solid green — draws itself in */}
+                {fillEnd >= 1 && (
+                  <m.path
+                    key={`trail-done-${fillEnd}`}
+                    d={doneTrailD}
+                    stroke="#58CC02"
+                    strokeWidth={6}
+                    strokeLinecap="round"
+                    initial={{ pathLength: 0, opacity: 0 }}
+                    animate={{ pathLength: 1, opacity: 1 }}
+                    transition={{
+                      pathLength: { duration: 1.1, ease: "easeInOut" },
+                      opacity: { duration: 0.25 },
+                    }}
+                  />
+                )}
+              </svg>
+            )}
+            <div className="relative" style={{ zIndex: 1 }}>
+              {INCIDENTS.map((inc, i) => {
+                const isLocked = inc.minLevel > lvlIdx;
+                const best = bestByInc[inc.id];
+                const isDone = !!best;
+                const isCurrent = i === currentIdx; // only the next playable mission
+                // Winding path: nodes alternate left/right as you go down.
+                const side: "left" | "right" = i % 2 === 0 ? "left" : "right";
+
+                return (
+                  <MissionNode
+                    key={inc.id}
+                    incident={inc}
+                    isLocked={isLocked}
+                    isDone={isDone}
+                    isCurrent={isCurrent}
+                    best={best}
+                    index={i}
+                    side={side}
+                    circleRef={(el) => {
+                      circleRefs.current[i] = el;
+                    }}
+                  />
+                );
+              })}
+            </div>
           </div>
         </section>
 
@@ -359,6 +460,7 @@ function MissionNode({
   best,
   index,
   side,
+  circleRef,
 }: {
   incident: typeof INCIDENTS[0];
   isLocked: boolean;
@@ -367,6 +469,7 @@ function MissionNode({
   best: string | undefined;
   index: number;
   side: "left" | "right";
+  circleRef?: (el: HTMLDivElement | null) => void;
 }) {
   const cfg =
     incident.isBoss ? { bg: "bg-duo-purple", border: "border-duo-purple-dark", text: "text-white", glow: "shadow-[0_0_30px_rgba(206,130,255,0.5)]" } :
@@ -392,7 +495,7 @@ function MissionNode({
       className={`relative flex items-center gap-4 ${side === "right" ? "flex-row-reverse" : ""}`}
     >
       {/* Node circle */}
-      <div className={`relative shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center ${cfg.bg} border-4 ${cfg.border} ${cfg.glow} ${isCurrent ? "card-press" : ""} transition-all`}
+      <div ref={circleRef} className={`relative shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center ${cfg.bg} border-4 ${cfg.border} ${cfg.glow} ${isCurrent ? "card-press" : ""} transition-all`}
         style={{ borderBottomWidth: 8 }}>
         {isLocked && <Lock className={`w-8 h-8 sm:w-9 sm:h-9 ${cfg.text} stroke-[2.5]`} />}
         {!isLocked && isDone && !incident.isBoss && (
