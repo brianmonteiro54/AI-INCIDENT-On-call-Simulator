@@ -369,8 +369,7 @@ function MissionNode({
     incident.isBoss ? { bg: "bg-duo-purple", border: "border-duo-purple-dark", text: "text-white", glow: "shadow-[0_0_30px_rgba(206,130,255,0.5)]" } :
     isLocked ? { bg: "bg-duo-line", border: "border-duo-line", text: "text-duo-ink-faded", glow: "" } :
     isDone ? { bg: "bg-duo-yellow", border: "border-duo-yellow-dark", text: "text-white", glow: "" } :
-    isCurrent ? { bg: "bg-duo-green", border: "border-duo-green-dark", text: "text-white", glow: "shadow-[0_0_24px_rgba(88,204,2,0.35)]" } :
-    { bg: "bg-duo-blue", border: "border-duo-blue-dark", text: "text-white", glow: "" };
+    { bg: "bg-duo-green", border: "border-duo-green-dark", text: "text-white", glow: isCurrent ? "shadow-[0_0_24px_rgba(88,204,2,0.35)]" : "" };
 
   const titleClean = incident.title.replace(/^🔥\s*/, "");
 
@@ -393,12 +392,11 @@ function MissionNode({
       <div className={`relative shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center ${cfg.bg} border-4 ${cfg.border} ${cfg.glow} ${isCurrent ? "card-press" : ""} transition-all`}
         style={{ borderBottomWidth: 8 }}>
         {isLocked && <Lock className={`w-8 h-8 sm:w-9 sm:h-9 ${cfg.text} stroke-[2.5]`} />}
-        {isDone && !incident.isBoss && (
+        {!isLocked && isDone && !incident.isBoss && (
           <div className={`text-display font-black ${cfg.text} text-3xl sm:text-4xl drop-shadow-md`}>{best}</div>
         )}
-        {isDone && incident.isBoss && <Crown className={`w-10 h-10 ${cfg.text} fill-current drop-shadow-md`} />}
-        {isCurrent && !incident.isBoss && <Star className={`w-9 h-9 sm:w-10 sm:h-10 ${cfg.text} fill-current drop-shadow-md`} strokeWidth={2.5} />}
-        {isCurrent && incident.isBoss && <Crown className={`w-10 h-10 ${cfg.text} fill-current drop-shadow-md`} />}
+        {!isLocked && !isDone && !incident.isBoss && <Star className={`w-9 h-9 sm:w-10 sm:h-10 ${cfg.text} fill-current drop-shadow-md`} strokeWidth={2.5} />}
+        {!isLocked && incident.isBoss && <Crown className={`w-10 h-10 ${cfg.text} fill-current drop-shadow-md`} />}
 
         {isCurrent && (
           <m.div
