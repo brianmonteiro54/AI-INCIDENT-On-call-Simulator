@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { useGame } from "@/lib/store";
 import { ACHIEVEMENTS } from "@/lib/achievements";
 import { playSound } from "@/lib/sound";
@@ -27,7 +27,7 @@ export function AchievementToasts() {
           const ach = ACHIEVEMENTS.find((a) => a.id === id);
           if (!ach) return null;
           return (
-            <motion.div
+            <m.div
               key={id}
               initial={{ opacity: 0, x: 60, scale: 0.9 }}
               animate={{ opacity: 1, x: 0, scale: 1 }}
@@ -50,7 +50,7 @@ export function AchievementToasts() {
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           );
         })}
       </AnimatePresence>

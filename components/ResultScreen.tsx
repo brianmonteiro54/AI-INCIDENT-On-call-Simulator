@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useEffect } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Home, Clock, Zap } from "lucide-react";
 import type { IncidentResult, Incident, Grade } from "@/lib/types";
@@ -84,7 +84,7 @@ export function ResultScreen({ result, incident, onClose }: Props) {
     "sad";
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -92,45 +92,45 @@ export function ResultScreen({ result, incident, onClose }: Props) {
       className="fixed inset-0 z-50 bg-duo-cream overflow-y-auto"
     >
       {/* Top banner */}
-      <motion.div
+      <m.div
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ type: "spring", stiffness: 200, damping: 18 }}
         className={`${bannerClasses} pt-6 pb-12 px-4`}
       >
         <div className="max-w-2xl mx-auto text-center">
-          <motion.div
+          <m.div
             initial={{ scale: 0.4, rotate: -10 }}
             animate={{ scale: 1, rotate: 0 }}
             transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 14 }}
             className="flex justify-center mb-3"
           >
             <Mascot expression={mascotExpr} size={140} />
-          </motion.div>
+          </m.div>
 
-          <motion.h1
+          <m.h1
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.35, type: "spring", stiffness: 200 }}
             className="text-display text-4xl sm:text-5xl font-black mb-2 tracking-tight"
           >
             {titleText}
-          </motion.h1>
+          </m.h1>
 
-          <motion.p
+          <m.p
             initial={{ y: 10, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.5 }}
             className="text-base sm:text-lg font-bold opacity-90"
           >
             {subText}
-          </motion.p>
+          </m.p>
         </div>
-      </motion.div>
+      </m.div>
 
       {/* Stats cards */}
       <section className="max-w-2xl mx-auto px-4 sm:px-6 -mt-6 mb-6 relative z-10">
-        <motion.div
+        <m.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.55 }}
@@ -139,11 +139,11 @@ export function ResultScreen({ result, incident, onClose }: Props) {
           <StatCard icon={<div className="text-display font-black text-3xl">{result.grade}</div>} label="nota" color={accent} />
           <XpStatCard xp={result.xp} />
           <StatCard icon={<Clock className="w-7 h-7 text-duo-blue-dark" strokeWidth={2.5} />} label={formatTime(result.elapsed)} color="blue" mainLabel />
-        </motion.div>
+        </m.div>
 
         {/* Replay banner — shows when this mission was already solved before */}
         {result.xp === 0 && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.75 }}
@@ -160,13 +160,13 @@ export function ResultScreen({ result, incident, onClose }: Props) {
                 Você já tinha resolvido essa missão. XP só é dado na <b>primeira vez</b> pra manter o ranking justo.
               </div>
             </div>
-          </motion.div>
+          </m.div>
         )}
       </section>
 
       {/* Verdict + Decision */}
       <section className="max-w-2xl mx-auto px-4 sm:px-6 mb-5">
-        <motion.div
+        <m.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.7 }}
@@ -185,12 +185,12 @@ export function ResultScreen({ result, incident, onClose }: Props) {
               </div>
             </div>
           </div>
-        </motion.div>
+        </m.div>
       </section>
 
       {/* ════════ TEORIA AWS — destaque ════════ */}
       <section className="max-w-2xl mx-auto px-4 sm:px-6 mb-5">
-        <motion.div
+        <m.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.85 }}
@@ -249,7 +249,7 @@ export function ResultScreen({ result, incident, onClose }: Props) {
               ))}
             </div>
           </div>
-        </motion.div>
+        </m.div>
       </section>
 
       {/* Actions */}
@@ -299,7 +299,7 @@ export function ResultScreen({ result, incident, onClose }: Props) {
         .prose-result ul { margin: 0.5em 0; padding-left: 1.2em; list-style: disc; }
         .prose-result li { margin: 0.2em 0; }
       `}</style>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -370,7 +370,7 @@ function XpStatCard({ xp }: { xp: number }) {
       {xp > 0 && (
         <>
           {[0, 1, 2].map((i) => (
-            <motion.span
+            <m.span
               key={i}
               initial={{ opacity: 0, y: 8, x: 0 }}
               animate={{ opacity: [0, 1, 0], y: -28, x: (i - 1) * 14 }}
@@ -379,7 +379,7 @@ function XpStatCard({ xp }: { xp: number }) {
               aria-hidden
             >
               ✦
-            </motion.span>
+            </m.span>
           ))}
         </>
       )}

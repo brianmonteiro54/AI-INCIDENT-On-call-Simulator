@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { ArrowLeft, Search, BookOpen, X } from "lucide-react";
 import { GLOSSARY, type GlossaryTerm } from "@/lib/glossary";
@@ -176,7 +176,7 @@ export default function GlossarioPage() {
 function TermCard({ term }: { term: GlossaryTerm }) {
   const [open, setOpen] = useState(false);
   return (
-    <motion.div
+    <m.div
       layout
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
@@ -198,17 +198,17 @@ function TermCard({ term }: { term: GlossaryTerm }) {
             {term.short}
           </div>
         </div>
-        <motion.div
+        <m.div
           animate={{ rotate: open ? 90 : 0 }}
           className="shrink-0 text-duo-ink-faded mt-1 select-none font-black"
         >
           ▶
-        </motion.div>
+        </m.div>
       </button>
 
       <AnimatePresence initial={false}>
         {open && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
@@ -236,9 +236,9 @@ function TermCard({ term }: { term: GlossaryTerm }) {
                 </div>
               )}
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </m.div>
   );
 }

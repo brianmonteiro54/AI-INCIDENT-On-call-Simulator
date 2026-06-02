@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import Link from "next/link";
 import { ArrowLeft, Flame, RefreshCw } from "lucide-react";
 import { useGame, bestGradeByIncident } from "@/lib/store";
@@ -133,7 +133,7 @@ export default function LeaderboardPage() {
       {/* —— PLAYER STATUS CARD: shows current XP + position + submit button —— */}
       {hydrated && player.xp > 0 && (
         <section className="max-w-3xl mx-auto px-4 sm:px-6 mt-4">
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             className="duo-card p-4 sm:p-5 bg-white"
@@ -179,7 +179,7 @@ export default function LeaderboardPage() {
                 💡 tua pontuação é enviada pro ranking automaticamente cada vez que tu resolve uma missão nova.
               </div>
             )}
-          </motion.div>
+          </m.div>
         </section>
       )}
 
@@ -232,7 +232,7 @@ export default function LeaderboardPage() {
                 null;
 
               return (
-                <motion.div
+                <m.div
                   key={`${e.name}-${i}`}
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -284,7 +284,7 @@ export default function LeaderboardPage() {
                       XP
                     </div>
                   </div>
-                </motion.div>
+                </m.div>
               );
             })}
           </div>

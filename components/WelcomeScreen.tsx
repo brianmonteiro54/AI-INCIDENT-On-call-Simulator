@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import { Mascot } from "./Mascot";
 import { playSound, startAmbient } from "@/lib/sound";
 
@@ -39,7 +39,7 @@ export function WelcomeScreen({ onSubmit, forceShow }: Props) {
   };
 
   return (
-    <motion.div
+    <m.div
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4 }}
@@ -50,18 +50,18 @@ export function WelcomeScreen({ onSubmit, forceShow }: Props) {
       <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full bg-duo-blue-light blur-3xl opacity-50 pointer-events-none" />
 
       <div className="relative max-w-md w-full text-center">
-        <motion.div
+        <m.div
           initial={{ scale: 0.5, y: 30 }}
           animate={{ scale: 1, y: 0 }}
           transition={{ type: "spring", stiffness: 200, damping: 14 }}
           className="mb-4 flex justify-center"
         >
           <Mascot expression={step === "name" ? "happy" : "celebrate"} size={160} />
-        </motion.div>
+        </m.div>
 
         <AnimatePresence mode="wait">
           {(step === "hi" || forceShow) ? (
-            <motion.div
+            <m.div
               key="hi"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -77,19 +77,19 @@ export function WelcomeScreen({ onSubmit, forceShow }: Props) {
               <p className="text-duo-ink-faded text-sm sm:text-base leading-snug font-medium max-w-xs mx-auto">
                 Você é o engenheiro on-call. Recebe um incident de IA, investiga, decide.
               </p>
-              <motion.div
+              <m.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.8 }}
                 className="mt-6 flex items-center justify-center gap-1.5 text-duo-ink-faded text-xs font-bold"
               >
-                <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity }}>●</motion.span>
-                <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}>●</motion.span>
-                <motion.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}>●</motion.span>
-              </motion.div>
-            </motion.div>
+                <m.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity }}>●</m.span>
+                <m.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}>●</m.span>
+                <m.span animate={{ opacity: [0.3, 1, 0.3] }} transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}>●</m.span>
+              </m.div>
+            </m.div>
           ) : (
-            <motion.div
+            <m.div
               key="name"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -153,10 +153,10 @@ export function WelcomeScreen({ onSubmit, forceShow }: Props) {
                   pular (vai entrar como "anon")
                 </button>
               </form>
-            </motion.div>
+            </m.div>
           )}
         </AnimatePresence>
       </div>
-    </motion.div>
+    </m.div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import type { Incident } from "@/lib/types";
 
 interface Props {
@@ -100,8 +100,8 @@ export function SlackThread({ incident, playerName }: Props) {
       </div>
 
       <div className="bg-white p-3 sm:p-4 space-y-3">
-        {messages.map((m, i) => (
-          <motion.div
+        {messages.map((msg, i) => (
+          <m.div
             key={i}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -109,36 +109,36 @@ export function SlackThread({ incident, playerName }: Props) {
             className="flex items-start gap-2.5"
           >
             <div className={`shrink-0 w-9 h-9 rounded-md flex items-center justify-center text-lg ${
-              m.tone === "alert" ? "bg-duo-red-light" :
-              m.tone === "bad" ? "bg-duo-orange-light" :
-              m.tone === "recap" ? "bg-duo-yellow-light" :
+              msg.tone === "alert" ? "bg-duo-red-light" :
+              msg.tone === "bad" ? "bg-duo-orange-light" :
+              msg.tone === "recap" ? "bg-duo-yellow-light" :
               "bg-duo-line-soft"
             }`}>
-              {m.persona.avatar}
+              {msg.persona.avatar}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline gap-2 mb-0.5 flex-wrap">
-                <span className={`font-black text-sm ${m.persona.color}`}>{m.persona.display}</span>
-                {m.persona.bot && (
+                <span className={`font-black text-sm ${msg.persona.color}`}>{msg.persona.display}</span>
+                {msg.persona.bot && (
                   <span className="text-[9px] font-black uppercase tracking-widest bg-duo-ink-faded text-white px-1 py-0.5 rounded-sm">APP</span>
                 )}
-                <span className="text-[10px] text-duo-ink-faded font-medium">{formatTime(m.time)}</span>
+                <span className="text-[10px] text-duo-ink-faded font-medium">{formatTime(msg.time)}</span>
               </div>
-              {m.tone === "recap" && (
+              {msg.tone === "recap" && (
                 <div className="mb-1.5 inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-duo-yellow-dark bg-duo-yellow-light px-2 py-0.5 rounded-full">
                   📋 resumo do que descobrimos
                 </div>
               )}
               <div
                 className={`text-sm font-medium leading-snug ${
-                  m.tone === "alert" ? "text-duo-red-dark" :
-                  m.tone === "bad" ? "text-duo-orange-dark" :
+                  msg.tone === "alert" ? "text-duo-red-dark" :
+                  msg.tone === "bad" ? "text-duo-orange-dark" :
                   "text-duo-ink"
                 } [&_b]:font-black [&_b]:text-current [&_code]:bg-duo-yellow-light [&_code]:text-duo-ink [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-mono [&_code]:font-bold [&_code]:text-xs`}
-                dangerouslySetInnerHTML={{ __html: m.text }}
+                dangerouslySetInnerHTML={{ __html: msg.text }}
               />
             </div>
-          </motion.div>
+          </m.div>
         ))}
       </div>
 

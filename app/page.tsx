@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useGame, bestGradeByIncident } from "@/lib/store";
@@ -150,7 +150,7 @@ export default function HomePage() {
                 {lvl.name}
               </span>
               <div className="flex-1 progress-track h-3">
-                <motion.div
+                <m.div
                   className="progress-fill"
                   initial={{ width: 0 }}
                   animate={{ width: `${xpPct}%` }}
@@ -372,7 +372,7 @@ function MissionNode({
   const titleClean = incident.title.replace(/^🔥\s*/, "");
 
   const inner = (
-    <motion.div
+    <m.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
@@ -390,13 +390,13 @@ function MissionNode({
         {isCurrent && incident.isBoss && <Crown className={`w-10 h-10 ${cfg.text} fill-current drop-shadow-md`} />}
 
         {isCurrent && (
-          <motion.div
+          <m.div
             className="absolute -top-12 left-1/2 -translate-x-1/2 chip border-duo-yellow-dark bg-duo-yellow text-duo-yellow-dark text-xs font-black uppercase tracking-wider px-2 py-1 whitespace-nowrap"
             animate={{ y: [0, -3, 0] }}
             transition={{ duration: 1.4, repeat: Infinity }}
           >
             COMEÇAR
-          </motion.div>
+          </m.div>
         )}
       </div>
 
@@ -439,7 +439,7 @@ function MissionNode({
           </div>
         )}
       </div>
-    </motion.div>
+    </m.div>
   );
 
   if (isLocked) {

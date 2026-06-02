@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 
 export type MascotExpression = "default" | "happy" | "sad" | "thinking" | "celebrate" | "alert";
 
@@ -40,7 +40,7 @@ export function Mascot({ expression = "default", size = 120, className = "" }: P
     { duration: 2.4, repeat: Infinity, ease: "easeInOut" };
 
   return (
-    <motion.div
+    <m.div
       className={`inline-block ${className}`}
       style={{ width: size, height: size * 1.05 }}
       animate={bodyAnim}
@@ -49,7 +49,7 @@ export function Mascot({ expression = "default", size = 120, className = "" }: P
       <svg viewBox="0 0 160 168" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
         {/* Antenna */}
         <line x1="80" y1="26" x2="80" y2="44" stroke="#3C3C3C" strokeWidth="3.5" strokeLinecap="round" />
-        <motion.circle
+        <m.circle
           cx="80"
           cy="22"
           r="6.5"
@@ -133,33 +133,33 @@ export function Mascot({ expression = "default", size = 120, className = "" }: P
         {/* Sparkles for celebrate */}
         {expression === "celebrate" && (
           <>
-            <motion.g
+            <m.g
               animate={{ scale: [0, 1.2, 0], rotate: [0, 180] }}
               transition={{ duration: 1.4, repeat: Infinity, delay: 0.1 }}
               style={{ transformOrigin: "30px 30px" }}
             >
               <path d="M 30 22 L 32 28 L 38 30 L 32 32 L 30 38 L 28 32 L 22 30 L 28 28 Z" fill="#FFC800" />
-            </motion.g>
-            <motion.g
+            </m.g>
+            <m.g
               animate={{ scale: [0, 1, 0], rotate: [0, -180] }}
               transition={{ duration: 1.4, repeat: Infinity, delay: 0.5 }}
               style={{ transformOrigin: "130px 40px" }}
             >
               <path d="M 130 32 L 132 38 L 138 40 L 132 42 L 130 48 L 128 42 L 122 40 L 128 38 Z" fill="#1CB0F6" />
-            </motion.g>
-            <motion.g
+            </m.g>
+            <m.g
               animate={{ scale: [0, 1.2, 0], rotate: [0, 180] }}
               transition={{ duration: 1.4, repeat: Infinity, delay: 0.8 }}
               style={{ transformOrigin: "140px 80px" }}
             >
               <path d="M 140 72 L 142 78 L 148 80 L 142 82 L 140 88 L 138 82 L 132 80 L 138 78 Z" fill="#FF4B4B" />
-            </motion.g>
+            </m.g>
           </>
         )}
 
         {/* Question mark for thinking */}
         {expression === "thinking" && (
-          <motion.text
+          <m.text
             x="118"
             y="60"
             fontSize="22"
@@ -173,29 +173,29 @@ export function Mascot({ expression = "default", size = 120, className = "" }: P
             style={{ transformOrigin: "118px 55px" }}
           >
             ?
-          </motion.text>
+          </m.text>
         )}
 
         {/* Sweat drop for sad */}
         {expression === "sad" && (
-          <motion.g
+          <m.g
             animate={{ y: [0, 6, 0], opacity: [1, 0.5, 1] }}
             transition={{ duration: 1.5, repeat: Infinity }}
           >
             <path d="M 116 60 Q 120 70, 116 76 Q 112 70, 116 60 Z" fill="#1CB0F6" stroke="#3C3C3C" strokeWidth="1.5" />
-          </motion.g>
+          </m.g>
         )}
 
         {/* Alert ! for alert */}
         {expression === "alert" && (
-          <motion.g
+          <m.g
             animate={{ scale: [1, 1.2, 1] }}
             transition={{ duration: 0.5, repeat: Infinity }}
             style={{ transformOrigin: "118px 60px" }}
           >
             <circle cx="118" cy="60" r="11" fill="#FF4B4B" stroke="#3C3C3C" strokeWidth="2.5" />
             <text x="118" y="67" fontSize="16" fontWeight="900" fill="white" textAnchor="middle" fontFamily="var(--font-bricolage), sans-serif">!</text>
-          </motion.g>
+          </m.g>
         )}
 
         {/* AWS label on body */}
@@ -203,6 +203,6 @@ export function Mascot({ expression = "default", size = 120, className = "" }: P
           ON-CALL
         </text>
       </svg>
-    </motion.div>
+    </m.div>
   );
 }

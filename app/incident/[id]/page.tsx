@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { m } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { AchievementToasts } from "@/components/AchievementToasts";
 import { WarRoom } from "@/components/WarRoom";
@@ -78,9 +78,9 @@ export default function IncidentPage() {
   return (
     <>
       <AchievementToasts />
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+      <m.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
         <WarRoom incident={incident} isDaily={isDaily} />
-      </motion.div>
+      </m.div>
     </>
   );
 }

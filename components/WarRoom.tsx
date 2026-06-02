@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { X, Search, ChevronRight, Check, Flame, Sparkles, Volume2, VolumeX, ArrowRight, Eye, AlertCircle, MessageSquare } from "lucide-react";
 import type { Incident, IncidentResult, Grade, Action, InvestigateAction, DecisionAction, Metric, LogLine } from "@/lib/types";
@@ -36,8 +36,11 @@ export function WarRoom({ incident, isDaily }: Props) {
   const [bossGrades, setBossGrades] = useState<Grade[]>([]);
 
   const [step, setStep] = useState<Step>("briefing");
-  const [elapsed, setElapsed] = useState(incident.initialElapsed);
-  const [cost, setCost] = useState(incident.initialCost);
+  // Silent background counters — never rendered, only read when the mission ends
+  // to compute final cost/savings. Kept in refs so the per-second cost ticker
+  // (below) doesn't trigger a full WarRoom re-render every second.
+  const elapsedRef = useRef(incident.initialElapsed);
+  const costRef = useRef(incident.initialCost);
   const [revealed, setRevealed] = useState<string[]>([]);
   const [currentFinding, setCurrentFinding] = useState<string | null>(null);
   const [selectedAction, setSelectedAction] = useState<DecisionAction | null>(null);
@@ -65,7 +68,7 @@ export function WarRoom({ incident, isDaily }: Props) {
   // where the blue explanation card was rendered below the fold.
   useEffect(() => {
     if (quizRevealed && quizExplanationRef.current) {
-      // Wait a tick so the motion.div is in the DOM before scrolling
+      // Wait a tick so the m.div is in the DOM before scrolling
       const t = setTimeout(() => {
         quizExplanationRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 100);
@@ -155,8 +158,8 @@ export function WarRoom({ incident, isDaily }: Props) {
   useEffect(() => {
     if (step === "feedback" || step === "checking") return;
     const t = setInterval(() => {
-      setElapsed((e) => e + 1);
-      setCost((c) => c + incident.ratePerMin / 60);
+      elapsedRef.current += 1;
+      costRef.current += incident.ratePerMin / 60;
     }, 1000);
     return () => clearInterval(t);
   }, [step, incident.ratePerMin]);
@@ -190,7 +193,7 @@ export function WarRoom({ incident, isDaily }: Props) {
 
   function advanceBossOrFinish(grade: Grade, actionId: string, verdict: string, sub: string, costDelta: number, xp: number) {
     if (phaseIdx < incident.phases!.length - 1) {
-      setCost((c) => c + costDelta);
+      costRef.current += costDelta;
       setPhaseIdx((p) => p + 1);
       setStep("briefing");
       setRevealed([]);
@@ -219,7 +222,7 @@ export function WarRoom({ incident, isDaily }: Props) {
   function openFinding(a: InvestigateAction) {
     if (!revealed.includes(a.reveals)) {
       setRevealed((r) => [...r, a.reveals]);
-      setElapsed((e) => e + a.timeCost);
+      elapsedRef.current += a.timeCost;
     }
     setCurrentFinding(a.reveals);
     setStep("finding");
@@ -338,7 +341,7 @@ export function WarRoom({ incident, isDaily }: Props) {
 
     if (isBoss && phaseIdx < incident.phases!.length - 1) {
       // mid-boss, advance phase
-      setCost((c) => c + feedback.costDelta);
+      costRef.current += feedback.costDelta;
       setBossGrades((g) => [...g, selectedAction!.grade]);
       setPhaseIdx((p) => p + 1);
       setStep("briefing");
@@ -373,8 +376,8 @@ export function WarRoom({ incident, isDaily }: Props) {
   function finalizeResult(grade: Grade, actionId: string, verdict: string, sub: string, costDelta: number, xp: number, perfect = false) {
     stopAlarmLoop();
     clearMissionProgress(incident.id);
-    const finalCost = cost + costDelta;
-    const wouldveContinued = (1000 - elapsed) * (incident.ratePerMin / 60);
+    const finalCost = costRef.current + costDelta;
+    const wouldveContinued = (1000 - elapsedRef.current) * (incident.ratePerMin / 60);
     const saved = Math.max(0, wouldveContinued - costDelta);
     const action = currentActions.find((x) => x.id === actionId);
     // result.elapsed = REAL player time (not the incident clock)
@@ -397,7 +400,7 @@ export function WarRoom({ incident, isDaily }: Props) {
       perfect,
       isDaily,
     };
-    setCost(finalCost);
+    costRef.current = finalCost;
     setResult(r);
     recordResult(r);
   }
@@ -443,7 +446,7 @@ export function WarRoom({ incident, isDaily }: Props) {
 
           {/* Progress bar */}
           <div className="flex-1 progress-track h-4">
-            <motion.div
+            <m.div
               className={`progress-fill ${
                 step === "feedback" && !feedback?.correct ? "progress-fill-red" :
                 step === "feedback" && feedback?.correct ? "progress-fill-green" :
@@ -502,7 +505,7 @@ export function WarRoom({ incident, isDaily }: Props) {
 
           {/* ─── STEP 1: BRIEFING ─── */}
           {step === "briefing" && (
-            <motion.section
+            <m.section
               key="briefing"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -530,7 +533,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                 </div>
 
                 {/* Big incident title card */}
-                <motion.div
+                <m.div
                   initial={{ scale: 0.95, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.15, type: "spring", stiffness: 200, damping: 18 }}
@@ -554,7 +557,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                       </span>
                     )}
                   </div>
-                </motion.div>
+                </m.div>
 
                 {/* CTA */}
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -576,12 +579,12 @@ export function WarRoom({ incident, isDaily }: Props) {
                   )}
                 </div>
               </div>
-            </motion.section>
+            </m.section>
           )}
 
           {/* ─── STEP 2: INVESTIGATION HUB ─── */}
           {step === "investigation" && (
-            <motion.section
+            <m.section
               key="investigation"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -606,7 +609,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                   {investigateActions.map((a, i) => {
                     const done = revealed.includes(a.reveals);
                     return (
-                      <motion.button
+                      <m.button
                         key={a.id}
                         initial={{ opacity: 0, x: -8 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -631,13 +634,13 @@ export function WarRoom({ incident, isDaily }: Props) {
                           </div>
                         </div>
                         <ChevronRight className="w-5 h-5 text-duo-ink-faded stroke-[3] shrink-0" />
-                      </motion.button>
+                      </m.button>
                     );
                   })}
                 </div>
 
                 {allInvestigated && (
-                  <motion.div
+                  <m.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className="duo-card duo-card-correct p-4 mb-4 flex items-center gap-3"
@@ -646,7 +649,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                     <div className="flex-1 font-bold text-duo-green-dark text-sm sm:text-base">
                       Investigaste tudo! A/A+ agora vale +30 XP bônus 🎯
                     </div>
-                  </motion.div>
+                  </m.div>
                 )}
 
                 <button onClick={goToDecide} className="duo-btn duo-green w-full flex items-center justify-center gap-2">
@@ -654,12 +657,12 @@ export function WarRoom({ incident, isDaily }: Props) {
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </div>
-            </motion.section>
+            </m.section>
           )}
 
           {/* ─── STEP 3: FINDING REVEAL (modal-like inline) ─── */}
           {step === "finding" && currentFinding && FINDINGS[currentFinding] && (
-            <motion.section
+            <m.section
               key="finding"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -696,12 +699,12 @@ export function WarRoom({ incident, isDaily }: Props) {
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </div>
-            </motion.section>
+            </m.section>
           )}
 
           {/* ─── STEP 4: DECISION ─── */}
           {step === "decide" && (
-            <motion.section
+            <m.section
               key="decide"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -729,7 +732,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                 {/* Wrong toast — fixed bottom popup on mobile, inline on desktop */}
                 <AnimatePresence>
                   {wrongFeedback && (
-                    <motion.div
+                    <m.div
                       initial={{ opacity: 0, y: 20, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -757,13 +760,13 @@ export function WarRoom({ incident, isDaily }: Props) {
                           {wrongFeedback.sub}
                         </div>
                       </div>
-                    </motion.div>
+                    </m.div>
                   )}
                 </AnimatePresence>
 
                 {/* Hint card — appears after 2+ wrong attempts */}
                 {wrongActions.length >= 2 && incident.hint && (
-                  <motion.div
+                  <m.div
                     key="hint-card"
                     initial={{ opacity: 0, y: -8, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -782,7 +785,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                         dangerouslySetInnerHTML={{ __html: incident.hint }}
                       />
                     </div>
-                  </motion.div>
+                  </m.div>
                 )}
 
                 {/* Case briefing — Slack-style war room thread */}
@@ -829,7 +832,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                     const isSelected = selectedAction?.id === a.id;
                     const isWrong = wrongActions.includes(a.id);
                     return (
-                      <motion.button
+                      <m.button
                         key={a.id}
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -876,7 +879,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                             );
                           })()}
                         </div>
-                      </motion.button>
+                      </m.button>
                     );
                   })}
                 </div>
@@ -889,24 +892,24 @@ export function WarRoom({ incident, isDaily }: Props) {
                   verificar
                 </button>
               </div>
-            </motion.section>
+            </m.section>
           )}
 
           {/* ─── STEP 5: CHECKING ─── */}
           {step === "checking" && (
-            <motion.section
+            <m.section
               key="checking"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="flex-1 flex items-center justify-center"
             >
               <Mascot expression="thinking" size={140} />
-            </motion.section>
+            </m.section>
           )}
 
           {/* ─── STEP 6: FEEDBACK ─── */}
           {step === "feedback" && feedback && (
-            <motion.section
+            <m.section
               key="feedback"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -914,16 +917,16 @@ export function WarRoom({ incident, isDaily }: Props) {
             >
               <div className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6">
                 <div className="max-w-2xl w-full mx-auto text-center">
-                  <motion.div
+                  <m.div
                     initial={{ scale: 0.3, opacity: 0, rotate: -10 }}
                     animate={{ scale: 1, opacity: 1, rotate: 0 }}
                     transition={{ type: "spring", stiffness: 200, damping: 14 }}
                     className="mb-6 flex justify-center"
                   >
                     <Mascot expression={feedback.correct ? "celebrate" : "sad"} size={180} />
-                  </motion.div>
+                  </m.div>
 
-                  <motion.div
+                  <m.div
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.15 }}
@@ -945,7 +948,7 @@ export function WarRoom({ incident, isDaily }: Props) {
 
                     {/* XP gain pill */}
                     {feedback.xp > 0 && (
-                      <motion.div
+                      <m.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ delay: 0.4, type: "spring", stiffness: 250 }}
@@ -954,11 +957,11 @@ export function WarRoom({ incident, isDaily }: Props) {
                         <Sparkles className="w-4 h-4 fill-duo-yellow-dark" />
                         <span className="font-black">+{feedback.xp} XP</span>
                         {feedback.perfect && <span className="text-duo-green-dark">· 🎯 perfeito</span>}
-                      </motion.div>
+                      </m.div>
                     )}
 
                     {speedBonus > 0 && (
-                      <motion.div
+                      <m.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ delay: 0.55, type: "spring", stiffness: 250 }}
@@ -966,11 +969,11 @@ export function WarRoom({ incident, isDaily }: Props) {
                       >
                         <span className="text-base">⚡</span>
                         <span className="font-black">+{speedBonus} velocidade</span>
-                      </motion.div>
+                      </m.div>
                     )}
 
                     {attempts > 1 && (
-                      <motion.div
+                      <m.div
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
                         transition={{ delay: 0.65, type: "spring", stiffness: 250 }}
@@ -978,9 +981,9 @@ export function WarRoom({ incident, isDaily }: Props) {
                       >
                         <span>↩</span>
                         <span className="font-bold">tentou {attempts} vez{attempts > 1 ? "es" : ""}</span>
-                      </motion.div>
+                      </m.div>
                     )}
-                  </motion.div>
+                  </m.div>
                 </div>
               </div>
 
@@ -991,12 +994,12 @@ export function WarRoom({ incident, isDaily }: Props) {
                   </button>
                 </div>
               </div>
-            </motion.section>
+            </m.section>
           )}
 
           {/* ─── STEP 7: THEORY QUIZ ─── */}
           {step === "quiz" && incident.quizQuestion && (
-            <motion.section
+            <m.section
               key="quiz"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1045,7 +1048,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                     }
 
                     return (
-                      <motion.button
+                      <m.button
                         key={originalIdx}
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -1076,7 +1079,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                           } [&_code]:bg-duo-yellow-light [&_code]:text-duo-ink [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-mono [&_code]:font-bold [&_code]:text-xs`}
                           dangerouslySetInnerHTML={{ __html: opt }}
                         />
-                      </motion.button>
+                      </m.button>
                     );
                   })}
                 </div>
@@ -1084,7 +1087,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                 {/* Explanation (after reveal) */}
                 <AnimatePresence>
                   {quizRevealed && (
-                    <motion.div
+                    <m.div
                       ref={quizExplanationRef}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -1117,7 +1120,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                           dangerouslySetInnerHTML={{ __html: incident.quizQuestion.explanation }}
                         />
                       </div>
-                    </motion.div>
+                    </m.div>
                   )}
                 </AnimatePresence>
               </div>
@@ -1154,7 +1157,7 @@ export function WarRoom({ incident, isDaily }: Props) {
                   )}
                 </div>
               </div>
-            </motion.section>
+            </m.section>
           )}
 
         </AnimatePresence>
@@ -1166,7 +1169,7 @@ export function WarRoom({ incident, isDaily }: Props) {
       {/* Exit confirmation modal */}
       <AnimatePresence>
         {showExitModal && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1174,7 +1177,7 @@ export function WarRoom({ incident, isDaily }: Props) {
             className="fixed inset-0 z-50 bg-duo-ink/40 backdrop-blur-sm flex items-center justify-center px-4"
             onClick={() => setShowExitModal(false)}
           >
-            <motion.div
+            <m.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
@@ -1213,8 +1216,8 @@ export function WarRoom({ incident, isDaily }: Props) {
                   Continuar resolvendo
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
+            </m.div>
+          </m.div>
         )}
       </AnimatePresence>
 
@@ -1276,7 +1279,7 @@ function FindingsRecap({ keys, pendingCount, onGoBack }: { keys: string[]; pendi
 
       <AnimatePresence>
         {expanded && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
@@ -1313,7 +1316,7 @@ function FindingsRecap({ keys, pendingCount, onGoBack }: { keys: string[]; pendi
                 </button>
               )}
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>
@@ -1373,7 +1376,7 @@ function Confetti() {
         const rotation = Math.random() * 360;
         const color = colors[i % colors.length];
         return (
-          <motion.div
+          <m.div
             key={i}
             initial={{ y: -20, x: 0, opacity: 1, rotate: 0 }}
             animate={{ y: "110vh", x: (Math.random() - 0.5) * 200, opacity: [1, 1, 0], rotate: rotation }}
