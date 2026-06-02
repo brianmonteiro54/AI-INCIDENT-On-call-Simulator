@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, DM_Sans, JetBrains_Mono, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import { MotionProvider } from "@/components/MotionProvider";
+import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -60,6 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-BR" className={`${bricolage.variable} ${dmsans.variable} ${jetbrains.variable} ${serif.variable}`}>
       <body className="font-sans antialiased text-duo-ink bg-duo-cream selection:bg-duo-yellow selection:text-duo-ink">
         <MotionProvider>{children}</MotionProvider>
+        <ServiceWorkerRegistrar />
       </body>
     </html>
   );
