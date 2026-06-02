@@ -24,7 +24,7 @@
  * Bump VERSION to ship a new SW; old caches are purged on activate.
  * ────────────────────────────────────────────────────────────────────────── */
 
-const VERSION = "v2";
+const VERSION = "v4";
 const STATIC_CACHE = `ai-incident-static-${VERSION}`;
 const RUNTIME_CACHE = `ai-incident-runtime-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
@@ -32,18 +32,40 @@ const APP_SHELL_URL = "/";
 
 const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png", "/icons/icon-512.png"];
 
-// Fetch the home page and precache it + the hashed JS/CSS it references.
+// Fetch a URL, cache the document, and precache every /_next/static asset it
+// references. Returns the HTML (or null on failure).
+async function precacheUrlAndAssets(cache, url) {
+  const res = await fetch(url, { cache: "no-cache" });
+  if (!res || !res.ok) return null;
+  await cache.put(url, res.clone());
+  const html = await res.text();
+  const assets = new Set();
+  const re = /(?:src|href)="(\/_next\/static\/[^"]+)"/g;
+  let m;
+  while ((m = re.exec(html)) !== null) assets.add(m[1]);
+  await Promise.all([...assets].map((u) => cache.add(u).catch(() => {})));
+  return html;
+}
+
+// Precache the home shell AND one mission page. Opening an /incident/[id] page
+// pulls in the route chunk shared by EVERY mission, so caching it once (via a
+// mission link found on the home page) makes all missions playable offline —
+// even ones never opened this session. Mission content lives in the JS bundle,
+// so no per-mission server data is required.
 async function precacheAppShell(cache) {
   try {
-    const res = await fetch(APP_SHELL_URL, { cache: "no-cache" });
-    if (!res || !res.ok) return;
-    await cache.put(APP_SHELL_URL, res.clone());
-    const html = await res.text();
-    const assets = new Set();
-    const re = /(?:src|href)="(\/_next\/static\/[^"]+)"/g;
-    let m;
-    while ((m = re.exec(html)) !== null) assets.add(m[1]);
-    await Promise.all([...assets].map((url) => cache.add(url).catch(() => {})));
+    const homeHtml = await precacheUrlAndAssets(cache, APP_SHELL_URL);
+    // Find a mission link to pull in the route chunk shared by all missions.
+    let missionUrl = null;
+    if (homeHtml) {
+      const link = homeHtml.match(/href="(\/incident\/[^"?]+)"/);
+      if (link) missionUrl = link[1];
+    }
+    // The home HTML may server-render the welcome screen (no mission links yet),
+    // so fall back to a stable intro mission. This guarantees the shared
+    // /incident/[id] chunk is cached at install — so missions work offline even
+    // if the user goes offline before Next prefetches anything.
+    await precacheUrlAndAssets(cache, missionUrl || "/incident/polly-mispronounce").catch(() => {});
   } catch {
     /* offline/blocked during install — runtime caching fills in later */
   }
