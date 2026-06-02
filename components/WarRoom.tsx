@@ -53,6 +53,14 @@ export function WarRoom({ incident, isDaily }: Props) {
   const [quizRevealed, setQuizRevealed] = useState(false);
   const quizExplanationRef = useRef<HTMLDivElement>(null);
 
+  // Some sozinha após 5s. O timer reinicia a cada novo erro e é cancelado na
+  // limpeza — inclusive quando o usuário toca na mensagem para fechá-la antes.
+  useEffect(() => {
+    if (!wrongFeedback) return;
+    const t = setTimeout(() => setWrongFeedback(null), 5000);
+    return () => clearTimeout(t);
+  }, [wrongFeedback]);
+
   // Auto-scroll quiz explanation into view when revealed — fixes mobile UX
   // where the blue explanation card was rendered below the fold.
   useEffect(() => {
@@ -321,7 +329,6 @@ export function WarRoom({ incident, isDaily }: Props) {
 
         setSelectedAction(null);
         setStep("decide");
-        setTimeout(() => setWrongFeedback(null), 5000);
       }
     }, 500);
   }
@@ -727,7 +734,17 @@ export function WarRoom({ incident, isDaily }: Props) {
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 20, scale: 0.95 }}
                       transition={{ type: "spring", stiffness: 250, damping: 18 }}
-                      className="duo-card duo-card-wrong p-4 flex items-center gap-3 fixed bottom-4 inset-x-4 z-50 shadow-2xl sm:static sm:inset-auto sm:z-auto sm:shadow-none sm:mb-4"
+                      onClick={() => setWrongFeedback(null)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setWrongFeedback(null);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      aria-label="Fechar aviso"
+                      className="duo-card duo-card-wrong p-4 flex items-center gap-3 fixed bottom-4 inset-x-4 z-50 shadow-2xl sm:static sm:inset-auto sm:z-auto sm:shadow-none sm:mb-4 cursor-pointer select-none active:scale-[0.98] transition-transform"
                     >
                       <div className="shrink-0 w-10 h-10 rounded-2xl bg-duo-red text-white flex items-center justify-center font-black text-xl">
                         ✗
