@@ -95,6 +95,9 @@ export default function HomePage() {
   const inLevel = player.xp - lvl.min;
   const span = next ? next.min - lvl.min : 1;
   const xpPct = next ? Math.min(100, (inLevel / span) * 100) : 100;
+  const isAnon = !player.name || player.name === "anon";
+  // The single "next" mission to play: first unlocked one not yet cleared.
+  const currentIdx = INCIDENTS.findIndex((inc) => inc.minLevel <= lvlIdx && !bestByInc[inc.id]);
 
   return (
     <>
@@ -170,10 +173,11 @@ export default function HomePage() {
             <Mascot expression="happy" size={100} className="shrink-0" />
             <div className="flex-1 min-w-0">
               <h1 className="text-display text-2xl sm:text-3xl font-black text-duo-ink leading-tight mb-1.5">
-                Oi, <input
+                {isAnon ? "E aí, " : "Oi, "}<input
                   type="text"
                   aria-label="seu nome"
-                  value={nameDraft}
+                  value={nameDraft === "anon" ? "" : nameDraft}
+                  placeholder="on-call"
                   maxLength={14}
                   onChange={(e) => setNameDraft(e.target.value)}
                   onBlur={commitName}
@@ -182,7 +186,7 @@ export default function HomePage() {
                       e.currentTarget.blur();
                     }
                   }}
-                  className="bg-transparent outline-none text-duo-blue-dark border-b-2 border-dashed border-duo-line focus:border-duo-blue inline-block max-w-[140px] font-black"
+                  className="bg-transparent outline-none text-duo-blue-dark placeholder:text-duo-blue-dark/45 border-b-2 border-dashed border-duo-line focus:border-duo-blue inline-block max-w-[140px] font-black"
                 />! 👋
               </h1>
               <p className="text-duo-ink-soft text-sm sm:text-base font-medium leading-snug">
@@ -237,11 +241,10 @@ export default function HomePage() {
             {INCIDENTS.map((inc, i) => {
               const isLocked = inc.minLevel > lvlIdx;
               const best = bestByInc[inc.id];
-              const isCurrent = !isLocked && !best;
               const isDone = !!best;
-              // Zigzag path offset — only on sm+ so phones stay perfectly straight
-              // (a right-shift on a narrow screen caused horizontal overflow).
-              const offset = (i % 4 === 1 ? "sm:translate-x-[10%]" : i % 4 === 2 ? "sm:translate-x-[16%]" : i % 4 === 3 ? "sm:translate-x-[10%]" : "");
+              const isCurrent = i === currentIdx; // only the next playable mission
+              // Winding path: nodes alternate left/right as you go down.
+              const side: "left" | "right" = i % 2 === 0 ? "left" : "right";
 
               return (
                 <MissionNode
@@ -252,7 +255,7 @@ export default function HomePage() {
                   isCurrent={isCurrent}
                   best={best}
                   index={i}
-                  offset={offset}
+                  side={side}
                 />
               );
             })}
@@ -352,7 +355,7 @@ function MissionNode({
   isCurrent,
   best,
   index,
-  offset,
+  side,
 }: {
   incident: typeof INCIDENTS[0];
   isLocked: boolean;
@@ -360,7 +363,7 @@ function MissionNode({
   isCurrent: boolean;
   best: string | undefined;
   index: number;
-  offset: string;
+  side: "left" | "right";
 }) {
   const cfg =
     incident.isBoss ? { bg: "bg-duo-purple", border: "border-duo-purple-dark", text: "text-white", glow: "shadow-[0_0_30px_rgba(206,130,255,0.5)]" } :
@@ -371,12 +374,20 @@ function MissionNode({
 
   const titleClean = incident.title.replace(/^🔥\s*/, "");
 
+  // Difficulty tier color (Nível 1–4), shown as a chip on every mission.
+  const tier = [
+    { label: "Nível 1", bg: "bg-duo-green-light", text: "text-duo-green-dark", border: "border-duo-green/40" },
+    { label: "Nível 2", bg: "bg-duo-blue-light", text: "text-duo-blue-dark", border: "border-duo-blue/40" },
+    { label: "Nível 3", bg: "bg-duo-orange-light", text: "text-duo-orange-dark", border: "border-duo-orange/40" },
+    { label: "Nível 4", bg: "bg-duo-red-light", text: "text-duo-red-dark", border: "border-duo-red/40" },
+  ][Math.min(incident.minLevel, 3)];
+
   const inner = (
     <m.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className={`relative flex items-center gap-4 ${offset}`}
+      className={`relative flex items-center gap-4 ${side === "right" ? "flex-row-reverse" : ""}`}
     >
       {/* Node circle */}
       <div className={`relative shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-full flex items-center justify-center ${cfg.bg} border-4 ${cfg.border} ${cfg.glow} ${isCurrent ? "card-press" : ""} transition-all`}
@@ -401,19 +412,17 @@ function MissionNode({
       </div>
 
       {/* Info card */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1 flex-wrap">
+      <div className={`flex-1 min-w-0 ${side === "right" ? "text-right" : ""}`}>
+        <div className={`flex items-center gap-2 mb-1 flex-wrap ${side === "right" ? "justify-end" : ""}`}>
           <span className="text-[10px] font-black uppercase tracking-widest text-duo-ink-faded">
             missão {String(index + 1).padStart(2, "0")}
+          </span>
+          <span className={`chip ${tier.bg} ${tier.text} ${tier.border} text-[10px] px-2 py-0 ${isLocked ? "opacity-70" : ""}`}>
+            {tier.label}
           </span>
           {incident.isBoss && (
             <span className="chip border-duo-purple-dark bg-duo-purple/15 text-duo-purple-dark text-[10px] px-2 py-0">
               BOSS
-            </span>
-          )}
-          {isLocked && (
-            <span className="text-[10px] font-bold text-duo-ink-faded">
-              level {incident.minLevel + 1}+
             </span>
           )}
         </div>
@@ -424,7 +433,7 @@ function MissionNode({
           {incident.short}
         </p>
         {!isLocked && incident.services && incident.services.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <div className={`mt-2 flex flex-wrap gap-1.5 ${side === "right" ? "justify-end" : ""}`}>
             {incident.services.slice(0, 3).map((s) => (
               <span
                 key={s.name}
