@@ -1,6 +1,27 @@
 import { Redis } from "@upstash/redis";
 
-const LB_KEY = "ai-incident:leaderboard:v1";
+// ──────────────────────────────────────────────────────────────────────────────
+// LEADERBOARD STORAGE — Redis Sorted Set + Hash
+//
+// Why not a single JSON array? The old design read the whole list, mutated it
+// in memory, and wrote it back. Two players submitting at the same time would
+// both read the same list and the last writer would erase the other's entry
+// (a classic read-modify-write race).
+//
+// Now each player is an independent member:
+//   • ZSET  (LB_ZSET) → member = name, score = composite rank (for ordering/trim)
+//   • HASH  (LB_HASH) → field  = name, value = full entry JSON (for details)
+//
+// Submits for DIFFERENT players never touch the same key field, so they can't
+// clobber each other. We also trim to the top MAX_ENTRIES via ZREMRANGEBYRANK,
+// which is O(log n) instead of rewriting the entire list.
+//
+// (Structure changed → uses fresh v2 keys. The old v1 array isn't migrated;
+//  the global board simply starts clean on this version.)
+// ──────────────────────────────────────────────────────────────────────────────
+
+const LB_ZSET = "ai-incident:lb:z:v2";
+const LB_HASH = "ai-incident:lb:h:v2";
 const MAX_ENTRIES = 100;
 
 export interface LeaderboardEntry {
@@ -15,6 +36,7 @@ export interface LeaderboardEntry {
   at: number;
 }
 
+// In-memory fallback (used when Upstash env vars aren't set, e.g. local dev).
 let memoryStore: LeaderboardEntry[] = [];
 
 function getRedis(): Redis | null {
@@ -28,6 +50,17 @@ function getRedis(): Redis | null {
   }
 }
 
+// Composite score (higher = better), used only to ORDER & TRIM the sorted set.
+// Exact tiebreaks are applied in JS by sortEntries() after fetching, so this
+// just needs an XP-dominant ordering. Packs three tiers without overlap:
+//   XP            → ×1e9   (range 0..1.2e13, well inside JS safe-integer range)
+//   aPlusCount    → ×1e7   (0..19  → 0..1.9e8, below the 1e9 XP step)
+//   speed (asc)   → (1e6 - elapsedSec)  (0..1e6, below the 1e7 aPlus step)
+function compositeScore(e: LeaderboardEntry): number {
+  const elapsedSec = Math.min(1_000_000, Math.round((e.totalElapsedMs ?? 0) / 1000));
+  return e.xp * 1e9 + (e.aPlusCount ?? 0) * 1e7 + (1e6 - elapsedSec);
+}
+
 function sortEntries(list: LeaderboardEntry[]): LeaderboardEntry[] {
   // Multi-tier ranking:
   //   1. XP desc (primary)
@@ -39,7 +72,6 @@ function sortEntries(list: LeaderboardEntry[]): LeaderboardEntry[] {
   return [...list].sort((a, b) => {
     if (b.xp !== a.xp) return b.xp - a.xp;
     if (b.aPlusCount !== a.aPlusCount) return b.aPlusCount - a.aPlusCount;
-    // tiebreaker: faster (smaller totalElapsedMs) ranks higher. Missing field = treat as Infinity (worst).
     const aMs = a.totalElapsedMs ?? Number.MAX_SAFE_INTEGER;
     const bMs = b.totalElapsedMs ?? Number.MAX_SAFE_INTEGER;
     if (aMs !== bMs) return aMs - bMs;
@@ -49,13 +81,22 @@ function sortEntries(list: LeaderboardEntry[]): LeaderboardEntry[] {
   });
 }
 
+/** Pick the "better" of two entries for the same name (never downgrade a player). */
+function bestOf(prev: LeaderboardEntry | null | undefined, next: LeaderboardEntry): LeaderboardEntry {
+  if (!prev) return next;
+  return sortEntries([prev, next])[0];
+}
+
 export async function getLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
   const redis = getRedis();
   if (!redis) {
     return sortEntries(memoryStore).slice(0, limit);
   }
   try {
-    const entries = (await redis.get<LeaderboardEntry[]>(LB_KEY)) ?? [];
+    // The hash holds at most MAX_ENTRIES entries (kept trimmed on submit), so
+    // reading it all and sorting in JS is cheap and gives exact tiebreak order.
+    const map = await redis.hgetall<Record<string, LeaderboardEntry>>(LB_HASH);
+    const entries = map ? Object.values(map).filter(Boolean) : [];
     return sortEntries(entries).slice(0, limit);
   } catch {
     return [];
@@ -65,31 +106,32 @@ export async function getLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
 export async function submitScore(entry: LeaderboardEntry): Promise<void> {
   const redis = getRedis();
 
-  // dedupe by name — keep best (using same sort criteria)
-  function merge(list: LeaderboardEntry[]): LeaderboardEntry[] {
-    const byName = new Map<string, LeaderboardEntry>();
-    for (const e of [...list, entry]) {
-      const prev = byName.get(e.name);
-      if (!prev) {
-        byName.set(e.name, e);
-        continue;
-      }
-      // Keep the one with more XP. If tied, more A+. Then completion.
-      const better = sortEntries([prev, e])[0];
-      byName.set(e.name, better);
-    }
-    return sortEntries(Array.from(byName.values())).slice(0, MAX_ENTRIES);
-  }
-
   if (!redis) {
-    memoryStore = merge(memoryStore);
+    const others = memoryStore.filter((e) => e.name !== entry.name);
+    const best = bestOf(memoryStore.find((e) => e.name === entry.name), entry);
+    memoryStore = sortEntries([...others, best]).slice(0, MAX_ENTRIES);
     return;
   }
 
   try {
-    const current = (await redis.get<LeaderboardEntry[]>(LB_KEY)) ?? [];
-    await redis.set(LB_KEY, merge(current));
+    const prev = await redis.hget<LeaderboardEntry>(LB_HASH, entry.name);
+    const best = bestOf(prev, entry);
+
+    // Per-member writes: two different players never collide here.
+    await redis.zadd(LB_ZSET, { score: compositeScore(best), member: best.name });
+    await redis.hset(LB_HASH, { [best.name]: best });
+
+    // Keep only the top MAX_ENTRIES (drop the lowest-scoring overflow).
+    const count = await redis.zcard(LB_ZSET);
+    if (count > MAX_ENTRIES) {
+      const dropTo = count - MAX_ENTRIES - 1; // ranks 0..dropTo are the lowest scores
+      const losers = await redis.zrange<string[]>(LB_ZSET, 0, dropTo);
+      await redis.zremrangebyrank(LB_ZSET, 0, dropTo);
+      if (losers && losers.length > 0) {
+        await redis.hdel(LB_HASH, ...losers);
+      }
+    }
   } catch {
-    /* swallow */
+    /* swallow — best-effort */
   }
 }

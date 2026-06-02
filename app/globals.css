@@ -275,4 +275,15 @@
 @layer utilities {
   .text-balance { text-wrap: balance; }
   .tabular { font-variant-numeric: tabular-nums; }
+
+  /* ─── Accessibility: minimum 44×44px touch target (WCAG 2.5.5 / Apple HIG) ───
+     Apply to small icon-only buttons so they're comfortable to tap on mobile
+     without changing the visual size of the icon inside. */
+  .tap-target {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }

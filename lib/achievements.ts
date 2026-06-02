@@ -44,7 +44,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   },
   {
     id: "millionaire",
-    title: "Milhonário do Save",
+    title: "Milionário do Save",
     description: "Mais de $1M economizado pra clientes",
     icon: "💰",
     check: ({ player }) => player.totalSaved >= 1_000_000,

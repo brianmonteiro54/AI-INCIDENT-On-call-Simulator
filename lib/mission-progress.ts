@@ -92,3 +92,18 @@ export function cleanupStaleMissionSaves(): void {
     /* ignore */
   }
 }
+
+/** Remove EVERY mission-in-progress save (used by the full "reset progress" action). */
+export function clearAllMissionProgress(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const toRemove: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (k && k.startsWith(STORAGE_KEY_PREFIX)) toRemove.push(k);
+    }
+    toRemove.forEach((k) => window.localStorage.removeItem(k));
+  } catch {
+    /* ignore */
+  }
+}

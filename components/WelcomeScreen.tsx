@@ -128,6 +128,7 @@ export function WelcomeScreen({ onSubmit, forceShow }: Props) {
                 <input
                   autoFocus
                   type="text"
+                  aria-label="seu nome"
                   value={nameInput}
                   maxLength={14}
                   onChange={(e) => setNameInput(e.target.value)}

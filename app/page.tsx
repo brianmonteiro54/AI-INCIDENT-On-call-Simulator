@@ -11,6 +11,7 @@ import { WelcomeScreen } from "@/components/WelcomeScreen";
 import { AchievementToasts } from "@/components/AchievementToasts";
 import { Mascot } from "@/components/Mascot";
 import { playSound } from "@/lib/sound";
+import { cleanupStaleMissionSaves, clearAllMissionProgress } from "@/lib/mission-progress";
 import { Sparkles, Flame, Crown, Lock, Check, Star, Volume2, VolumeX, Trophy, Settings, ChevronRight, Zap, BookOpen } from "lucide-react";
 
 export default function HomePage() {
@@ -28,6 +29,11 @@ export default function HomePage() {
   useEffect(() => {
     const t = setTimeout(() => setForceReady(true), 1500);
     return () => clearTimeout(t);
+  }, []);
+
+  // Boot housekeeping: drop any mission-in-progress saves older than 6h.
+  useEffect(() => {
+    cleanupStaleMissionSaves();
   }, []);
 
   useEffect(() => {
@@ -130,7 +136,7 @@ export default function HomePage() {
 
             <button
               onClick={() => { playSound("click"); setSoundOn(!player.soundOn); }}
-              className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition shrink-0"
+              className="text-duo-ink-soft hover:text-duo-ink tap-target rounded-full hover:bg-duo-line-soft transition shrink-0"
               aria-label={player.soundOn ? "desativar som" : "ativar som"}
             >
               {player.soundOn ? <Volume2 className="w-5 h-5 stroke-[2.5]" /> : <VolumeX className="w-5 h-5 stroke-[2.5]" />}
@@ -166,6 +172,7 @@ export default function HomePage() {
               <h1 className="text-display text-2xl sm:text-3xl font-black text-duo-ink leading-tight mb-1.5">
                 Oi, <input
                   type="text"
+                  aria-label="seu nome"
                   value={nameDraft}
                   maxLength={14}
                   onChange={(e) => setNameDraft(e.target.value)}
@@ -196,7 +203,7 @@ export default function HomePage() {
                   <Sparkles className="w-6 h-6 stroke-[2.5]" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-black text-duo-green-dark text-sm uppercase tracking-wider">desafio diário · 2× XP</div>
+                  <div className="font-black text-duo-green-dark text-sm uppercase tracking-wider">desafio do dia</div>
                   <div className="font-bold text-duo-ink leading-tight truncate">
                     {dailyInc.title.replace(/^🔥\s*/, "")}
                   </div>
@@ -226,14 +233,15 @@ export default function HomePage() {
             <div className="h-1 flex-1 bg-duo-line rounded-full" />
           </div>
 
-          <div className="relative">
+          <div className="relative overflow-x-clip">
             {INCIDENTS.map((inc, i) => {
               const isLocked = inc.minLevel > lvlIdx;
               const best = bestByInc[inc.id];
               const isCurrent = !isLocked && !best;
               const isDone = !!best;
-              // Zigzag path offset
-              const offset = (i % 4 === 1 ? "translate-x-[12%]" : i % 4 === 2 ? "translate-x-[24%]" : i % 4 === 3 ? "translate-x-[12%]" : "");
+              // Zigzag path offset — only on sm+ so phones stay perfectly straight
+              // (a right-shift on a narrow screen caused horizontal overflow).
+              const offset = (i % 4 === 1 ? "sm:translate-x-[10%]" : i % 4 === 2 ? "sm:translate-x-[16%]" : i % 4 === 3 ? "sm:translate-x-[10%]" : "");
 
               return (
                 <MissionNode
@@ -299,7 +307,12 @@ export default function HomePage() {
             </Link>
           </div>
           <button
-            onClick={() => { if (confirm("Apagar TODO o progresso?")) reset(); }}
+            onClick={() => {
+              if (confirm("Apagar todo o progresso (XP, missões e conquistas)? Teu nome é mantido.")) {
+                reset();
+                clearAllMissionProgress();
+              }
+            }}
             className="text-sm font-medium text-duo-ink-faded hover:text-duo-red-dark transition"
           >
             <Settings className="w-4 h-4 inline mr-1" />

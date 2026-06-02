@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { ArrowLeft, Search, BookOpen, X } from "lucide-react";
@@ -30,6 +30,33 @@ export default function GlossarioPage() {
   const totalTerms = GLOSSARY.reduce((sum, s) => sum + s.terms.length, 0);
   const filteredCount = filtered.reduce((sum, s) => sum + s.terms.length, 0);
 
+  // Scroll-spy: highlight the section chip whose section is currently in view.
+  // Only meaningful when not searching (the chip bar is hidden during search).
+  useEffect(() => {
+    if (query) return;
+    const els = GLOSSARY
+      .map((s) => document.getElementById(`section-${s.id}`))
+      .filter((el): el is HTMLElement => el !== null);
+    if (els.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible.length > 0) {
+          setActiveSection(visible[0].target.id.replace("section-", ""));
+        }
+      },
+      // Activate a section once its heading clears the sticky header (~80px),
+      // and keep it active through the upper part of the viewport.
+      { rootMargin: "-80px 0px -55% 0px", threshold: 0 }
+    );
+
+    els.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [query]);
+
   return (
     <div className="min-h-screen bg-duo-cream">
       <header className="sticky top-0 z-30 bg-duo-cream/95 backdrop-blur-sm border-b-2 border-duo-line">
@@ -38,7 +65,7 @@ export default function GlossarioPage() {
             href="/"
             onClick={() => playSound("page")}
             aria-label="voltar pra home"
-            className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition"
+            className="text-duo-ink-soft hover:text-duo-ink tap-target rounded-full hover:bg-duo-line-soft transition"
           >
             <ArrowLeft className="w-6 h-6 stroke-[2.5]" />
           </Link>
@@ -98,6 +125,7 @@ export default function GlossarioPage() {
                 key={s.id}
                 onClick={() => {
                   playSound("tick");
+                  setActiveSection(s.id);
                   const el = document.getElementById(`section-${s.id}`);
                   el?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}

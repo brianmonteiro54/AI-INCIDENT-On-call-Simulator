@@ -1,0 +1,1 @@
+AI INCIDENT · On-call Simulator — mascote robô laranja com alerta de incidente. Estuda AWS AI Practitioner apagando incêndio de produção.

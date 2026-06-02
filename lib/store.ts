@@ -213,7 +213,14 @@ export const useGame = create<GameState>()(
 
       clearNewAchievements: () => set({ newAchievements: [] }),
 
-      reset: () => set({ player: initialPlayer, history: [], newAchievements: [] }),
+      // Reset clears PROGRESS only (xp, history, achievements, streak, saved/cost…).
+      // It deliberately KEEPS identity/preferences: the player's name and sound setting.
+      reset: () =>
+        set((s) => ({
+          player: { ...initialPlayer, name: s.player.name, soundOn: s.player.soundOn },
+          history: [],
+          newAchievements: [],
+        })),
 
       setHydrated: (b: boolean) => set({ hydrated: b }),
     }),

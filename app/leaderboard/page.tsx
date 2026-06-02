@@ -100,12 +100,12 @@ export default function LeaderboardPage() {
     <div className="min-h-screen bg-duo-cream">
       <header className="sticky top-0 z-30 bg-duo-cream/95 backdrop-blur-sm border-b-2 border-duo-line">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 flex items-center gap-3">
-          <Link href="/" onClick={() => playSound("page")} aria-label="voltar pra home" className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition">
+          <Link href="/" onClick={() => playSound("page")} aria-label="voltar pra home" className="text-duo-ink-soft hover:text-duo-ink tap-target rounded-full hover:bg-duo-line-soft transition">
             <ArrowLeft className="w-6 h-6 stroke-[2.5]" />
           </Link>
           <h1 className="text-display text-xl font-black text-duo-ink">Ranking Global</h1>
           <div className="flex-1" />
-          <button onClick={() => { playSound("click"); fetchBoard(); }} aria-label="atualizar ranking" className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition">
+          <button onClick={() => { playSound("click"); fetchBoard(); }} aria-label="atualizar ranking" className="text-duo-ink-soft hover:text-duo-ink tap-target rounded-full hover:bg-duo-line-soft transition">
             <RefreshCw className={`w-5 h-5 stroke-[2.5] ${loading ? "animate-spin" : ""}`} />
           </button>
         </div>

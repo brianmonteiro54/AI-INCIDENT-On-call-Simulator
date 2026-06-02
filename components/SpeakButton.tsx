@@ -153,7 +153,7 @@ export function SpeakButton({ text, lang, label, variant = "neutral" }: Props) {
       <button
         type="button"
         onClick={speak}
-        className={`inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full border-2 font-black text-xs transition ${cls}`}
+        className={`inline-flex items-center justify-center gap-1.5 px-3 py-2 min-h-[44px] rounded-full border-2 font-black text-xs transition ${cls}`}
         style={{ borderBottomWidth: 3 }}
       >
         <Volume2 className={`w-3.5 h-3.5 ${playing ? "animate-pulse" : ""}`} strokeWidth={2.5} />

@@ -428,7 +428,7 @@ export function WarRoom({ incident, isDaily }: Props) {
               playSound("tick");
               setShowExitModal(true);
             }}
-            className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition"
+            className="text-duo-ink-soft hover:text-duo-ink tap-target rounded-full hover:bg-duo-line-soft transition"
             aria-label="fechar"
           >
             <X className="w-6 h-6 stroke-[3]" />
@@ -459,7 +459,7 @@ export function WarRoom({ incident, isDaily }: Props) {
           {/* Sound toggle */}
           <button
             onClick={() => { playSound("click"); setSoundOn(!player.soundOn); }}
-            className="text-duo-ink-soft hover:text-duo-ink p-1.5 rounded-full hover:bg-duo-line-soft transition shrink-0"
+            className="text-duo-ink-soft hover:text-duo-ink tap-target rounded-full hover:bg-duo-line-soft transition shrink-0"
             aria-label={player.soundOn ? "desativar som" : "ativar som"}
           >
             {player.soundOn ? <Volume2 className="w-5 h-5 stroke-[2.5]" /> : <VolumeX className="w-5 h-5 stroke-[2.5]" />}
@@ -483,7 +483,7 @@ export function WarRoom({ incident, isDaily }: Props) {
         {isDaily && (
           <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-2 flex items-center gap-2 text-sm">
             <span className="chip border-duo-green-dark bg-duo-green-light text-duo-green-dark">
-              <Sparkles className="w-3.5 h-3.5" /> DAILY · 2× XP
+              <Sparkles className="w-3.5 h-3.5" /> DESAFIO DO DIA
             </span>
           </div>
         )}
