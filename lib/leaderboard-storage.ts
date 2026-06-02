@@ -56,12 +56,12 @@ function getRedis(): Redis | null {
 //   XP            → ×1e9   (range 0..1.2e13, well inside JS safe-integer range)
 //   aPlusCount    → ×1e7   (0..19  → 0..1.9e8, below the 1e9 XP step)
 //   speed (asc)   → (1e6 - elapsedSec)  (0..1e6, below the 1e7 aPlus step)
-function compositeScore(e: LeaderboardEntry): number {
+export function compositeScore(e: LeaderboardEntry): number {
   const elapsedSec = Math.min(1_000_000, Math.round((e.totalElapsedMs ?? 0) / 1000));
   return e.xp * 1e9 + (e.aPlusCount ?? 0) * 1e7 + (1e6 - elapsedSec);
 }
 
-function sortEntries(list: LeaderboardEntry[]): LeaderboardEntry[] {
+export function sortEntries(list: LeaderboardEntry[]): LeaderboardEntry[] {
   // Multi-tier ranking:
   //   1. XP desc (primary)
   //   2. A+ count desc (quality)
@@ -82,7 +82,7 @@ function sortEntries(list: LeaderboardEntry[]): LeaderboardEntry[] {
 }
 
 /** Pick the "better" of two entries for the same name (never downgrade a player). */
-function bestOf(prev: LeaderboardEntry | null | undefined, next: LeaderboardEntry): LeaderboardEntry {
+export function bestOf(prev: LeaderboardEntry | null | undefined, next: LeaderboardEntry): LeaderboardEntry {
   if (!prev) return next;
   return sortEntries([prev, next])[0];
 }

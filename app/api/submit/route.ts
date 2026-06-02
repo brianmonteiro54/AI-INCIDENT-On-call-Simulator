@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { submitScore } from "@/lib/leaderboard-storage";
+import { sanitizeName } from "@/lib/name-sanitize";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -28,8 +29,6 @@ const ABSOLUTE_XP_CAP = 12_000;
 const ABSOLUTE_SAVED_CAP = 50_000_000;
 // 30 min per mission × 19 missions = 34.2M ms. Cap at 100M as absolute hard ceiling.
 const ABSOLUTE_ELAPSED_MS_CAP = 100_000_000;
-const NAME_MAX_LEN = 16;
-const NAME_MIN_LEN = 1;
 
 // Min XP a real player could have per completed mission (low base × bad accuracy + min speed bonus 15)
 // 100 × 0.4 + 15 = 55. Floor at 10 just in case.
@@ -60,26 +59,7 @@ function checkRateLimit(name: string): boolean {
 }
 
 // ── 3. NAME SANITIZATION ─────────────────────────────────────────────────────
-// Allow: letters (incl. accented), digits, space, hyphen, underscore, dot,
-// and a curated emoji-safe Unicode range. Strip everything else.
-function sanitizeName(raw: unknown): string | null {
-  if (typeof raw !== "string") return null;
-  let s = raw.trim();
-  if (s.length < NAME_MIN_LEN) return null;
-  if (s.length > NAME_MAX_LEN) s = s.slice(0, NAME_MAX_LEN);
-
-  // Remove HTML tag chars, quotes, backticks, control chars, zero-width chars
-  s = s.replace(/[<>"'`\u0000-\u001F\u007F\u200B-\u200F\u2028-\u202F\u2060-\u206F]/g, "");
-  // Collapse runs of whitespace
-  s = s.replace(/\s+/g, " ").trim();
-
-  if (s.length < NAME_MIN_LEN) return null;
-
-  // Reserved name
-  if (s.toLowerCase() === "anon") return null;
-
-  return s;
-}
+// (extracted to lib/name-sanitize.ts so it can be unit-tested in isolation)
 
 // ── 4. ORIGIN CHECK (CSRF-light) ─────────────────────────────────────────────
 function checkOrigin(req: NextRequest): boolean {
