@@ -173,21 +173,24 @@ export default function HomePage() {
             <Mascot expression="happy" size={100} className="shrink-0" />
             <div className="flex-1 min-w-0">
               <h1 className="text-display text-2xl sm:text-3xl font-black text-duo-ink leading-tight mb-1.5">
-                {isAnon ? "E aí, " : "Oi, "}<input
-                  type="text"
-                  aria-label="seu nome"
-                  value={nameDraft === "anon" ? "" : nameDraft}
-                  placeholder="on-call"
-                  maxLength={14}
-                  onChange={(e) => setNameDraft(e.target.value)}
-                  onBlur={commitName}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.currentTarget.blur();
-                    }
-                  }}
-                  className="bg-transparent outline-none text-duo-blue-dark placeholder:text-duo-blue-dark/45 border-b-2 border-dashed border-duo-line focus:border-duo-blue inline-block max-w-[140px] font-black"
-                />! 👋
+                {isAnon ? (
+                  "E aí! 👋"
+                ) : (
+                  <>Oi, <input
+                    type="text"
+                    aria-label="seu nome"
+                    value={nameDraft}
+                    maxLength={14}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onBlur={commitName}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    className="bg-transparent outline-none text-duo-blue-dark border-b-2 border-dashed border-duo-line focus:border-duo-blue inline-block max-w-[140px] font-black"
+                  />! 👋</>
+                )}
               </h1>
               <p className="text-duo-ink-soft text-sm sm:text-base font-medium leading-snug">
                 Bora estudar AWS AI Practitioner resolvendo incidentes reais.

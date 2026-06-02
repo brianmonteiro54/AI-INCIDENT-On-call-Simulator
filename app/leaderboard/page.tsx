@@ -101,6 +101,11 @@ export default function LeaderboardPage() {
     setMyRank(idx >= 0 ? idx + 1 : null);
   }, [entries, player.name, hydrated]);
 
+  // Players without a name ("anon") are never published to the global ranking
+  // (the server reserves the name and the client skips the submit). Reflect that
+  // honestly instead of claiming the score was auto-published.
+  const isAnon = !player.name || player.name === "anon";
+
   return (
     <div className="min-h-screen bg-duo-cream">
       <header className="sticky top-0 z-30 bg-duo-cream/95 backdrop-blur-sm border-b-2 border-duo-line">
@@ -140,11 +145,11 @@ export default function LeaderboardPage() {
           >
             <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
               <div className="shrink-0 w-14 h-14 rounded-2xl bg-duo-blue-light border-2 border-duo-blue text-duo-blue-dark flex items-center justify-center font-black text-xl" style={{ borderBottomWidth: 4 }}>
-                {myRank ? `#${myRank}` : "?"}
+                {isAnon ? "–" : myRank ? `#${myRank}` : "?"}
               </div>
               <div className="flex-1 min-w-[140px]">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-display text-lg font-black text-duo-ink">{player.name}</h3>
+                  <h3 className="text-display text-lg font-black text-duo-ink">{isAnon ? "Anônimo" : player.name}</h3>
                   {player.streak >= 3 && (
                     <span className="text-duo-orange-dark text-xs font-bold flex items-center">
                       <Flame className="w-3 h-3 fill-duo-orange" />{player.streak}
@@ -163,13 +168,24 @@ export default function LeaderboardPage() {
                   )}
                 </div>
               </div>
-              <div className="shrink-0 inline-flex items-center gap-1.5 chip border-duo-green-dark bg-duo-green-light text-duo-green-dark text-[10px] px-2.5 py-1">
-                <span>⚡</span>
-                <span>auto-publicado</span>
-              </div>
+              {isAnon ? (
+                <div className="shrink-0 inline-flex items-center gap-1.5 chip border-duo-ink-faded bg-duo-line-soft text-duo-ink-soft text-[10px] px-2.5 py-1">
+                  <span>🙈</span>
+                  <span>fora do ranking</span>
+                </div>
+              ) : (
+                <div className="shrink-0 inline-flex items-center gap-1.5 chip border-duo-green-dark bg-duo-green-light text-duo-green-dark text-[10px] px-2.5 py-1">
+                  <span>⚡</span>
+                  <span>auto-publicado</span>
+                </div>
+              )}
             </div>
 
-            {syncError ? (
+            {isAnon ? (
+              <div className="mt-3 pt-3 border-t-2 border-duo-line-soft text-duo-ink-soft text-xs font-medium leading-snug">
+                👋 Tu tá jogando como anônimo, então tua pontuação fica só aqui para você. <b className="text-duo-ink">fora do ranking</b>.
+              </div>
+            ) : syncError ? (
               <div className="mt-3 pt-3 border-t-2 border-duo-line-soft text-duo-red-dark text-xs font-bold leading-snug flex items-start gap-2">
                 <span>⚠️</span>
                 <span>{syncError}</span>
