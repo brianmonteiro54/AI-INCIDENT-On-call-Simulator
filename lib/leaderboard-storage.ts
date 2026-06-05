@@ -120,14 +120,18 @@ export async function getLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
       else if (e?.name) staleNames.push(e.name);
     }
 
-    // Lazily prune expired members so the board self-cleans over time.
+    // Prune expired members so the board self-cleans over time — but do it
+    // FIRE-AND-FORGET. The response is built from `active` (already filtered),
+    // so the user never waits on this Redis round-trip. Worst case the delete
+    // doesn't finish on a cold/frozen invocation; the entries are still hidden
+    // from the response and a later request retries the cleanup.
     if (staleNames.length > 0) {
-      try {
-        await redis.zrem(LB_ZSET, ...staleNames);
-        await redis.hdel(LB_HASH, ...staleNames);
-      } catch {
-        /* swallow — best-effort cleanup */
-      }
+      void redis
+        .zrem(LB_ZSET, ...staleNames)
+        .then(() => redis.hdel(LB_HASH, ...staleNames))
+        .catch(() => {
+          /* swallow — best-effort cleanup */
+        });
     }
 
     return sortEntries(active).slice(0, limit);

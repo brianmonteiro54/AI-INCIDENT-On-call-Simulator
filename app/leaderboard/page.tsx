@@ -39,11 +39,15 @@ export default function LeaderboardPage() {
     };
   }, [history]);
 
-  async function fetchBoard() {
+  async function fetchBoard(opts?: { fresh?: boolean }) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/leaderboard", { cache: "no-store" });
+      // Default load uses the CDN cache (instant). `fresh` bypasses it with a
+      // unique query param + no-store, for the manual refresh button and the
+      // confirmation fetch right after publishing a score.
+      const url = opts?.fresh ? `/api/leaderboard?t=${Date.now()}` : "/api/leaderboard";
+      const res = await fetch(url, opts?.fresh ? { cache: "no-store" } : undefined);
       const data = await res.json();
       setEntries(data.entries ?? []);
     } catch {
@@ -83,7 +87,7 @@ export default function LeaderboardPage() {
         // saved. Treat it like a success and just refresh the board.
         if (res.ok || res.status === 429) {
           setSyncError(null);
-          return fetchBoard();
+          return fetchBoard({ fresh: true });
         }
         throw new Error(`http ${res.status}`);
       })
@@ -115,7 +119,7 @@ export default function LeaderboardPage() {
           </Link>
           <h1 className="text-display text-xl font-black text-duo-ink">Ranking Global</h1>
           <div className="flex-1" />
-          <button onClick={() => { playSound("click"); fetchBoard(); }} aria-label="atualizar ranking" className="text-duo-ink-soft hover:text-duo-ink tap-target rounded-full hover:bg-duo-line-soft transition">
+          <button onClick={() => { playSound("click"); fetchBoard({ fresh: true }); }} aria-label="atualizar ranking" className="text-duo-ink-soft hover:text-duo-ink tap-target rounded-full hover:bg-duo-line-soft transition">
             <RefreshCw className={`w-5 h-5 stroke-[2.5] ${loading ? "animate-spin" : ""}`} />
           </button>
         </div>
