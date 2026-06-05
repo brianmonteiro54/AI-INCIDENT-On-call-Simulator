@@ -6,7 +6,7 @@ import { m } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Home, Clock, Zap } from "lucide-react";
 import type { IncidentResult, Incident, Grade } from "@/lib/types";
-import { INCIDENTS } from "@/lib/incidents";
+import { INCIDENTS_META as INCIDENTS } from "@/lib/incidents-meta";
 import { formatTime, getLevelIdx } from "@/lib/levels";
 import { useGame } from "@/lib/store";
 import { Mascot } from "./Mascot";

@@ -4,7 +4,7 @@ import { m, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useGame, bestGradeByIncident } from "@/lib/store";
-import { INCIDENTS } from "@/lib/incidents";
+import { INCIDENTS_META as INCIDENTS } from "@/lib/incidents-meta";
 import { getLevel, getLevelIdx, getNextLevel, getTodaysDailyId, getDailyKey, sevLabel } from "@/lib/levels";
 import { ACHIEVEMENTS } from "@/lib/achievements";
 import { WelcomeScreen } from "@/components/WelcomeScreen";
