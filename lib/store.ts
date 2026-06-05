@@ -12,12 +12,21 @@ import {
   MAX_ELAPSED_MS_PER_MISSION,
   MAX_TOTAL_ELAPSED_MS,
 } from "./sanitize-progress";
+import { isProgressExpired, lastActiveTimestamp } from "./retention";
+import { clearAllMissionProgress } from "./mission-progress";
+
+// localStorage key written by app/page.tsx once the player has been onboarded.
+// Cleared together with the rest of the progress when the 30-day window lapses,
+// so the welcome screen reappears and re-asks for the name.
+const ONBOARDED_KEY = "ai-incident-onboarded";
 
 interface GameState {
   player: Player;
   history: IncidentResult[];
   hydrated: boolean;
   newAchievements: string[];
+  /** Epoch ms of the player's last activity. Drives the 30-day retention wipe. */
+  lastActiveAt: number;
 
   setName: (name: string) => void;
   setSoundOn: (on: boolean) => void;
@@ -68,9 +77,13 @@ export const useGame = create<GameState>()(
       history: [],
       hydrated: false,
       newAchievements: [],
+      lastActiveAt: 0,
 
       setName: (name: string) =>
-        set((s) => ({ player: { ...s.player, name: name.trim() || "anon" } })),
+        set((s) => ({
+          player: { ...s.player, name: name.trim() || "anon" },
+          lastActiveAt: Date.now(),
+        })),
 
       setSoundOn: (on: boolean) => {
         setSoundEnabled(on);
@@ -135,11 +148,23 @@ export const useGame = create<GameState>()(
           player: evaluated.player,
           history: nextHistory,
           newAchievements: evaluated.newOnes,
+          // Any solve (first-time OR replay) counts as a "play" → resets the
+          // 30-day retention clock for the local progress.
+          lastActiveAt: Date.now(),
         });
 
         // ── AUTO-PUBLISH to global leaderboard (fire-and-forget) ──
-        // Only on first-time solves (so replays don't spam submissions)
-        if (isFirstTime && typeof window !== "undefined" && evaluated.player.name && evaluated.player.name !== "anon") {
+        // Fires on first-time solves AND replays. Replays don't change the
+        // numbers (server keeps the best), but the submission refreshes the
+        // entry's `at` timestamp — i.e. "last play" — so an active player never
+        // ages off the board, while someone who stops playing drops off 30 days
+        // after their last session (see lib/leaderboard-storage.ts).
+        const canPublish =
+          typeof window !== "undefined" &&
+          evaluated.player.name &&
+          evaluated.player.name !== "anon" &&
+          evaluated.player.xp > 0;
+        if (canPublish) {
           const best = bestGradeByIncident(nextHistory);
           const completedCount = Object.keys(best).length;
           const aPlusCount = Object.values(best).filter((g) => g === "A+").length;
@@ -170,6 +195,7 @@ export const useGame = create<GameState>()(
           player: { ...initialPlayer, name: s.player.name, soundOn: s.player.soundOn },
           history: [],
           newAchievements: [],
+          lastActiveAt: Date.now(),
         })),
 
       setHydrated: (b: boolean) => set({ hydrated: b }),
@@ -177,13 +203,36 @@ export const useGame = create<GameState>()(
     {
       name: "ai-incident-v2",
       storage: createJSONStorage(() => (typeof window !== "undefined" ? localStorage : { getItem: () => null, setItem: () => {}, removeItem: () => {} } as unknown as Storage)),
-      partialize: (s) => ({ player: s.player, history: s.history }),
+      partialize: (s) => ({ player: s.player, history: s.history, lastActiveAt: s.lastActiveAt }),
       onRehydrateStorage: () => (state, error) => {
         if (state) {
+          // ── 30-DAY RETENTION ──────────────────────────────────────────────
+          // If the player hasn't played in over 30 days, treat them like a
+          // first-time visitor: wipe ALL progress AND identity (name), drop the
+          // onboarding flag and any mission-in-progress saves, so the welcome
+          // screen reappears and asks for the name again.
+          if (isProgressExpired(state.lastActiveAt, state.history)) {
+            state.player = { ...initialPlayer };
+            state.history = [];
+            state.newAchievements = [];
+            state.lastActiveAt = 0;
+            if (typeof window !== "undefined") {
+              try { window.localStorage.removeItem(ONBOARDED_KEY); } catch {}
+              try { clearAllMissionProgress(); } catch {}
+            }
+            state.setHydrated(true);
+            setSoundEnabled(state.player.soundOn ?? true);
+            if (error) console.error("rehydrate error", error);
+            return;
+          }
+
           // Sanitize any tampered/corrupted localStorage data before exposing it
           const safe = sanitizeRehydratedState({ player: state.player, history: state.history });
           state.player = safe.player;
           state.history = safe.history;
+          // Ground the timestamp for users saved before this field existed, so
+          // the retention window is anchored to their last real play.
+          state.lastActiveAt = lastActiveTimestamp(state.lastActiveAt, safe.history) || Date.now();
           // Re-evaluate achievements from clean history (so forged achievements get filtered too)
           const evaluated = evalAchievements(safe.player, safe.history);
           state.player = evaluated.player;

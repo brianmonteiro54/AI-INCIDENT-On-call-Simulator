@@ -1,4 +1,5 @@
 import { Redis } from "@upstash/redis";
+import { RETENTION_MS } from "./retention";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // LEADERBOARD STORAGE — Redis Sorted Set + Hash
@@ -61,6 +62,16 @@ export function compositeScore(e: LeaderboardEntry): number {
   return e.xp * 1e9 + (e.aPlusCount ?? 0) * 1e7 + (1e6 - elapsedSec);
 }
 
+// ── 30-DAY RETENTION ──────────────────────────────────────────────────────────
+// A player's standing is kept for at most 30 days since their last submission
+// (which auto-fires on every play, including replays — see lib/store.ts). After
+// that the entry is considered expired: hidden from results and pruned from
+// Redis on the next read. `at` is epoch ms of the player's last play.
+/** True when the entry was last updated within the retention window. */
+export function isEntryActive(e: LeaderboardEntry, now: number = Date.now()): boolean {
+  return now - (Number(e?.at) || 0) <= RETENTION_MS;
+}
+
 export function sortEntries(list: LeaderboardEntry[]): LeaderboardEntry[] {
   // Multi-tier ranking:
   //   1. XP desc (primary)
@@ -88,16 +99,38 @@ export function bestOf(prev: LeaderboardEntry | null | undefined, next: Leaderbo
 }
 
 export async function getLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
+  const now = Date.now();
   const redis = getRedis();
   if (!redis) {
+    // Drop anyone whose last play was > 30 days ago, then return the top slice.
+    memoryStore = memoryStore.filter((e) => isEntryActive(e, now));
     return sortEntries(memoryStore).slice(0, limit);
   }
   try {
     // The hash holds at most MAX_ENTRIES entries (kept trimmed on submit), so
     // reading it all and sorting in JS is cheap and gives exact tiebreak order.
     const map = await redis.hgetall<Record<string, LeaderboardEntry>>(LB_HASH);
-    const entries = map ? Object.values(map).filter(Boolean) : [];
-    return sortEntries(entries).slice(0, limit);
+    const all = map ? Object.values(map).filter(Boolean) : [];
+
+    // Split into active vs expired (> 30 days since last play).
+    const active: LeaderboardEntry[] = [];
+    const staleNames: string[] = [];
+    for (const e of all) {
+      if (isEntryActive(e, now)) active.push(e);
+      else if (e?.name) staleNames.push(e.name);
+    }
+
+    // Lazily prune expired members so the board self-cleans over time.
+    if (staleNames.length > 0) {
+      try {
+        await redis.zrem(LB_ZSET, ...staleNames);
+        await redis.hdel(LB_HASH, ...staleNames);
+      } catch {
+        /* swallow — best-effort cleanup */
+      }
+    }
+
+    return sortEntries(active).slice(0, limit);
   } catch {
     return [];
   }
