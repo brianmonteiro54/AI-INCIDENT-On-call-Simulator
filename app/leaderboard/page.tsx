@@ -5,6 +5,7 @@ import { m } from "framer-motion";
 import Link from "next/link";
 import { ArrowLeft, Flame, RefreshCw } from "lucide-react";
 import { useGame, bestGradeByIncident } from "@/lib/store";
+import { publishScore } from "@/lib/submit-score-client";
 import { getLevel } from "@/lib/levels";
 import { playSound } from "@/lib/sound";
 import { Mascot } from "@/components/Mascot";
@@ -68,18 +69,14 @@ export default function LeaderboardPage() {
     const needsSync = !myEntry || myEntry.xp < player.xp;
     if (!needsSync) return;
 
-    fetch("/api/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: player.name,
-        xp: player.xp,
-        totalSaved: player.totalSaved,
-        totalElapsedMs: player.totalElapsedMs,
-        completedCount: myStats.completedCount,
-        aPlusCount: myStats.aPlusCount,
-        streak: player.streak,
-      }),
+    publishScore({
+      name: player.name,
+      xp: player.xp,
+      totalSaved: player.totalSaved,
+      totalElapsedMs: player.totalElapsedMs,
+      completedCount: myStats.completedCount,
+      aPlusCount: myStats.aPlusCount,
+      streak: player.streak,
     })
       .then((res) => {
         // 429 ("too fast") isn't a failure here: it means the post-mission

@@ -14,6 +14,7 @@ import {
 } from "./sanitize-progress";
 import { isProgressExpired, lastActiveTimestamp } from "./retention";
 import { clearAllMissionProgress } from "./mission-progress";
+import { publishScore } from "./submit-score-client";
 
 // localStorage key written by app/page.tsx once the player has been onboarded.
 // Cleared together with the rest of the progress when the 30-day window lapses,
@@ -168,18 +169,14 @@ export const useGame = create<GameState>()(
           const best = bestGradeByIncident(nextHistory);
           const completedCount = Object.keys(best).length;
           const aPlusCount = Object.values(best).filter((g) => g === "A+").length;
-          fetch("/api/submit", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              name: evaluated.player.name,
-              xp: evaluated.player.xp,
-              totalSaved: evaluated.player.totalSaved,
-              totalElapsedMs: evaluated.player.totalElapsedMs,
-              completedCount,
-              aPlusCount,
-              streak: evaluated.player.streak,
-            }),
+          publishScore({
+            name: evaluated.player.name,
+            xp: evaluated.player.xp,
+            totalSaved: evaluated.player.totalSaved,
+            totalElapsedMs: evaluated.player.totalElapsedMs,
+            completedCount,
+            aPlusCount,
+            streak: evaluated.player.streak,
           }).catch(() => {
             /* swallow — best-effort */
           });

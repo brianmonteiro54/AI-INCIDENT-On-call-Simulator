@@ -1,5 +1,5 @@
-import { Redis } from "@upstash/redis";
 import { RETENTION_MS } from "./retention";
+import { getRedis } from "./redis";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // LEADERBOARD STORAGE — Redis Sorted Set + Hash
@@ -40,16 +40,7 @@ export interface LeaderboardEntry {
 // In-memory fallback (used when Upstash env vars aren't set, e.g. local dev).
 let memoryStore: LeaderboardEntry[] = [];
 
-function getRedis(): Redis | null {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) return null;
-  try {
-    return new Redis({ url, token });
-  } catch {
-    return null;
-  }
-}
+// Redis client comes from lib/redis.ts (shared with the rate limiter).
 
 // Composite score (higher = better), used only to ORDER & TRIM the sorted set.
 // Exact tiebreaks are applied in JS by sortEntries() after fetching, so this

@@ -5,8 +5,11 @@ build
 dist
 .DS_Store
 *.log
-.env*.local
+# env files — keep ALL real env files out of git (incl. .env.production,
+# .env.development, *.local…), but allow the committed template.
 .env
+.env.*
+!.env.example
 .vercel
 next-env.d.ts
 

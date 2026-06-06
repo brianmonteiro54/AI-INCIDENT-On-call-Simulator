@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { submitScore } from "@/lib/leaderboard-storage";
 import { sanitizeName } from "@/lib/name-sanitize";
+import { ScoreSchema } from "@/lib/score-schema";
+import { checkRateLimit, clientIp } from "@/lib/rate-limit";
+import { verifyScore, type SignablePayload } from "@/lib/score-signature";
+import { claimSignature } from "@/lib/nonce";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -8,67 +12,36 @@ export const runtime = "nodejs";
 // ──────────────────────────────────────────────────────────────────────────────
 // HARDENED LEADERBOARD SUBMIT
 //
-// This endpoint can't authenticate users (no login system) so it can't fully
-// prevent cheating. Defense strategy is layered:
-//   1. Strict caps on every numeric field (no fake +99999 XP)
-//   2. Cross-field consistency (XP must make sense given completedCount)
-//   3. Sanitize name (no XSS, no impersonation via whitespace tricks)
-//   4. Rate limit per name (in-memory, 5s between submits)
-//   5. Origin check (rejects basic CSRF / cross-origin POSTs)
+// No login system → can't fully prevent cheating. Layered defense:
+//   1. Zod schema      → coerces + clamps every numeric field, then enforces
+//                        cross-field consistency (lib/score-schema.ts)
+//   2. Name sanitize   → no XSS / whitespace-impersonation (lib/name-sanitize.ts)
+//   3. Distributed rate limit → per-name AND per-IP, backed by Upstash so it
+//                        actually holds across serverless instances, with an
+//                        in-memory fallback for local dev (lib/rate-limit.ts)
+//   4. HMAC signature  → rejects forged requests that didn't come from the game
+//                        (lib/score-signature.ts) — opt-in via env var. Signed
+//                        requests are time-boxed AND single-use (lib/nonce.ts),
+//                        so a captured valid request can't be replayed.
+//   5. Origin check    → rejects basic cross-origin / CSRF POSTs
 //
-// Anything that requires a server-side source of truth (per-incident XP audit,
-// real anti-cheat) would need a login system + signed payloads, which is out
-// of scope for an educational app.
+// Stronger guarantees (per-incident XP audit, true anti-cheat) require accounts
+// + server-side state, which is out of scope for an educational app.
 // ──────────────────────────────────────────────────────────────────────────────
 
-// ── 1. ABSOLUTE CAPS ─────────────────────────────────────────────────────────
-// Max XP per mission in the realistic case (base 200 × 1.5 speed × 1.0 acc + 30 invest + boss 200) ≈ 530.
-// Total XP for 19 missions with all bonuses ≈ 7.500. Cap at 12.000 for safety.
-const TOTAL_MISSIONS = 19;
-const ABSOLUTE_XP_CAP = 12_000;
-const ABSOLUTE_SAVED_CAP = 50_000_000;
-// 30 min per mission × 19 missions = 34.2M ms. Cap at 100M as absolute hard ceiling.
-const ABSOLUTE_ELAPSED_MS_CAP = 100_000_000;
+// Shared secret for the HMAC signature. MUST be NEXT_PUBLIC_* so the browser can
+// read it to sign (there's no login, so it can't be truly secret). When unset,
+// signature verification is skipped — set it to turn the protection on.
+const SUBMIT_SECRET = process.env.NEXT_PUBLIC_SUBMIT_SECRET || "";
+const SIGNATURE_TTL_MS = 5 * 60 * 1000; // reject signed requests older than 5 min (anti-replay)
 
-// Min XP a real player could have per completed mission (low base × bad accuracy + min speed bonus 15)
-// 100 × 0.4 + 15 = 55. Floor at 10 just in case.
-const MIN_XP_PER_MISSION = 10;
-// Max XP a real player could have per completed mission (high base × 1.0 acc + 60 invest + 50 quiz + 100 speed + boss 200)
-const MAX_XP_PER_MISSION = 600;
-
-// ── 2. RATE LIMIT (in-memory, per server instance) ───────────────────────────
-const lastSubmitByName = new Map<string, number>();
-const RATE_LIMIT_MS = 5_000; // 5s between submits for the same name
-const MAX_TRACKED_NAMES = 5_000; // evict old entries to prevent memory leak
-
-function checkRateLimit(name: string): boolean {
-  const now = Date.now();
-  const last = lastSubmitByName.get(name);
-  if (last && now - last < RATE_LIMIT_MS) return false;
-
-  // Evict oldest entries if map grows too big
-  if (lastSubmitByName.size > MAX_TRACKED_NAMES) {
-    const sorted = Array.from(lastSubmitByName.entries()).sort((a, b) => a[1] - b[1]);
-    for (let i = 0; i < 1000 && i < sorted.length; i++) {
-      lastSubmitByName.delete(sorted[i][0]);
-    }
-  }
-
-  lastSubmitByName.set(name, now);
-  return true;
-}
-
-// ── 3. NAME SANITIZATION ─────────────────────────────────────────────────────
-// (extracted to lib/name-sanitize.ts so it can be unit-tested in isolation)
-
-// ── 4. ORIGIN CHECK (CSRF-light) ─────────────────────────────────────────────
+// ── ORIGIN CHECK (CSRF-light) ─────────────────────────────────────────────────
 function checkOrigin(req: NextRequest): boolean {
   const origin = req.headers.get("origin");
   const host = req.headers.get("host");
   if (!origin || !host) return true; // some envs strip these — don't hard-fail
   try {
-    const originHost = new URL(origin).host;
-    return originHost === host;
+    return new URL(origin).host === host;
   } catch {
     return false;
   }
@@ -76,7 +49,7 @@ function checkOrigin(req: NextRequest): boolean {
 
 export async function POST(req: NextRequest) {
   try {
-    // CSRF-light
+    // 5. CSRF-light
     if (!checkOrigin(req)) {
       return NextResponse.json({ error: "bad origin" }, { status: 403 });
     }
@@ -86,45 +59,56 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "bad body" }, { status: 400 });
     }
 
-    // Name validation
-    const name = sanitizeName(body.name);
+    // 2. Name
+    const name = sanitizeName((body as Record<string, unknown>).name);
     if (!name) {
       return NextResponse.json({ error: "invalid name" }, { status: 400 });
     }
 
-    // Numeric coercion with hard caps
-    const xp = Math.max(0, Math.min(ABSOLUTE_XP_CAP, Number(body.xp) || 0));
-    const totalSaved = Math.max(0, Math.min(ABSOLUTE_SAVED_CAP, Number(body.totalSaved) || 0));
-    const totalElapsedMs = Math.max(0, Math.min(ABSOLUTE_ELAPSED_MS_CAP, Number(body.totalElapsedMs) || 0));
-    const completedCount = Math.max(0, Math.min(TOTAL_MISSIONS, Number(body.completedCount) || 0));
-    const aPlusCount = Math.max(0, Math.min(TOTAL_MISSIONS, Number(body.aPlusCount) || 0));
-    const streak = Math.max(0, Math.min(TOTAL_MISSIONS, Number(body.streak) || 0));
-
-    // Must have some XP
-    if (xp === 0 || completedCount === 0) {
-      return NextResponse.json({ error: "no progress" }, { status: 400 });
+    // 3. Rate limit (per-name + per-IP). Done early so a flood is throttled
+    //    before we spend any work on crypto/validation.
+    const rl = await checkRateLimit(name, clientIp(req.headers));
+    if (!rl.ok) {
+      return NextResponse.json({ error: rl.limitedBy === "ip" ? "too many requests" : "too fast" }, { status: 429 });
     }
 
-    // ── 5. CROSS-FIELD CONSISTENCY ──────────────────────────────────────────
-    // aPlusCount can't exceed completedCount
-    if (aPlusCount > completedCount) {
-      return NextResponse.json({ error: "aPlus > completed" }, { status: 400 });
-    }
-    // streak can't exceed completedCount (streak is consecutive A+ — can't have streak > A+ count)
-    if (streak > aPlusCount) {
-      return NextResponse.json({ error: "streak > aPlus" }, { status: 400 });
-    }
-    // XP must be within plausible range for completedCount
-    const minPossibleXp = completedCount * MIN_XP_PER_MISSION;
-    const maxPossibleXp = completedCount * MAX_XP_PER_MISSION;
-    if (xp < minPossibleXp || xp > maxPossibleXp) {
-      return NextResponse.json({ error: "xp inconsistent" }, { status: 400 });
+    // 4. Signature (opt-in). Verify against the RAW body values the client signed,
+    //    BEFORE clamping, then check the timestamp is fresh (anti-replay).
+    if (SUBMIT_SECRET) {
+      const b = body as Record<string, unknown>;
+      const signable: SignablePayload = {
+        name: typeof b.name === "string" ? b.name : String(b.name ?? ""),
+        xp: Number(b.xp) || 0,
+        totalSaved: Number(b.totalSaved) || 0,
+        totalElapsedMs: Number(b.totalElapsedMs) || 0,
+        completedCount: Number(b.completedCount) || 0,
+        aPlusCount: Number(b.aPlusCount) || 0,
+        streak: Number(b.streak) || 0,
+        ts: Number(b.ts) || 0,
+      };
+      const sig = req.headers.get("x-score-signature") || "";
+      const valid = await verifyScore(signable, sig, SUBMIT_SECRET);
+      if (!valid) {
+        return NextResponse.json({ error: "bad signature" }, { status: 401 });
+      }
+      if (!Number.isFinite(signable.ts) || Math.abs(Date.now() - signable.ts) > SIGNATURE_TTL_MS) {
+        return NextResponse.json({ error: "stale request" }, { status: 401 });
+      }
+      // Single-use: this exact signature can only be accepted once (within its
+      // TTL). Closes the replay window the freshness check leaves open.
+      const firstUse = await claimSignature(sig);
+      if (!firstUse) {
+        return NextResponse.json({ error: "replay" }, { status: 409 });
+      }
     }
 
-    // Rate limit (per name)
-    if (!checkRateLimit(name)) {
-      return NextResponse.json({ error: "too fast" }, { status: 429 });
+    // 1. Validate + coerce + clamp + consistency (Zod). `data` is fully typed and
+    //    already within the hard caps.
+    const parsed = ScoreSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "invalid" }, { status: 400 });
     }
+    const { xp, totalSaved, totalElapsedMs, completedCount, aPlusCount, streak } = parsed.data;
 
     await submitScore({
       name,
