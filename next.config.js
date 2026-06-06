@@ -39,9 +39,6 @@ const csp = [
 
 const nextConfig = {
   reactStrictMode: true,
-  experimental: {
-    optimizePackageImports: ["framer-motion", "lucide-react"],
-  },
   async headers() {
     return [
       {
